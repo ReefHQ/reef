@@ -181,6 +181,24 @@ The displayed status describes **the operation**, not containers or healthchecks
 
 ## Source layout and development checks
 
+### Versioning
+
+Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
+source of truth for the application version, starting at `0.1.0`. Release tags
+use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
+does not mean a release has been tagged or published.
+
+- Before `1.0.0`, minor releases may introduce incompatible changes; patch
+  releases contain backward-compatible fixes.
+- From `1.0.0`, incompatible changes increment MAJOR, backward-compatible
+  features increment MINOR, and backward-compatible fixes increment PATCH.
+- Incrementing MAJOR or MINOR resets the lower components to zero. Prereleases
+  use suffixes such as `0.2.0-rc.1`. Published releases are immutable.
+
+Compatibility includes configuration, persisted state and documented HTTP/API
+behavior. Changes requiring manual migration must be documented in release notes.
+Update `VERSION` when preparing a release, then create its matching Git tag.
+
 ```text
 cmd/reef/         Application entry point
 cmd/reef-local/   Local launcher entry point
