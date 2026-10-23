@@ -6,7 +6,7 @@
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
  <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/inventory.js" defer></script>
 </head>
-<body>
+<body class="app-shell">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
 <header><div class="brand"><span class="mark" aria-hidden="true">≋</span><strong>{{.Name}}</strong><span id="connection-status" class="connection" role="status">Connecting to Docker…</span></div><div class="header-actions"><div class="theme-control" role="group" aria-label="Color theme"><button type="button" data-theme-choice="system" aria-pressed="true" title="Follow your system theme">System</button><button type="button" data-theme-choice="light" aria-pressed="false" title="Use the light theme">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false" title="Use the dark theme">Dark</button></div><form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="quiet">Sign out</button></form></div></header>
 {{if .Demo}}<div class="demo-banner">Offline simulation · project operations are simulated; Docker inventory is unavailable.</div>{{end}}

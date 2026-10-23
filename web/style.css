@@ -143,3 +143,11 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .mobile-table-hint{display:none}@media(max-width:760px){.mobile-table-hint{display:block;font-size:10px;margin:0 0 10px}}
 
 .mobile-managed-navigation{display:none}@media(max-width:760px){body[data-detail=false] #managed-navigation{display:none}#managed-navigation .nav-heading,#projects{display:none}.mobile-managed-navigation{display:block;margin:12px 0 2px}.mobile-managed-navigation label{font-size:10px;color:var(--muted)}.mobile-managed-navigation select{min-height:36px;font-size:12px}}
+
+/* Keep navigation visible while the workspace and long project lists scroll. */
+.app-shell{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.app-shell>header,.app-shell>.demo-banner{flex-shrink:0}
+.app-shell>.layout{flex:1;min-height:0;overflow:hidden}
+.app-shell .layout>nav{min-height:0;overflow:auto}
+.app-shell .workspace-shell{min-height:0;overflow:auto;scroll-padding-block:16px}
+@media(max-width:760px){.app-shell>.layout{display:flex;flex-direction:column}.app-shell .layout>nav{flex-shrink:0;max-height:40%;overflow:auto}.app-shell .workspace-shell{flex:1}}
