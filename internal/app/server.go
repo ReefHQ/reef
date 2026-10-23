@@ -117,6 +117,12 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 			s.containers(w, r)
+		case "/api/container-logs":
+			if r.Method != "GET" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.containerLogs(w, r)
 		case "/api/projects/proposal":
 			if r.Method != "GET" {
 				http.Error(w, "Method not allowed", 405)

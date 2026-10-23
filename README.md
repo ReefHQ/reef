@@ -58,6 +58,28 @@ On this development Mac, the installation is `/path/to/reef`, so the applied def
 
 In the project editor, **More actions → Stop managing** removes a UI registration after confirmation, without stopping containers, running Compose, deleting project files or deleting operation history. An active operation blocks removal. Entries originally configured in `config.json` cannot be removed by this button. Reef's own Compose project cannot be registered.
 
+## Container and application logs
+
+Choose **Logs** on a container or project row, or **Application logs** in the
+project editor. Project logs let you select a container/service, including
+stopped containers. This is read-only access for every container in the local
+inventory; a project does not need to be managed by Reef.
+
+The viewer reads application stdout/stderr through Docker, with timestamps.
+Choose all output, stdout or stderr and the latest 100, 200, 500 or 1000 lines.
+Snapshots refresh every three seconds while the viewer is open and the tab is
+visible. Pause updates to inspect a snapshot; scroll up to read without being
+automatically moved to the bottom. Closing the viewer cancels pending reads.
+Errors retain the last successful output and pause automatic refresh.
+
+Each response is capped at 256 KiB and reports truncation. Logs are shown as
+plain text and are not saved by Reef. They can contain application secrets;
+unlike Compose operation logs, application output is not masked. TTY containers
+combine stdout/stderr; drivers without readable logs may return an error.
+Files inside containers are not read. Offline simulation has no Docker logs.
+This is a periodically refreshed snapshot rather than a persistent Docker
+follow/attach connection. No container is restarted or adopted by reading logs.
+
 ## Appearance
 
 Use **System / Light / Dark** on the login page or in the application header. System is the default and follows OS changes. Explicit choices are remembered in this browser for the current origin and shared between its tabs; selecting System clears the override. The theme is applied by a small local script before styles load to avoid a light flash when dark mode is selected. If browser storage is blocked, switching still works for the current page but may not persist. CSS provides a system-theme fallback without JavaScript.
@@ -175,7 +197,7 @@ Simple `.env` values and the access password are masked in captured output; `con
 
 File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Reef does not back up application data. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
 
-The displayed status describes **the operation**, not containers or healthchecks: successful `up -d` does not prove application health. There are no streaming application logs, terminal, multiple users, automatic crash recovery, automatic rollback, monitoring or availability guarantees.
+The displayed operation status describes **the operation**, not container healthchecks: successful `up -d` does not prove application health. Reef has no terminal, multi-user accounts, automatic crash recovery, automatic rollback, monitoring or availability guarantees.
 
 
 
@@ -232,10 +254,11 @@ Go 1.23+ is needed for source development checks; Node.js 18+ is only needed for
 ```sh
 go test -race ./...
 go vet ./...
-node --test tests/theme.test.cjs tests/view-model.test.cjs
+node --test tests/theme.test.cjs tests/view-model.test.cjs tests/logs.test.cjs
 node --check web/model.js
 node --check web/app.js
 node --check web/inventory.js
+node --check web/logs.js
 node --check web/theme.js
 ```
 

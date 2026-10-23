@@ -1,4 +1,4 @@
-// Package docker reads a minimal inventory from the local Docker Unix socket.
+// Package docker reads container inventory and bounded logs from the local Docker Unix socket.
 package docker
 
 import (
