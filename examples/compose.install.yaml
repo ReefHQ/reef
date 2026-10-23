@@ -1,0 +1,56 @@
+# ADAPT THIS EXAMPLE. Not executed. Placeholder paths have not been verified on QNAP.
+services:
+  reef:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        DOCKER_IMAGE: docker:29.9.2-cli
+    image: reef:local
+    labels:
+      io.reef.instance: "true"
+    restart: unless-stopped
+    # Shutdown waits for operations. A forced kill may interrupt a sequence.
+    stop_grace_period: 46m
+    ports:
+      - "127.0.0.1:8099:8099"
+    environment:
+      QCU_PASSWORD_FILE: /run/secrets/reef_password
+      # Alternative to config installation_directory, when that field is absent:
+      # REEF_INSTALLATION_DIR: /CANONICAL_ABSOLUTE_PATH/reef
+    secrets:
+      - reef_password
+    # Match the parent of installation_directory (/CANONICAL_ABSOLUTE_PATH/reef).
+    # Explicit allowed_project_roots override this default; adapt their mounts too.
+    # Keep identical absolute source/target paths; never mount the host root.
+    volumes:
+      - type: bind
+        source: /CANONICAL_ABSOLUTE_PATH
+        target: /CANONICAL_ABSOLUTE_PATH
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /REEF_STATE_PATH
+        target: /var/lib/reef
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /REEF_CONFIG_PATH/config.json
+        target: /etc/reef/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    # /root/.docker is only needed for private registries (see README).
+secrets:
+  reef_password:
+    file: /REEF_SECRET_PATH/password.txt

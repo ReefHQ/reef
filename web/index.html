@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title>
+ <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
+ <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/inventory.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#workspace-content">Skip to content</a>
+<header><div class="brand"><span class="mark" aria-hidden="true">≋</span><strong>{{.Name}}</strong><span id="connection-status" class="connection" role="status">Connecting to Docker…</span></div><div class="header-actions"><div class="theme-control" role="group" aria-label="Color theme"><button type="button" data-theme-choice="system" aria-pressed="true" title="Follow your system theme">System</button><button type="button" data-theme-choice="light" aria-pressed="false" title="Use the light theme">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false" title="Use the dark theme">Dark</button></div><form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="quiet">Sign out</button></form></div></header>
+{{if .Demo}}<div class="demo-banner">Offline simulation · project operations are simulated; Docker inventory is unavailable.</div>{{end}}
+<main class="layout">
+ <nav aria-label="Main navigation">
+  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button></div>
+  <div id="managed-navigation" hidden><div class="nav-heading">MANAGED <span id="project-count">0</span></div><div id="projects"></div><div class="mobile-managed-navigation"><label for="managed-project-select">Managed project</label><select id="managed-project-select"><option value="">Choose a project</option></select></div></div>
+  <p class="nav-note">Visible containers stay read-only until you connect their project.</p>
+ </nav>
+ <div id="workspace-content" class="workspace-shell" tabindex="-1">
+ <div id="inventory-error" class="notice error" role="alert" hidden></div><div id="app-notice" class="notice error" role="alert" hidden></div>
+ <section class="workspace" id="containers-view" aria-labelledby="containers-title">
+  <div class="page-heading"><div><h1 id="containers-title" tabindex="-1">Containers</h1><p class="muted">Your local Docker engine, including stopped containers.</p></div><button id="refresh-containers" type="button">Refresh</button></div>
+  <div class="inventory-summary" aria-label="Container counts"><span><strong id="total-count">—</strong> total</span><span class="running-text"><strong id="running-count">—</strong> running</span><span><strong id="other-count">—</strong> in other states</span><span id="updated-at" class="muted"></span></div>
+  <div class="filter-bar"><div class="search-field"><label for="container-search">Search containers</label><input id="container-search" type="search" placeholder="Name, image or project" autocomplete="off"></div><div><label for="container-state">State</label><select id="container-state"><option value="">All states</option></select></div><div><label for="container-project">Compose project</label><select id="container-project"><option value="">All projects</option></select></div><div><label for="container-access">Access</label><select id="container-access"><option value="">All containers</option><option value="managed">Managed</option><option value="visible">View only</option></select></div></div>
+  <div class="result-line"><span id="container-results" role="status"></span><button class="quiet" id="clear-container-filters" type="button" hidden>Clear filters</button></div>
+  <p class="mobile-table-hint muted">Swipe the table to see all columns.</p>
+  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
+ </section>
+ <section class="workspace" id="projects-view" aria-label="Compose projects" hidden>
+  <div id="project-overview">
+   <div class="page-heading"><div><h1 tabindex="-1" id="projects-title">Projects</h1><p class="muted">Connect a project to edit its Compose files and manage updates.</p></div><button type="button" id="refresh-projects">Refresh</button></div>
+   <div class="filter-bar project-filters"><div class="search-field"><label for="project-search">Search projects</label><input type="search" id="project-search" placeholder="Project name" autocomplete="off"></div><div><label for="project-access">Access</label><select id="project-access"><option value="">All projects</option><option value="managed">Managed</option><option value="visible">View only</option></select></div></div>
+   <div class="result-line"><span id="project-results" role="status"></span></div>
+   <div class="project-list" id="discovered-projects"></div>
+   <details class="access-details"><summary>Project access &amp; allowed folders</summary><p>Connecting a project saves its settings. It does not restart its containers.</p><p id="project-root-summary" class="path muted"></p><p class="muted small">Folders must be mounted into Reef at the same absolute path. The default is the parent of the Reef installation; explicit configured roots take priority.</p></details>
+   <p id="no-managed-projects" class="muted" hidden>No projects connected yet. Choose Manage this project to get started.</p>
+  </div>
+  <section id="project-detail" hidden aria-labelledby="project-name">
+   <button type="button" class="quiet back-button" id="back-projects">← All projects</button>
+   <div class="page-heading"><div><h1 id="project-name" tabindex="-1">Project</h1><p id="project-identity" class="muted"></p></div><details class="project-tools"><summary>More actions</summary><div><button type="button" data-action="start">Start / retry</button><button type="button" data-action="stop" class="danger">Stop project</button><button type="button" id="unmanage-current" hidden>Stop managing</button></div></details></div>
+   <p id="project-path" class="path muted project-directory"></p>
+   <div id="message" role="status" aria-live="polite"></div>
+   <div class="editor-card"><div class="card-heading"><strong id="file-name">Compose</strong><span id="edit-state" class="save-status">Saved</span><button id="reload" type="button" class="quiet">Reload file</button></div><label class="sr-only" for="editor">Main Compose file contents</label><textarea id="editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Compose editor"></textarea><div class="editor-footer"><span id="file-context">Main file · additional files keep their order</span><span id="chars"></span></div></div>
+   <div class="actions"><button type="button" data-action="save" id="save">Save file</button><button type="button" class="primary" data-action="apply" id="apply">Apply update</button><span id="save-shortcut" class="muted small">⌘ / Ctrl + S to save</span></div>
+   <p class="action-help muted">Save file validates and saves. Apply update also pulls images and recreates this project.</p>
+   <section class="operation-card" aria-labelledby="operation-title"><div class="card-heading"><strong id="operation-title">Latest operation</strong><span id="phase" class="tag">None</span></div><p id="operation-result">No operations yet.</p><ol id="steps" class="operation-steps" aria-label="Operation progress"></ol><p id="operation-time" class="muted small"></p><div id="needs-start" class="notice" hidden><p>The project may be stopped or partially running. Review the error, then use Start / retry when ready.</p><button type="button" data-action="start">Start / retry</button></div><p id="operation-next" class="muted" hidden></p><details id="operation-log"><summary>Command log</summary><pre id="logs" tabindex="0" aria-label="Operation log">Operation logs will appear here.</pre></details><p class="muted small">Operation status, not container health.</p></section>
+   <footer>Data folders stay in place. Explicit volume changes or actions performed by your applications can affect your data.</footer>
+  </section>
+ </section>
+ </div>
+</main>
+<dialog id="manage-project" aria-labelledby="manage-title">
+ <form id="manage-form" method="post" action="/api/projects/register"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="project_name" id="manage-identity">
+  <div class="dialog-heading"><div><p class="eyebrow" id="manage-step-label">1 of 2 · Project files</p><h2 id="manage-title">Manage this project</h2></div><button type="button" class="quiet" id="manage-cancel" aria-label="Close project setup">×</button></div>
+  <p class="project-token" id="manage-project-name"></p>
+  <div id="manage-files-step">
+   <p id="manage-notice" class="muted">Check the existing folder and Compose file order detected from Docker.</p>
+   <div class="form-field"><label for="manage-name">Display name</label><input id="manage-name" name="name" maxlength="200" required aria-describedby="manage-name-error"><p id="manage-name-error" class="field-error" hidden></p></div>
+   <div class="form-field"><label for="manage-directory">Project folder</label><input id="manage-directory" name="directory" required autocomplete="off" spellcheck="false" aria-describedby="manage-directory-help manage-directory-error"><p id="manage-directory-help" class="muted small">Use the existing absolute path, mounted at the same path in Reef.</p><p id="manage-directory-error" class="field-error" hidden></p></div>
+   <div class="form-field"><label for="manage-files">Compose files</label><textarea id="manage-files" name="compose_files" rows="3" required spellcheck="false" aria-describedby="manage-files-help manage-files-error"></textarea><p id="manage-files-help" class="muted small">Relative to the project folder. One per line, main file first, overrides in their original order.</p><p id="manage-files-error" class="field-error" hidden></p></div>
+   <details id="manage-env-options"><summary>Environment &amp; advanced options</summary><div class="form-field"><label for="manage-env">Custom interpolation env files</label><textarea id="manage-env" name="env_files" rows="2" spellcheck="false" aria-describedby="manage-env-help manage-env-error"></textarea><p id="manage-env-help" class="muted small">Relative paths, one per line, in their original order. Leave blank to use the default .env behavior. Docker labels do not reliably retain custom env files or profiles. Profiles and custom CLI options are not supported.</p><p id="manage-env-error" class="field-error" hidden></p></div><p class="muted small">Includes, service env files, secrets and build contexts referenced inside Compose are not confined by this form. Review the original project settings before managing it.</p></details>
+   <details id="manage-access-details"><summary>Allowed folders &amp; mounting help</summary><p id="manage-root-source" class="muted small"></p><p id="manage-roots" class="path"></p><p class="muted small">The folder must already exist inside a read/write bind mount at the identical absolute host path. Setup cannot add mounts or create folders. Detected Docker paths are suggestions, never authorization.</p></details>
+  </div>
+  <div id="manage-review-step" hidden><p class="muted">Review the connection. Its containers will keep their current state.</p><dl id="manage-review"></dl><label class="confirm-paths"><input type="checkbox" id="manage-confirm" name="confirmed" value="yes" required> I confirm this existing project, its file order and environment settings, and authorize Reef to manage these files.</label></div>
+  <p id="manage-error" class="notice error" role="alert" hidden></p>
+  <div class="dialog-actions"><button type="button" id="manage-back" hidden>← Edit details</button><button type="button" id="manage-next" class="primary">Review connection →</button><button type="submit" class="primary" id="manage-submit" hidden>Confirm and manage</button></div>
+ </form>
+</dialog>
+<dialog id="confirmation" aria-labelledby="confirm-title"><form method="dialog"><h2 id="confirm-title">Confirm operation</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" autofocus>Cancel</button><button value="confirm" class="primary">Confirm</button></div></form></dialog>
+</body></html>

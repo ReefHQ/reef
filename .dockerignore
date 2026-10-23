@@ -1,0 +1,15 @@
+# Only application and Go launcher source enters the build context.
+**
+!Dockerfile
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!web/
+!web/**
+.reef-local/
+work/
+bin/
+demo/

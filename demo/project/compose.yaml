@@ -1,0 +1,8 @@
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8088:80"
+    volumes:
+      - ./data:/usr/share/nginx/html:ro
+      - ./config:/etc/nginx/templates:ro

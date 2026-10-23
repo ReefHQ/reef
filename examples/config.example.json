@@ -1,0 +1,7 @@
+{
+  "listen": "0.0.0.0:8099",
+  "state_dir": "/var/lib/reef",
+  "secure_cookie": false,
+  "installation_directory": "/CANONICAL_ABSOLUTE_PATH/reef",
+  "projects": []
+}
