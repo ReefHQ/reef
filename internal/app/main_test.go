@@ -24,6 +24,30 @@ func call(h http.Handler, method, path, body, origin string, cookie *http.Cookie
 	h.ServeHTTP(w, r)
 	return w
 }
+func TestIncorrectPasswordKeepsLoginForm(t *testing.T) {
+	m, _, _ := fixture(t, &fakeExecutor{})
+	s := newServer(m, Config{}, "long-password-123456", false)
+	h := s.Handler()
+	w := call(h, "POST", "/login", "password=wrong-private-value", "http://reef.test", nil)
+	if w.Code != http.StatusUnauthorized || !strings.HasPrefix(w.Header().Get("Content-Type"), "text/html") {
+		t.Fatal(w.Code, w.Header())
+	}
+	for _, text := range []string{`action="/login"`, `type="password"`, `autocomplete="current-password"`, `aria-invalid="true"`, `aria-describedby="login-error"`, `id="login-error"`, `role="alert"`, "Incorrect password", "Open Reef"} {
+		if !strings.Contains(w.Body.String(), text) {
+			t.Errorf("Login form missing %q", text)
+		}
+	}
+	if strings.Contains(w.Body.String(), "wrong-private-value") || len(w.Result().Cookies()) != 0 || len(s.sessions) != 0 {
+		t.Fatal("Failed login disclosed input or created a session")
+	}
+	clean := call(h, "GET", "/login", "", "", nil)
+	if clean.Code != 200 || strings.Contains(clean.Body.String(), `id="login-error"`) {
+		t.Fatal("Error persisted on a fresh login page")
+	}
+	if retry := call(h, "POST", "/login", "password=long-password-123456", "http://reef.test", nil); retry.Code != 303 {
+		t.Fatal("Retry failed", retry.Code)
+	}
+}
 func TestAuthCSRFAndDocumentLock(t *testing.T) {
 	f := &fakeExecutor{}
 	m, p, rev := fixture(t, f)
@@ -171,7 +195,6 @@ func TestEnglishInterfaceAndMessages(t *testing.T) {
 		code                             int
 	}{
 		{"GET", "/api/state", "", "", "Sign-in required", 401},
-		{"POST", "/login", "password=wrong", "http://reef.test", "Incorrect password", 401},
 		{"POST", "/login", "password=wrong", "http://other.test", "Origin rejected", 403},
 	} {
 		w := call(h, tc.method, tc.path, tc.body, tc.origin, nil)

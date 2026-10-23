@@ -212,12 +212,16 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
+	s.renderStatus(w, name, data, http.StatusOK)
+}
+func (s *Server) renderStatus(w http.ResponseWriter, name string, data any, status int) {
 	t, e := template.ParseFS(webFiles, name)
 	if e != nil {
 		http.Error(w, "Invalid template", 500)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	if e = t.Execute(w, data); e != nil {
 		log.Print("HTML rendering failed")
 	}
@@ -262,7 +266,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	got := sha256.Sum256([]byte(r.Form.Get("password")))
 	if subtle.ConstantTimeCompare(got[:], s.password[:]) != 1 {
-		http.Error(w, "Incorrect password", 401)
+		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Demo": s.demo, "Error": "Incorrect password"}, http.StatusUnauthorized)
 		return
 	}
 	id := randomID()
