@@ -181,6 +181,17 @@ The displayed status describes **the operation**, not containers or healthchecks
 
 ## Source layout and development checks
 
+The GitLab CI configuration uses the `build` shell runners and disposable Go and
+Node containers, following the existing projects' runner convention. It replaces
+Auto DevOps with two quality jobs on branches, merge requests and tags; a push
+to a branch with an open merge request uses the merge request pipeline only.
+Checks cover Go race tests, vet, Linux amd64/arm64 application compilation,
+launcher compilation and frontend tests/syntax. No Docker socket is passed to
+the check containers. Run the same checks locally with `sh scripts/ci.sh go` and
+`sh scripts/ci.sh frontend` (Docker required). This CI does not publish releases,
+deploy Reef or mirror to GitHub; the private-session removal rule above applies
+when the mirror is added.
+
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
