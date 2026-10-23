@@ -151,3 +151,9 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .app-shell .layout>nav{min-height:0;overflow:auto}
 .app-shell .workspace-shell{min-height:0;overflow:auto;scroll-padding-block:16px}
 @media(max-width:760px){.app-shell>.layout{display:flex;flex-direction:column}.app-shell .layout>nav{flex-shrink:0;max-height:40%;overflow:auto}.app-shell .workspace-shell{flex:1}}
+
+.project-heading-actions{display:flex;align-items:flex-start;gap:10px}.project-row-action{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px}
+#container-logs{width:1050px}#container-logs[open]{display:flex;flex-direction:column;gap:14px;overflow:hidden}#container-logs p{margin:0}
+.log-controls{display:grid;grid-template-columns:minmax(0,2fr) minmax(100px,1fr) 100px auto auto;gap:10px;align-items:end}.log-controls input,.log-controls select{height:40px}.log-controls button{min-height:40px}
+#container-log-output{margin:0;min-height:160px;height:50dvh;overflow:auto;flex:1 1 auto;border:1px solid var(--border);border-radius:8px;background:var(--logs);color:var(--logs-text);padding:14px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
+@media(max-width:760px){.log-controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.log-controls>div:first-child{grid-column:1/-1}.log-controls button{font-size:11px}#container-logs{padding:16px;gap:10px}#container-logs[open]{max-height:95dvh}.project-heading-actions{flex-wrap:wrap;justify-content:flex-end;max-width:50%}.project-heading-actions>button{font-size:11px}#container-log-output{min-height:100px;font-size:11px}}

@@ -4,7 +4,7 @@
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
  <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title>
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
- <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/inventory.js" defer></script>
+ <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/inventory.js" defer></script>
 </head>
 <body class="app-shell">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
@@ -24,7 +24,7 @@
   <div class="filter-bar"><div class="search-field"><label for="container-search">Search containers</label><input id="container-search" type="search" placeholder="Name, image or project" autocomplete="off"></div><div><label for="container-state">State</label><select id="container-state"><option value="">All states</option></select></div><div><label for="container-project">Compose project</label><select id="container-project"><option value="">All projects</option></select></div><div><label for="container-access">Access</label><select id="container-access"><option value="">All containers</option><option value="managed">Managed</option><option value="visible">View only</option></select></div></div>
   <div class="result-line"><span id="container-results" role="status"></span><button class="quiet" id="clear-container-filters" type="button" hidden>Clear filters</button></div>
   <p class="mobile-table-hint muted">Swipe the table to see all columns.</p>
-  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
+  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th><th scope="col">Logs</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
  </section>
  <section class="workspace" id="projects-view" aria-label="Compose projects" hidden>
   <div id="project-overview">
@@ -37,7 +37,7 @@
   </div>
   <section id="project-detail" hidden aria-labelledby="project-name">
    <button type="button" class="quiet back-button" id="back-projects">← All projects</button>
-   <div class="page-heading"><div><h1 id="project-name" tabindex="-1">Project</h1><p id="project-identity" class="muted"></p></div><details class="project-tools"><summary>More actions</summary><div><button type="button" data-action="start">Start / retry</button><button type="button" data-action="stop" class="danger">Stop project</button><button type="button" id="unmanage-current" hidden>Stop managing</button></div></details></div>
+   <div class="page-heading"><div><h1 id="project-name" tabindex="-1">Project</h1><p id="project-identity" class="muted"></p></div><div class="project-heading-actions"><button type="button" id="project-container-logs">Application logs</button><details class="project-tools"><summary>More actions</summary><div><button type="button" data-action="start">Start / retry</button><button type="button" data-action="stop" class="danger">Stop project</button><button type="button" id="unmanage-current" hidden>Stop managing</button></div></details></div></div>
    <p id="project-path" class="path muted project-directory"></p>
    <div id="message" role="status" aria-live="polite"></div>
    <div class="editor-card"><div class="card-heading"><strong id="file-name">Compose</strong><span id="edit-state" class="save-status">Saved</span><button id="reload" type="button" class="quiet">Reload file</button></div><label class="sr-only" for="editor">Main Compose file contents</label><textarea id="editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Compose editor"></textarea><div class="editor-footer"><span id="file-context">Main file · additional files keep their order</span><span id="chars"></span></div></div>
@@ -65,6 +65,15 @@
   <p id="manage-error" class="notice error" role="alert" hidden></p>
   <div class="dialog-actions"><button type="button" id="manage-back" hidden>← Edit details</button><button type="button" id="manage-next" class="primary">Review connection →</button><button type="submit" class="primary" id="manage-submit" hidden>Confirm and manage</button></div>
  </form>
+</dialog>
+<dialog id="container-logs" aria-labelledby="container-logs-title" aria-describedby="container-logs-help">
+ <div class="dialog-heading"><div><p class="eyebrow">Application output · read only</p><h2 id="container-logs-title">Container logs</h2></div><button type="button" class="quiet" id="close-container-logs" aria-label="Close container logs">×</button></div>
+ <p id="container-logs-help" class="muted small">Recent stdout/stderr from Docker, with timestamps. TTY containers combine both streams. Files inside containers are not included.</p>
+ <div class="log-controls"><div><label for="log-container">Container / service</label><select id="log-container"></select></div><div><label for="log-stream">Output</label><select id="log-stream"><option value="all">All output</option><option value="stdout">stdout</option><option value="stderr">stderr</option></select></div><div><label for="log-tail">Recent lines</label><select id="log-tail"><option>100</option><option selected>200</option><option>500</option><option>1000</option></select></div><button type="button" id="refresh-container-logs">Refresh</button><button type="button" id="toggle-container-logs" aria-pressed="true">Pause updates</button></div>
+ <p id="container-logs-status" class="muted small" role="status"></p>
+ <p id="container-logs-error" class="notice error" role="alert" hidden></p>
+ <p id="container-logs-limit" class="notice" hidden>Output limited to 256 KiB. Choose fewer recent lines to reduce the response.</p>
+ <pre id="container-log-output" tabindex="0" aria-label="Application log output"></pre>
 </dialog>
 <dialog id="confirmation" aria-labelledby="confirm-title"><form method="dialog"><h2 id="confirm-title">Confirm operation</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" autofocus>Cancel</button><button value="confirm" class="primary">Confirm</button></div></form></dialog>
 </body></html>

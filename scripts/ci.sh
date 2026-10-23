@@ -13,9 +13,9 @@ case "${1:-}" in
     ;;
   frontend)
     image=node:24-bookworm-slim
-    checks='node --test tests/theme.test.cjs tests/view-model.test.cjs &&
+    checks='node --test tests/theme.test.cjs tests/view-model.test.cjs tests/logs.test.cjs &&
       node --check web/model.js && node --check web/app.js &&
-      node --check web/inventory.js && node --check web/theme.js'
+      node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js'
     ;;
   *) echo 'Usage: sh scripts/ci.sh go|frontend' >&2; exit 2 ;;
 esac
