@@ -52,11 +52,11 @@
   const name=document.createElement('span');name.textContent=`${sequence} · ${c.name}`;const state=document.createElement('span');state.className='console-tab-state';state.textContent='not connected';tab.append(name,state);tab.setAttribute('aria-label',`${label} — not connected`);
   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Close and disconnect ${label}`);tabGroup.append(tab,remove);
   const pane=document.createElement('div');pane.className='console-dock-pane';pane.id=key+'-pane';pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',tab.id);
-  const frame=document.createElement('iframe');frame.title=`Terminal for ${label}`;frame.src='/console?'+new URLSearchParams({id:c.id,embedded:'1',channel:key});pane.append(frame);
+  const frame=document.createElement('iframe');frame.classList.add('is-loading');frame.title=`Terminal for ${label}`;frame.src='/console?'+new URLSearchParams({id:c.id,embedded:'1',channel:key});pane.append(frame);
   const entry={key,c,label,tabGroup,tab,state,pane,frame,phase:'idle',console:'',controller:null};entries.set(key,entry);tabs.append(tabGroup);panes.append(pane);size(height);select(key);count();
   tab.addEventListener('click',()=>{collapsed=false;select(key);});remove.addEventListener('click',()=>close(key));
   tab.addEventListener('keydown',event=>{const keys=[...entries.keys()],index=keys.indexOf(key);let target;if(event.key==='ArrowRight')target=keys[(index+1)%keys.length];if(event.key==='ArrowLeft')target=keys[(index+keys.length-1)%keys.length];if(event.key==='Home')target=keys[0];if(event.key==='End')target=keys.at(-1);if(target){event.preventDefault();select(target,true);}if(event.key==='Delete'){event.preventDefault();close(key);}});
-  frame.addEventListener('load',()=>{tell(entry,{action:'activate',active:selected===key&&!collapsed});});
+  frame.addEventListener('load',()=>{frame.classList.remove('is-loading');tell(entry,{action:'activate',active:selected===key&&!collapsed});});
  };
  window.addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.data?.type!=='reef-console-frame')return;
