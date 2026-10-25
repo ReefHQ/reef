@@ -13,9 +13,9 @@ case "${1:-}" in
     ;;
   frontend)
     image=node:24-bookworm-slim
-    checks='node --test tests/theme.test.cjs tests/view-model.test.cjs tests/logs.test.cjs &&
+    checks='node scripts/check-version.cjs && node --test tests/*.test.cjs &&
       node --check web/model.js && node --check web/app.js &&
-      node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js'
+      node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js && node --check web/console.js && node --check web/console-picker.js && node --check web/container-details.js && node --check web/console-dock.js && node --check web/console-frame.js'
     ;;
   *) echo 'Usage: sh scripts/ci.sh go|frontend' >&2; exit 2 ;;
 esac
@@ -26,9 +26,10 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 docker create --name "$container" --network none --workdir /src \
   --env GOTOOLCHAIN=local --env GOPROXY=off --env GOSUMDB=off \
+  --env CI_COMMIT_TAG="${CI_COMMIT_TAG:-}" \
   "$image" sh -ec "$checks"
 # Copy only the required source; never copy .git or the private local runtime.
-for source in go.mod cmd internal web tests; do
+for source in go.mod VERSION cmd internal web tests scripts; do
   docker cp "$source" "$container:/src/"
 done
 docker start --attach "$container"

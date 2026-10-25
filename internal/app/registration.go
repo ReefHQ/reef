@@ -240,9 +240,6 @@ func selfProject(rows []docker.Container, name string) bool {
 	return false
 }
 func (s *Server) discovered(r *http.Request, name string) ([]docker.Container, error) {
-	if s.demo {
-		return nil, errors.New("Project registration is unavailable in offline simulation")
-	}
 	if !identifier.MatchString(name) || len(name) > 128 {
 		return nil, errors.New("Invalid Compose project name")
 	}

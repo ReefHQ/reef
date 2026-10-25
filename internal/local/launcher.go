@@ -173,7 +173,7 @@ func (l *Launcher) initialize(current engine) (metadata, error) {
 	}
 	install := map[string]any{"services": map[string]any{"reef": map[string]any{
 		"image": meta.Image, "build": map[string]string{"context": l.root}, "labels": map[string]string{"io.reef.local": meta.Prefix},
-		"ports": []string{fmt.Sprintf("127.0.0.1:%d:8099", meta.Port)}, "environment": map[string]string{"QCU_PASSWORD_FILE": "/run/secrets/reef_password", "REEF_INSTALLATION_DIR": l.root}, "secrets": []string{"reef_password"}, "stop_grace_period": "46m",
+		"ports": []string{fmt.Sprintf("127.0.0.1:%d:8099", meta.Port)}, "environment": map[string]string{"QCU_PASSWORD_FILE": "/run/secrets/reef_password", "REEF_INSTALLATION_DIR": l.root}, "secrets": []string{"reef_password"}, "stop_grace_period": "46m", "restart": "unless-stopped",
 		"volumes":   []any{bind(filepath.Dir(l.root), filepath.Dir(l.root), false), bind(filepath.Join(dir, "state"), "/var/lib/reef", false), bind(filepath.Join(dir, "config.json"), "/etc/reef/config.json", true), bind("/var/run/docker.sock", "/var/run/docker.sock", false)},
 		"read_only": true, "tmpfs": []string{"/tmp"}, "security_opt": []string{"no-new-privileges:true"},
 	}}, "secrets": map[string]any{"reef_password": map[string]string{"file": filepath.Join(dir, "password.txt")}}}
@@ -232,6 +232,9 @@ func (l *Launcher) Run(action string) error {
 	switch action {
 	case "up":
 		if e = l.ensureInstallationRoot(); e != nil {
+			return e
+		}
+		if e = l.ensureRestartPolicy(); e != nil {
 			return e
 		}
 		if e = invoke("config", "--quiet"); e == nil {

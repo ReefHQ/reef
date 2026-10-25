@@ -10,10 +10,6 @@ import (
 )
 
 func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) {
-	if s.demo {
-		http.Error(w, "Container logs are unavailable in offline simulation.", 503)
-		return
-	}
 	id, stream := r.URL.Query().Get("id"), r.URL.Query().Get("stream")
 	if stream == "" {
 		stream = "all"

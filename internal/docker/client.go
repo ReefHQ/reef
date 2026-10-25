@@ -1,4 +1,4 @@
-// Package docker reads container inventory and bounded logs from the local Docker Unix socket.
+// Package docker reads inventory/logs and opens authorized exec consoles on the local Docker Unix socket.
 package docker
 
 import (
@@ -28,12 +28,16 @@ type Container struct {
 type Lister interface {
 	List(context.Context) ([]Container, error)
 }
-type Client struct{ http *http.Client }
+type Client struct {
+	http *http.Client
+	dial func(context.Context) (net.Conn, error)
+}
 
 func NewClient(socket string) *Client {
-	return &Client{http: &http.Client{Timeout: 6 * time.Second, Transport: &http.Transport{
+	dial := func(ctx context.Context) (net.Conn, error) { return (&net.Dialer{}).DialContext(ctx, "unix", socket) }
+	return &Client{dial: dial, http: &http.Client{Timeout: 6 * time.Second, Transport: &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, "unix", socket)
+			return dial(ctx)
 		},
 		MaxIdleConns: 2, MaxIdleConnsPerHost: 2, IdleConnTimeout: 30 * time.Second,
 	}}}

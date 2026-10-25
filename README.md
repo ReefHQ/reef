@@ -6,7 +6,7 @@ The target QNAP NAS hosts **production** projects. Reef is developed and checked
 
 ## Quick start — real Docker Desktop
 
-The reference source folder is `/path/to/reef`. Real Docker validation has passed on this Mac. Simulation is optional and is not needed for the normal local launch.
+The reference source folder is `/path/to/reef`. Real Docker validation has passed on this Mac.
 
 Prerequisites: Docker Desktop running with its local context selected, Docker Compose, and the standard shell utilities included with the OS. Python is not required. Go is not required on the host: the shell bootstrap compiles the small Go launcher in a temporary, network-isolated Go container and caches only its executable under `.reef-local/tools/`. No Docker socket or private runtime data is mounted into that compiler container. Node.js is only used for optional frontend development tests.
 
@@ -24,6 +24,11 @@ The default Containers view reads **all containers, including stopped ones**, fr
 ./reef-local.sh status
 ./reef-local.sh stop
 ```
+
+Reef's UI container uses `restart: unless-stopped`. The local launcher sets this
+for new installations and applies it to existing Reef service definitions on
+`up`, before Compose validation and recreation. Other local launcher commands do
+not change the policy. The manual installation example uses the same policy.
 
 `stop` stops only the Reef UI; it does not stop projects managed through Reef. Use the UI's Stop action for the playground. The authenticated Reef UI and its own network are left running for exploration. Preexisting containers are listed read-only; they have not been restarted or adopted. Published images/build layers remain cached; no global cleanup or prune was run.
 
@@ -60,6 +65,13 @@ In the project editor, **More actions → Stop managing** removes a UI registrat
 
 ## Container and application logs
 
+Container names open a details panel with the full ID, image, state/status and
+Compose project/service metadata from inventory. Managed project editors also
+list their individual containers, with the same details and actions. All action
+groups use the order **Logs → Console**; stopped containers keep logs available
+and disable console access. The container list refreshes without replacing the
+Compose editor or discarding its unsaved changes.
+
 Choose **Logs** on a container or project row, or **Application logs** in the
 project editor. Project logs let you select a container/service, including
 stopped containers. This is read-only access for every container in the local
@@ -76,9 +88,55 @@ Each response is capped at 256 KiB and reports truncation. Logs are shown as
 plain text and are not saved by Reef. They can contain application secrets;
 unlike Compose operation logs, application output is not masked. TTY containers
 combine stdout/stderr; drivers without readable logs may return an error.
-Files inside containers are not read. Offline simulation has no Docker logs.
+Files inside containers are not read.
 This is a periodically refreshed snapshot rather than a persistent Docker
 follow/attach connection. No container is restarted or adopted by reading logs.
+
+## Container console
+
+Choose **Console** on a running container, project row or managed project editor.
+A new session tab opens in Reef's persistent bottom panel. Select `/bin/sh` or
+`/bin/bash`, then **Connect** to authorize the shell; opening a console tab alone
+executes nothing. The selected shell must exist in the container image.
+
+Each tab has its own shell, even when several tabs target the same container.
+Continue navigating Containers/Projects and editing Compose while sessions stay
+connected. **New session** opens another tab for the selected container. Drag the
+panel separator (or use its arrow keys), reduce, expand or maximize the panel
+without disconnecting. Switching tabs does not close or recreate terminals.
+Project/container names remain visible to identify the selected shell.
+
+**Disconnect** ends the selected shell connection and keeps its terminal output
+available. **Disconnect all** ends all connections in this panel. Closing a
+console tab disconnects it and removes its terminal. A page reload, closing the
+browser tab, logout, login expiry or Reef shutdown also ends connections; Reef
+never replays commands or reconnects shells automatically. Use `exit` to leave
+the shell. Disconnecting does not guarantee that already started commands have
+terminated, and never stops the container.
+
+The exec inherits the container's configured user and has no additional
+privileges. Console access is independent of Compose registration; an
+authenticated user can explicitly connect to any running container in inventory.
+Commands can change files and mounted data; input/output is neither masked nor
+persisted. These commands are outside Compose operation locks, like an external
+editor. Avoid changing Compose files during operations. Container recreation
+interrupts its console. Stopped/paused containers have no console.
+
+Defaults are **8 console sessions per login and 16 for the Reef instance**.
+Configure `console_sessions_per_login` (1–64) and `console_sessions_total` (1–128)
+in config; omitted/zero values use the defaults, and the per-login limit cannot
+exceed the total. The panel permits that many session tabs; server quotas count
+active and opening shells across browser pages. Configuration changes require
+restarting Reef. Sessions retain their 30-minute lifetime, 10-minute input/output
+inactivity timeout and 16 MiB output limit.
+
+The Go backend uses only the standard library. Local xterm.js 6.0.0 and fit addon
+0.11.0 (MIT) render each terminal in an isolated same-origin frame. Only the
+terminal document permits inline CSS and same-origin framing; the main page's
+CSP and framing restrictions remain intact. One bounded HTTP output stream is
+shared by all shells in the panel, avoiding HTTP/1.1 connection-pool exhaustion.
+A reverse proxy must pass streaming responses without buffering; heartbeats are
+sent every 15 seconds. No CDN, WebSocket or runtime package download is used.
 
 ## Appearance
 
@@ -86,19 +144,6 @@ Use **System / Light / Dark** on the login page or in the application header. Sy
 
 Both marine palettes cover the editor, operation logs, warning/error states, confirmation dialog, keyboard focus and login form. Theme controls use native keyboard-operable buttons with `aria-pressed`. No backend, Compose command, authentication policy or project data behavior depends on the theme.
 
-## Optional simulation without Docker
-
-From this directory on the development Apple Silicon Mac:
-
-```sh
-./demo.sh
-```
-
-Choose a free loopback port with `./demo.sh -listen 127.0.0.1:8100` if needed; do not use a port occupied by the real installation. By default open [http://127.0.0.1:8099](http://127.0.0.1:8099). Password: `demo-compose-local-only`, unless overridden with `QCU_PASSWORD` or `QCU_PASSWORD_FILE`. The optional preview requires Go 1.23+ (`go run ./cmd/reef -demo`); precompiled delivery binaries are not part of the source tree. Real Docker mode does not require a host Go installation.
-
-The demo only listens on loopback. **No Docker commands are executed.** Operations are simulated, but edits to `demo/project/compose.yaml`, its backups and the logs in `demo/state/` are real. Demo validation only checks for `services:` and rejects `DEMO_INVALID`; it **does not validate YAML or Compose syntax**. Add `DEMO_INVALID` to observe a failure before saving. Outside simulation, validation is delegated to `docker compose config --quiet`.
-
-The demo includes the project list, main-file editor, polling every 1.8 seconds, operation logs, validate/save, start, stop and update actions. Tests also inject pull and startup failures. Reef's own interface, confirmations and messages are in English. User-defined project names, Compose contents, existing historical logs and external Docker messages are shown as provided.
 
 ## Editor workflow
 
@@ -121,7 +166,7 @@ Each authorized project is explicitly listed in configuration or confirmed and p
 
 A validation failure before saving leaves the original intact. A pull failure leaves the edited Compose saved, but prevents `down`. Backups are not restored automatically. If `down` or `up -d` fails, containers may be stopped or partially running; Reef makes this clear and offers **Start / retry** (`config --quiet`, then `up -d`). There is no automatic rollback or availability guarantee.
 
-**More actions → Stop project** validates, then runs `down`, without deleting named volumes. A down/up cycle can remove and recreate containers and networks; anonymous volumes may not be reattached as before. Prefer existing bind mounts or named volumes. **Save file** stops after validation, backup and saving; it does not restart services. Web requests cannot provide arbitrary commands: the server constructs arguments using `exec.CommandContext`, without a shell.
+**More actions → Stop project** validates, then runs `down`, without deleting named volumes. A down/up cycle can remove and recreate containers and networks; anonymous volumes may not be reattached as before. Prefer existing bind mounts or named volumes. **Save file** stops after validation, backup and saving; it does not restart services. Compose action requests cannot provide arbitrary commands: the server constructs their arguments using `exec.CommandContext`, without a host shell. The separately authorized container console uses Docker exec.
 
 Operations continue after closing the tab and have a total timeout of 45 minutes. A project lock prevents editing and simultaneous operations on that project. A content hash covers configured Compose files, configured interpolation files and the default `.env`, rejecting outdated edits. SSH changes are detected at checkpoints, but Reef cannot lock an external editor: do not change these files while an operation is running. Files referenced through `include`, `extends`, service `env_file`, secrets, configs or build contexts are outside this revision hash.
 
@@ -152,7 +197,7 @@ go build -o /tmp/reef ./cmd/reef
 QCU_PASSWORD_FILE=/private/path/password.txt /tmp/reef -config /private/path/config.json
 ```
 
-The password must contain at least 16 characters. `QCU_PASSWORD_FILE` takes precedence over `QCU_PASSWORD`. Do not reuse the demo password. Docker client and Compose plugin must be installed. The socket is fixed to `/var/run/docker.sock`; remote Docker hosts and contexts are not supported. Docker subprocesses receive only `PATH`, `HOME`, the socket and Compose display settings, not the Reef password or arbitrary server environment variables. Put required interpolation values in project `.env` files rather than the server environment.
+The password must contain at least 16 characters. `QCU_PASSWORD_FILE` takes precedence over `QCU_PASSWORD`. Docker client and Compose plugin must be installed. The socket is fixed to `/var/run/docker.sock`; remote Docker hosts and contexts are not supported. Docker subprocesses receive only `PATH`, `HOME`, the socket and Compose display settings, not the Reef password or arbitrary server environment variables. Put required interpolation values in project `.env` files rather than the server environment.
 
 ## Container and future NAS installation
 
@@ -177,7 +222,7 @@ If the NAS cannot build the image, build on a suitable machine for its architect
 
 The Docker socket grants powerful access, effectively host administration. The example runs as root to access the socket and preserve file ownership when replacing Compose; a limited user requires matching UID/GID and file permissions. The browser never receives the socket. Ports bind to `127.0.0.1` by default: use an SSH tunnel or an authenticated HTTPS reverse proxy on the local network. Do not expose Reef directly to the Internet. The local HTTP cookie uses HttpOnly and SameSite Strict; HTTP over the LAN would still send credentials without encryption. Set `secure_cookie: true` for HTTPS deployment.
 
-Native same-origin forms work with `Referrer-Policy: same-origin`; cross-origin referrer details are suppressed. Strict origin checks remain active. A legacy fallback accepts opaque origins only in loopback simulation with `Sec-Fetch-Site: same-origin`; real Docker mode rejects them. See the [Fetch standard origin-header rules](https://fetch.spec.whatwg.org/#origin-header) for why the previous `no-referrer` setting broke native POST forms.
+Native same-origin forms work with `Referrer-Policy: same-origin`; cross-origin referrer details are suppressed. Strict origin checks remain active. Opaque origins are rejected, including requests carrying `Sec-Fetch-Site: same-origin`. See the [Fetch standard origin-header rules](https://fetch.spec.whatwg.org/#origin-header) for why the previous `no-referrer` setting broke native POST forms.
 
 Sessions expire after 12 hours and are cleared on restart. Mutations require a per-session CSRF token and matching origin. Login attempts are limited, CSP excludes third-party scripts, and logs are inserted as text. Graceful shutdown waits for operations; `stop_grace_period: 46m` prevents Compose from killing Reef too quickly. A forced kill, power loss or restart may interrupt an update. On restart the operation is marked interrupted with unknown Docker state; no recovery command runs automatically.
 
@@ -197,7 +242,7 @@ Simple `.env` values and the access password are masked in captured output; `con
 
 File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Reef does not back up application data. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
 
-The displayed operation status describes **the operation**, not container healthchecks: successful `up -d` does not prove application health. Reef has no terminal, multi-user accounts, automatic crash recovery, automatic rollback, monitoring or availability guarantees.
+The displayed operation status describes **the operation**, not container healthchecks: successful `up -d` does not prove application health. Reef has no multi-user accounts, automatic crash recovery, automatic rollback, monitoring or availability guarantees.
 
 
 
@@ -218,7 +263,8 @@ when the mirror is added.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, starting at `0.1.0`. Release tags
+source of truth for the application version, currently `0.2.0` in development.
+Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
 
@@ -231,7 +277,11 @@ does not mean a release has been tagged or published.
 
 Compatibility includes configuration, persisted state and documented HTTP/API
 behavior. Changes requiring manual migration must be documented in release notes.
-Update `VERSION` when preparing a release, then create its matching Git tag.
+Record user-facing changes in `CHANGELOG.md`. When starting work beyond an already
+tagged release, bump `VERSION` for the next release (MINOR for features, PATCH for
+compatible fixes); related changes may share the same unreleased version. Before
+publishing, finalize the changelog and create the matching Git tag. CI checks
+SemVer syntax and requires tags to match `VERSION`; no automatic tag is created.
 
 ```text
 cmd/reef/         Application entry point
@@ -243,7 +293,6 @@ web/             Embedded HTML/CSS/JavaScript and themes
 scripts/         Minimal shell bootstrap; reef-local.sh is the root convenience entry
 tests/           Frontend theme, filtering and progress view-model tests
 examples/        Explicit configuration and installation examples
-demo/            Optional offline simulation fixtures
 .reef-local/     Private live configuration, state, password and tool cache (ignored)
 ```
 
@@ -254,11 +303,17 @@ Go 1.23+ is needed for source development checks; Node.js 18+ is only needed for
 ```sh
 go test -race ./...
 go vet ./...
-node --test tests/theme.test.cjs tests/view-model.test.cjs tests/logs.test.cjs
+node --test tests/*.test.cjs
 node --check web/model.js
 node --check web/app.js
 node --check web/inventory.js
 node --check web/logs.js
+node --check web/console.js
+node --check web/console-dock.js
+node --check web/console-frame.js
+node --check web/console-picker.js
+node --check web/container-details.js
+node scripts/check-version.cjs
 node --check web/theme.js
 ```
 

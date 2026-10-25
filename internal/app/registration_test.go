@@ -201,7 +201,7 @@ func TestRegistrationAuthConfirmationUntrustedHintsAndSelfProtection(t *testing.
 	c, p := adoptionFixture(t)
 	x := &fakeExecutor{}
 	m, _ := newManager(c, x)
-	s := newServer(m, c, "long-password-123456", false)
+	s := newServer(m, c, "long-password-123456")
 	s.discovery = &inventoryStub{rows: []docker.Container{{ID: "other", ComposeProject: p.ProjectName, WorkingDir: "/unmounted/<script>alert(1)</script>", ConfigFiles: "/outside/a.yaml"}, {ID: "reef", ComposeProject: "reef-self", Reef: true}}}
 	h := s.Handler()
 	s.sessions["test"] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
@@ -310,7 +310,7 @@ func TestExistingConfigRemainsAvailableAndRootRevocationFailsClosed(t *testing.T
 func TestRegistrationErrorsIdentifyTheFieldWithoutAuthorizingFiles(t *testing.T) {
 	c, p := adoptionFixture(t)
 	m, _ := newManager(c, &fakeExecutor{})
-	s := newServer(m, c, "long-password-123456", false)
+	s := newServer(m, c, "long-password-123456")
 	s.discovery = &inventoryStub{rows: []docker.Container{{ID: "fixture", ComposeProject: p.ProjectName}}}
 	s.sessions["field-test"] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
 	cookie := &http.Cookie{Name: "qcu_session", Value: "field-test"}

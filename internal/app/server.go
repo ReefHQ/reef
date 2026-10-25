@@ -32,25 +32,21 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
-	discovery docker.Lister
-	m         *Manager
-	cfg       Config
-	demo      bool
-	password  [32]byte
-	mu        sync.Mutex
-	sessions  map[string]session
-	attempts  map[string]attempt
+	discovery      docker.Lister
+	m              *Manager
+	cfg            Config
+	password       [32]byte
+	mu             sync.Mutex
+	sessions       map[string]session
+	attempts       map[string]attempt
+	consoles       map[string]*consoleSession
+	consoleStreams map[string]*consoleTransport
 }
 
-func newServer(m *Manager, c Config, password string, demo bool) *Server {
-	return &Server{discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, demo: demo, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+func newServer(m *Manager, c Config, password string) *Server {
+	return &Server{discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
-	// The in-app browser submits an opaque Origin for native forms.
-	// This exception is confined to loopback-only simulation, never the Docker mode.
-	if s.demo && r.Header.Get("Origin") == "null" && r.Header.Get("Sec-Fetch-Site") == "same-origin" {
-		return true
-	}
 	u, e := url.Parse(r.Header.Get("Origin"))
 	if e != nil || u.Host != r.Host || u.User != nil {
 		return false
@@ -105,12 +101,37 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		switch r.URL.Path {
+		case "/console":
+			if r.Method != "GET" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.consolePage(w, r, sess)
+		case "/api/console/open":
+			if r.Method != "POST" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.openConsole(w, r, sess)
+		case "/api/console/stream":
+			if r.Method != "POST" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.consoleStream(w, r, sess)
+		case "/api/console/input", "/api/console/resize", "/api/console/close":
+			if r.Method != "POST" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.consoleAction(w, r, sess)
 		case "/":
 			if r.Method != "GET" {
 				http.Error(w, "Method not allowed", 405)
 				return
 			}
-			s.render(w, "index.html", map[string]any{"Name": appName, "Demo": s.demo, "CSRF": sess.CSRF})
+			per, _ := s.cfg.consoleLimits()
+			s.render(w, "index.html", map[string]any{"Name": appName, "CSRF": sess.CSRF, "ConsoleSessionLimit": per})
 		case "/api/containers":
 			if r.Method != "GET" {
 				http.Error(w, "Method not allowed", 405)
@@ -194,6 +215,16 @@ func (s *Server) Handler() http.Handler {
 			c, _ := r.Cookie("qcu_session")
 			s.mu.Lock()
 			delete(s.sessions, c.Value)
+			for _, entry := range s.consoles {
+				if entry.owner == sess.CSRF {
+					entry.cancel()
+				}
+			}
+			for _, stream := range s.consoleStreams {
+				if stream.owner == sess.CSRF {
+					stream.cancel()
+				}
+			}
 			s.mu.Unlock()
 			http.SetCookie(w, &http.Cookie{Name: "qcu_session", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode})
 			http.Redirect(w, r, "/login", 303)
@@ -232,7 +263,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		s.render(w, "login.html", map[string]any{"Name": appName, "Demo": s.demo})
+		s.render(w, "login.html", map[string]any{"Name": appName})
 		return
 	}
 	if r.Method != "POST" {
@@ -266,7 +297,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	got := sha256.Sum256([]byte(r.Form.Get("password")))
 	if subtle.ConstantTimeCompare(got[:], s.password[:]) != 1 {
-		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Demo": s.demo, "Error": "Incorrect password"}, http.StatusUnauthorized)
+		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": "Incorrect password"}, http.StatusUnauthorized)
 		return
 	}
 	id := randomID()

@@ -2,6 +2,8 @@
   "listen": "0.0.0.0:8099",
   "state_dir": "/var/lib/reef",
   "secure_cookie": false,
+  "console_sessions_per_login": 8,
+  "console_sessions_total": 16,
   "installation_directory": "/CANONICAL_ABSOLUTE_PATH/reef",
   "projects": []
 }

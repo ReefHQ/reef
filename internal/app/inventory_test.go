@@ -27,7 +27,7 @@ func (f *inventoryStub) List(context.Context) ([]docker.Container, error) {
 func TestInventoryRequiresAuthAndDoesNotAdoptProjects(t *testing.T) {
 	executor := &fakeExecutor{}
 	m, p, _ := fixture(t, executor)
-	s := newServer(m, Config{}, "long-password-123456", false)
+	s := newServer(m, Config{}, "long-password-123456")
 	reader := &inventoryStub{rows: []docker.Container{{ID: "running", Name: "Real application", State: "running", ComposeProject: "unconfigured"}, {ID: "stopped", Name: "Stopped application", State: "exited", ComposeProject: p.ProjectName}}}
 	s.discovery = reader
 	h := s.Handler()

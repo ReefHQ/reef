@@ -144,6 +144,17 @@ func (l *Launcher) ensureInstallationRoot() error {
 	if !changed {
 		return nil
 	}
+	if e = l.writeCompose(original, compose, info); e != nil {
+		return e
+	}
+	fmt.Fprintln(l.out, "Default project root: "+parent+" (parent of Reef installation "+l.root+"). Only Reef's service definition was updated; configured projects and private state were preserved.")
+	return nil
+}
+
+// writeCompose replaces only the local UI's Compose definition and refuses
+// to overwrite an intervening edit. Callers preserve all unrelated fields.
+func (l *Launcher) writeCompose(original []byte, compose map[string]any, info os.FileInfo) error {
+	path := filepath.Join(l.runtime(), "compose.json")
 	next, e := json.MarshalIndent(compose, "", "  ")
 	if e != nil {
 		return e
@@ -178,7 +189,7 @@ func (l *Launcher) ensureInstallationRoot() error {
 		return e
 	}
 	if !bytes.Equal(current, original) {
-		return errors.New("compose.json changed during installation migration; retry after reviewing it")
+		return errors.New("compose.json changed during local configuration update; retry after reviewing it")
 	}
 	if e = os.Rename(f.Name(), path); e != nil {
 		return e
@@ -191,6 +202,5 @@ func (l *Launcher) ensureInstallationRoot() error {
 	if e = directory.Sync(); e != nil {
 		return e
 	}
-	fmt.Fprintln(l.out, "Default project root: "+parent+" (parent of Reef installation "+l.root+"). Only Reef's service definition was updated; configured projects and private state were preserved.")
 	return nil
 }

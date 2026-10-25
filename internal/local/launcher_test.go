@@ -84,6 +84,7 @@ func TestFreshInstallationHasNoManagedProjectsAndNeverOverwritesPassword(t *test
 	}
 	var compose struct {
 		Services map[string]struct {
+			Restart     string
 			Environment map[string]string
 			Volumes     []struct {
 				Type, Source, Target string
@@ -99,6 +100,9 @@ func TestFreshInstallationHasNoManagedProjectsAndNeverOverwritesPassword(t *test
 		t.Fatal(e)
 	}
 	reef := compose.Services["reef"]
+	if reef.Restart != "unless-stopped" {
+		t.Fatal("fresh installation lacks unless-stopped restart policy")
+	}
 	if reef.Environment["REEF_INSTALLATION_DIR"] != l.root {
 		t.Fatal("fresh installation path not transmitted")
 	}
