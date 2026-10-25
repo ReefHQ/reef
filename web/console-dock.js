@@ -43,10 +43,10 @@
   if(!entries.size){const current=transport;transport=null;current?.controller.abort();current?.reject(Error('Console panel closed.'));maximized=false;collapsed=false;layout();}
  }
  window.openContainerConsole=c=>{
-  if(c.state!=='running')return;
+  if(c.state!=='running'||c.inventory_only)return;
   collapsed=false;layout();
   if(entries.size>=limit){error.textContent=`${limit} console tabs are open. Close a tab before opening another.`;error.hidden=false;return;}
-  error.hidden=true;const key='console-'+(++sequence),label=`${sequence} · ${c.name}${c.compose_project?' · '+c.compose_project:''}`;
+  error.hidden=true;const key='console-'+(++sequence),label=`${sequence} · ${c.name}${c.compose_project?' · '+c.compose_project:''} · Local`;
   const tabGroup=document.createElement('div');tabGroup.className='console-dock-tab';tabGroup.setAttribute('role','presentation');
   const tab=document.createElement('button');tab.type='button';tab.id=key+'-tab';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',key+'-pane');tab.title=label;
   const name=document.createElement('span');name.textContent=`${sequence} · ${c.name}`;const state=document.createElement('span');state.className='console-tab-state';state.textContent='not connected';tab.append(name,state);tab.setAttribute('aria-label',`${label} — not connected`);

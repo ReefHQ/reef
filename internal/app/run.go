@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reef/internal/agents"
 	"strings"
 	"syscall"
 	"time"
@@ -51,6 +52,10 @@ func Run() {
 		log.Fatal(e)
 	}
 	s := newServer(m, c, password)
+	s.agents, e = agents.Open(c.StateDir)
+	if e != nil {
+		log.Fatal(e)
+	}
 	if e = s.restoreSessions(); e != nil {
 		log.Fatal(e)
 	}

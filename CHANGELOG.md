@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.2.0 — Unreleased
+## 0.3.0 — Unreleased
+
+- Multi-host inventory through outbound HTTPS agents, with one-use enrollment,
+  durable identities/revocation, host selection and stale inventory indicators.
+  Agents are disabled by default; remote logs, consoles and Compose operations
+  remain unavailable. Local workflows retain their existing configuration.
+
+## 0.2.0 — Previous development baseline
 
 - Prevented the console frame from flashing white while its document loads.
 

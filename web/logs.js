@@ -31,6 +31,7 @@
   }
  }
  window.openContainerLogs=({containers,project='',id=''})=>{
+  if(containers.some(c=>c.inventory_only))return;
   cancel();picker.replaceChildren(...containers.map(c=>new Option(`${c.compose_service?c.compose_service+' · ':''}${c.name} (${c.state})`,c.id)));
   if(id)picker.value=id;
   document.querySelector('#container-logs-title').textContent=project?`Application logs · ${project}`:'Container logs';

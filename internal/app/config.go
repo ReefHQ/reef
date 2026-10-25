@@ -13,6 +13,7 @@ import (
 )
 
 type Config struct {
+	AgentsEnabled           bool      `json:"agents_enabled,omitempty"`
 	Listen                  string    `json:"listen"`
 	StateDir                string    `json:"state_dir"`
 	SecureCookie            bool      `json:"secure_cookie"`

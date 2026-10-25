@@ -1,6 +1,7 @@
 # Only application and Go launcher source enters the build context.
 **
 !Dockerfile
+!VERSION
 !go.mod
 !go.sum
 !cmd/
