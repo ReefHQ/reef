@@ -51,6 +51,9 @@ func Run() {
 		log.Fatal(e)
 	}
 	s := newServer(m, c, password)
+	if e = s.restoreSessions(); e != nil {
+		log.Fatal(e)
+	}
 	server := &http.Server{Addr: c.Listen, Handler: s.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 	// Do not terminate workers on tab closure, or on graceful process shutdown.
 	done := make(chan os.Signal, 1)

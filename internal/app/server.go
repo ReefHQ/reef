@@ -24,8 +24,8 @@ var webFiles = assets.Files
 
 const appName = "Reef" // Central display name; no distribution license has been selected.
 type session struct {
-	CSRF    string
-	Expires time.Time
+	CSRF    string    `json:"csrf"`
+	Expires time.Time `json:"expires"`
 }
 type attempt struct {
 	Count int
@@ -64,9 +64,10 @@ func (s *Server) getSession(r *http.Request) (session, bool) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	v, ok := s.sessions[c.Value]
+	key := sessionKey(c.Value)
+	v, ok := s.sessions[key]
 	if ok && time.Now().After(v.Expires) {
-		delete(s.sessions, c.Value)
+		delete(s.sessions, key)
 		return session{}, false
 	}
 	return v, ok
@@ -213,8 +214,11 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 			c, _ := r.Cookie("qcu_session")
+			if e := s.removeSession(c.Value); e != nil {
+				http.Error(w, "Cannot save sign-out. Please try again.", 503)
+				return
+			}
 			s.mu.Lock()
-			delete(s.sessions, c.Value)
 			for _, entry := range s.consoles {
 				if entry.owner == sess.CSRF {
 					entry.cancel()
@@ -300,20 +304,15 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": "Incorrect password"}, http.StatusUnauthorized)
 		return
 	}
-	id := randomID()
-	s.mu.Lock()
-	for k, v := range s.sessions {
-		if time.Now().After(v.Expires) {
-			delete(s.sessions, k)
+	id, e := s.createSession()
+	if e != nil {
+		if e == errSessionLimit {
+			http.Error(w, "Too many sessions", 429)
+		} else {
+			http.Error(w, "Cannot save sign-in. Please try again.", 503)
 		}
-	}
-	if len(s.sessions) >= 256 {
-		s.mu.Unlock()
-		http.Error(w, "Too many sessions", 429)
 		return
 	}
-	s.sessions[id] = session{CSRF: randomID(), Expires: time.Now().Add(12 * time.Hour)}
-	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: "qcu_session", Value: id, Path: "/", HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode, MaxAge: 43200})
 	http.Redirect(w, r, "/", 303)
 }

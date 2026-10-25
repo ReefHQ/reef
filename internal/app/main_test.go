@@ -70,7 +70,7 @@ func TestAuthCSRFAndDocumentLock(t *testing.T) {
 	if !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode {
 		t.Fatal(cookie)
 	}
-	sess := s.sessions[cookie.Value]
+	sess := s.sessions[sessionKey(cookie.Value)]
 	body := url.Values{"id": {p.ID}, "action": {"save"}, "revision": {rev}, "content": {"services: {}\n"}, "csrf": {sess.CSRF}}.Encode()
 	if w = call(h, "POST", "/api/action", body, "http://evil.test", cookie); w.Code != 403 {
 		t.Fatal(w.Code)

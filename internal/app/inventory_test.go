@@ -34,7 +34,7 @@ func TestInventoryRequiresAuthAndDoesNotAdoptProjects(t *testing.T) {
 	if w := call(h, "GET", "/api/containers", "", "", nil); w.Code != 401 || reader.calls != 0 {
 		t.Fatal(w.Code, reader.calls)
 	}
-	s.sessions["inventory-test"] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("inventory-test")] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
 	cookie := &http.Cookie{Name: "qcu_session", Value: "inventory-test"}
 	w := call(h, "GET", "/api/containers", "", "", cookie)
 	if w.Code != 200 {

@@ -2,6 +2,9 @@
 
 ## 0.2.0 — Unreleased
 
+- Login sessions survive Reef restarts/rebuilds until their original 12-hour
+  expiry; logout and password changes revoke them durably.
+
 - Removed the offline demo mode and its launcher/fixtures; Reef now uses Docker
   only, with explicit configuration/password and strict origin validation.
 
