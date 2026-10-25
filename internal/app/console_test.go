@@ -65,8 +65,8 @@ func consoleFixture(t *testing.T) (*Server, *consoleStub, *http.Cookie) {
 	s := newServer(m, Config{}, "long-password-123456")
 	f := &consoleStub{inventoryStub: inventoryStub{rows: []docker.Container{{ID: strings.Repeat("a", 64), Name: "fixture", State: "running"}}}, terminal: newFakeConsole()}
 	s.discovery = f
-	s.sessions["console-test"] = session{CSRF: "owner", Expires: time.Now().Add(time.Hour)}
-	s.sessions["other-test"] = session{CSRF: "other", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("console-test")] = session{CSRF: "owner", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("other-test")] = session{CSRF: "other", Expires: time.Now().Add(time.Hour)}
 	t.Cleanup(func() { s.closeConsoles(); f.terminal.Close() })
 	return s, f, &http.Cookie{Name: "qcu_session", Value: "console-test"}
 }
@@ -241,7 +241,7 @@ func TestConsoleClosesOnClientAbortLogoutAndSessionExpiry(t *testing.T) {
 		t.Run(reason, func(t *testing.T) {
 			s, f, cookie := consoleFixture(t)
 			if reason == "session expiry" {
-				s.sessions["console-test"] = session{CSRF: "owner", Expires: time.Now().Add(150 * time.Millisecond)}
+				s.sessions[sessionKey("console-test")] = session{CSRF: "owner", Expires: time.Now().Add(150 * time.Millisecond)}
 			}
 			ts := httptest.NewServer(s.Handler())
 			defer ts.Close()

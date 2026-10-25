@@ -204,7 +204,7 @@ func TestRegistrationAuthConfirmationUntrustedHintsAndSelfProtection(t *testing.
 	s := newServer(m, c, "long-password-123456")
 	s.discovery = &inventoryStub{rows: []docker.Container{{ID: "other", ComposeProject: p.ProjectName, WorkingDir: "/unmounted/<script>alert(1)</script>", ConfigFiles: "/outside/a.yaml"}, {ID: "reef", ComposeProject: "reef-self", Reef: true}}}
 	h := s.Handler()
-	s.sessions["test"] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("test")] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
 	cookie := &http.Cookie{Name: "qcu_session", Value: "test"}
 	body := url.Values{"csrf": {"token"}, "confirmed": {"yes"}, "project_name": {p.ProjectName}, "name": {p.Name}, "directory": {p.Directory}, "compose_files": {strings.Join(p.ComposeFiles, "\n")}, "env_files": {strings.Join(p.EnvFiles, "\n")}}
 	for _, path := range []string{"/api/projects/proposal?name=existing-app", "/api/projects/register", "/api/projects/unmanage"} {
@@ -312,7 +312,7 @@ func TestRegistrationErrorsIdentifyTheFieldWithoutAuthorizingFiles(t *testing.T)
 	m, _ := newManager(c, &fakeExecutor{})
 	s := newServer(m, c, "long-password-123456")
 	s.discovery = &inventoryStub{rows: []docker.Container{{ID: "fixture", ComposeProject: p.ProjectName}}}
-	s.sessions["field-test"] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("field-test")] = session{CSRF: "token", Expires: time.Now().Add(time.Hour)}
 	cookie := &http.Cookie{Name: "qcu_session", Value: "field-test"}
 	body := url.Values{"csrf": {"token"}, "confirmed": {"yes"}, "project_name": {p.ProjectName}, "name": {p.Name}, "directory": {p.Directory}, "compose_files": {"compose.yaml"}}
 	for _, tc := range []struct{ key, value, field string }{{"directory", filepath.Join(c.AllowedProjectRoots[0], "missing"), "directory"}, {"compose_files", "missing.yaml", "compose_files"}, {"env_files", "missing.env", "env_files"}} {

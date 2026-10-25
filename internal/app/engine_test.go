@@ -279,7 +279,7 @@ func TestRequestDisconnectDoesNotCancelOperation(t *testing.T) {
 	f := &fakeExecutor{gate: make(chan struct{}), entered: make(chan struct{})}
 	m, p, rev := fixture(t, f)
 	s := newServer(m, Config{}, "long-password-123456")
-	s.sessions["test-session"] = session{CSRF: "csrf-test", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("test-session")] = session{CSRF: "csrf-test", Expires: time.Now().Add(time.Hour)}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	body := url.Values{"id": {p.ID}, "action": {"apply"}, "revision": {rev}, "content": {"services: {}\n"}, "csrf": {"csrf-test"}}.Encode()

@@ -37,7 +37,7 @@ func TestContainerLogsAuthValidationAndReadOnlyDiscovery(t *testing.T) {
 	if w := call(h, "GET", path, "", "", nil); w.Code != 401 || reader.calls != 0 || reader.reads != 0 {
 		t.Fatal(w.Code)
 	}
-	s.sessions["logs-test"] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
+	s.sessions[sessionKey("logs-test")] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
 	cookie := &http.Cookie{Name: "qcu_session", Value: "logs-test"}
 	for _, query := range []string{"id=../../etc/passwd", "id=" + id + "&tail=1001", "id=" + id + "&tail=bad", "id=" + id + "&stream=exec"} {
 		if w := call(h, "GET", "/api/container-logs?"+query, "", "", cookie); w.Code != 400 {
