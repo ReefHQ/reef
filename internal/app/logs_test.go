@@ -28,7 +28,7 @@ func (f *logStub) ReadLogs(ctx context.Context, id, stream string, tail int) (do
 func TestContainerLogsAuthValidationAndReadOnlyDiscovery(t *testing.T) {
 	executor := &fakeExecutor{}
 	m, _, _ := fixture(t, executor)
-	s := newServer(m, Config{}, "long-password-123456", false)
+	s := newServer(m, Config{}, "long-password-123456")
 	id := strings.Repeat("a", 64)
 	reader := &logStub{inventoryStub: inventoryStub{rows: []docker.Container{{ID: id, Name: "unmanaged app", State: "exited", ComposeProject: "unmanaged"}}}}
 	s.discovery = reader
@@ -74,10 +74,6 @@ func TestContainerLogsAuthValidationAndReadOnlyDiscovery(t *testing.T) {
 	}
 	reader.failure = errors.New("private inventory failure")
 	if w := call(h, "GET", path, "", "", cookie); w.Code != 503 || strings.Contains(w.Body.String(), "private") {
-		t.Fatal(w.Code)
-	}
-	s.demo = true
-	if w := call(h, "GET", path, "", "", cookie); w.Code != 503 {
 		t.Fatal(w.Code)
 	}
 }

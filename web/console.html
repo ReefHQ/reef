@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Container.Name}} · Console · {{.Name}}</title>
+ <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css"><link rel="stylesheet" href="/assets/vendor/xterm.css">
+ <script src="/assets/vendor/xterm.js" defer></script><script src="/assets/vendor/addon-fit.js" defer></script>{{if .Embedded}}<script src="/assets/console-frame.js" defer></script>{{else}}<script src="/assets/console.js" defer></script>{{end}}
+</head><body class="app-shell console-page{{if .Embedded}} console-embedded{{end}}" data-container-id="{{.Container.ID}}" data-console-channel="{{.Channel}}">
+ {{if not .Embedded}}
+ <header><div class="brand"><span class="mark" aria-hidden="true">≋</span><strong>{{.Name}}</strong><span class="small muted">Container console</span></div><a class="console-link" href="/">Open Reef</a></header>
+ {{end}}
+ <main class="console-workspace">
+  <div class="page-heading"><div><h1>{{.Container.Name}}</h1><p class="muted">{{.Container.Image}} · {{.Container.ComposeService}}</p></div><span class="tag">{{.Container.State}}</span></div>
+  <p class="muted small console-intro">Connect opens a shell as the container's configured user. Commands can change the container and its mounted data. Console input and output are not saved by Reef.</p>
+  <form id="console-connect-form" class="console-toolbar"><div><label for="console-shell">Shell</label><select id="console-shell"><option value="/bin/sh">/bin/sh</option><option value="/bin/bash">/bin/bash</option></select></div><button type="submit" id="console-connect" class="primary">Connect</button><button type="button" id="console-disconnect" disabled>Disconnect</button><button type="button" id="console-clear">Clear screen</button></form>
+  <p id="console-status" class="muted small" role="status">Not connected. Choose a shell that exists in this container.</p>
+  <p id="console-error" class="notice error" role="alert" hidden></p>
+  <div id="terminal" aria-label="Interactive container terminal"></div>
+  <p class="muted small console-help">Use exit or Disconnect to end the connection. Sessions close after 10 minutes of inactivity or 30 minutes in total. Closing a console tab disconnects; commands already started may keep running inside the container.</p>
+ </main>
+</body></html>

@@ -13,12 +13,14 @@ import (
 )
 
 type Config struct {
-	Listen                string    `json:"listen"`
-	StateDir              string    `json:"state_dir"`
-	SecureCookie          bool      `json:"secure_cookie"`
-	Projects              []Project `json:"projects"`
-	AllowedProjectRoots   []string  `json:"allowed_project_roots"`
-	InstallationDirectory string    `json:"installation_directory,omitempty"`
+	Listen                  string    `json:"listen"`
+	StateDir                string    `json:"state_dir"`
+	SecureCookie            bool      `json:"secure_cookie"`
+	Projects                []Project `json:"projects"`
+	AllowedProjectRoots     []string  `json:"allowed_project_roots"`
+	InstallationDirectory   string    `json:"installation_directory,omitempty"`
+	ConsoleSessionsPerLogin int       `json:"console_sessions_per_login,omitempty"`
+	ConsoleSessionsTotal    int       `json:"console_sessions_total,omitempty"`
 }
 type Project struct {
 	ID           string   `json:"id"`
@@ -42,6 +44,9 @@ func loadConfig(path string) (Config, error) {
 	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8099"
+	}
+	if e := validateConsoleLimits(c); e != nil {
+		return c, e
 	}
 	if !filepath.IsAbs(c.StateDir) {
 		return c, errors.New("state_dir must be absolute")
@@ -69,6 +74,23 @@ func loadConfig(path string) (Config, error) {
 		return c, e
 	}
 	return c, nil
+}
+func (c Config) consoleLimits() (int, int) {
+	per, total := c.ConsoleSessionsPerLogin, c.ConsoleSessionsTotal
+	if per == 0 {
+		per = 8
+	}
+	if total == 0 {
+		total = 16
+	}
+	return per, total
+}
+func validateConsoleLimits(c Config) error {
+	per, total := c.consoleLimits()
+	if per < 1 || per > 64 || total < 1 || total > 128 || per > total {
+		return errors.New("console session limits must be 1–64 per login and 1–128 total, with per-login no greater than total")
+	}
+	return nil
 }
 func validateProjects(projects []Project) error {
 	ids, identities, files := map[string]bool{}, map[string]bool{}, map[string]bool{}

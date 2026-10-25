@@ -33,33 +33,6 @@ func (DockerExecutor) Run(ctx context.Context, p Project, args []string, w io.Wr
 	return cmd.Run()
 }
 
-type DemoExecutor struct{}
-
-func (DemoExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
-	fmt.Fprintln(w, "SIMULATION: no Docker command was executed.")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(650 * time.Millisecond):
-	}
-	// Only a demonstrator, deliberately not advertised as a YAML validator.
-	if args[len(args)-1] == "--quiet" {
-		for i, a := range args {
-			if a == "-f" {
-				b, e := os.ReadFile(args[i+1])
-				if e != nil {
-					return e
-				}
-				if !strings.Contains(string(b), "services:") || strings.Contains(string(b), "DEMO_INVALID") {
-					return errors.New("simulated validation failed (services: is required; DEMO_INVALID is not allowed)")
-				}
-				break
-			}
-		}
-	}
-	return nil
-}
-
 type Operation struct {
 	ID         string    `json:"id"`
 	Action     string    `json:"action"`

@@ -4,10 +4,8 @@
 /state/
 /secrets/
 
-# Optional offline simulation output (keep the source fixtures).
-/demo/state/
-/demo/project/.qcu-*
-/demo/project/*.qcu-backup-*
+# Legacy local scratch data.
+/demo/
 
 # Local build and scratch output.
 /bin/

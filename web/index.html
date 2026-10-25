@@ -4,12 +4,11 @@
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
  <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title>
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
- <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/inventory.js" defer></script>
+ <script src="/assets/model.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/inventory.js" defer></script>
 </head>
-<body class="app-shell">
+<body class="app-shell" data-console-session-limit="{{.ConsoleSessionLimit}}">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
 <header><div class="brand"><span class="mark" aria-hidden="true">≋</span><strong>{{.Name}}</strong><span id="connection-status" class="connection" role="status">Connecting to Docker…</span></div><div class="header-actions"><div class="theme-control" role="group" aria-label="Color theme"><button type="button" data-theme-choice="system" aria-pressed="true" title="Follow your system theme">System</button><button type="button" data-theme-choice="light" aria-pressed="false" title="Use the light theme">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false" title="Use the dark theme">Dark</button></div><form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="quiet">Sign out</button></form></div></header>
-{{if .Demo}}<div class="demo-banner">Offline simulation · project operations are simulated; Docker inventory is unavailable.</div>{{end}}
 <main class="layout">
  <nav aria-label="Main navigation">
   <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button></div>
@@ -24,7 +23,7 @@
   <div class="filter-bar"><div class="search-field"><label for="container-search">Search containers</label><input id="container-search" type="search" placeholder="Name, image or project" autocomplete="off"></div><div><label for="container-state">State</label><select id="container-state"><option value="">All states</option></select></div><div><label for="container-project">Compose project</label><select id="container-project"><option value="">All projects</option></select></div><div><label for="container-access">Access</label><select id="container-access"><option value="">All containers</option><option value="managed">Managed</option><option value="visible">View only</option></select></div></div>
   <div class="result-line"><span id="container-results" role="status"></span><button class="quiet" id="clear-container-filters" type="button" hidden>Clear filters</button></div>
   <p class="mobile-table-hint muted">Swipe the table to see all columns.</p>
-  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th><th scope="col">Logs</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
+  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th><th scope="col">Actions</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
  </section>
  <section class="workspace" id="projects-view" aria-label="Compose projects" hidden>
   <div id="project-overview">
@@ -37,8 +36,9 @@
   </div>
   <section id="project-detail" hidden aria-labelledby="project-name">
    <button type="button" class="quiet back-button" id="back-projects">← All projects</button>
-   <div class="page-heading"><div><h1 id="project-name" tabindex="-1">Project</h1><p id="project-identity" class="muted"></p></div><div class="project-heading-actions"><button type="button" id="project-container-logs">Application logs</button><details class="project-tools"><summary>More actions</summary><div><button type="button" data-action="start">Start / retry</button><button type="button" data-action="stop" class="danger">Stop project</button><button type="button" id="unmanage-current" hidden>Stop managing</button></div></details></div></div>
+   <div class="page-heading"><div><h1 id="project-name" tabindex="-1">Project</h1><p id="project-identity" class="muted"></p></div><div class="project-heading-actions"><button type="button" id="project-container-logs">Logs</button><button type="button" id="project-console-open" disabled>Console</button><details class="project-tools"><summary>More actions</summary><div><button type="button" data-action="start">Start / retry</button><button type="button" data-action="stop" class="danger">Stop project</button><button type="button" id="unmanage-current" hidden>Stop managing</button></div></details></div></div>
    <p id="project-path" class="path muted project-directory"></p>
+   <section class="project-containers" aria-labelledby="project-containers-title"><h2 id="project-containers-title">Containers</h2><p class="muted small">Choose a container name to view its details.</p><div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers in this project</caption><thead><tr><th scope="col">Container</th><th scope="col">Service</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Actions</th></tr></thead><tbody id="project-container-rows"></tbody></table></div><p class="empty-state" id="project-containers-empty">Waiting for Docker inventory…</p></div></section>
    <div id="message" role="status" aria-live="polite"></div>
    <div class="editor-card"><div class="card-heading"><strong id="file-name">Compose</strong><span id="edit-state" class="save-status">Saved</span><button id="reload" type="button" class="quiet">Reload file</button></div><label class="sr-only" for="editor">Main Compose file contents</label><textarea id="editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Compose editor"></textarea><div class="editor-footer"><span id="file-context">Main file · additional files keep their order</span><span id="chars"></span></div></div>
    <div class="actions"><button type="button" data-action="save" id="save">Save file</button><button type="button" class="primary" data-action="apply" id="apply">Apply update</button><span id="save-shortcut" class="muted small">⌘ / Ctrl + S to save</span></div>
@@ -49,6 +49,11 @@
  </section>
  </div>
 </main>
+<section id="console-dock" class="console-dock" aria-label="Persistent container consoles" hidden>
+ <div id="console-dock-resize" class="console-dock-resize" role="separator" tabindex="0" aria-label="Resize console panel" aria-orientation="horizontal" aria-valuemin="220" aria-valuemax="700" aria-valuenow="380"></div>
+ <div class="console-dock-toolbar"><div class="console-dock-heading"><strong id="console-dock-active">Console</strong><span id="console-dock-count" class="muted small" role="status"></span></div><div class="console-dock-buttons"><button type="button" id="console-dock-new">New session</button><button type="button" id="console-dock-disconnect">Disconnect all</button><button type="button" id="console-dock-maximize" aria-pressed="false">Maximize</button><button type="button" id="console-dock-minimize" aria-expanded="true">Reduce</button></div></div>
+ <div id="console-dock-content"><div id="console-dock-tabs" role="tablist" aria-label="Console sessions"></div><p id="console-dock-error" class="notice error" role="alert" hidden></p><div id="console-dock-panes"></div></div>
+</section>
 <dialog id="manage-project" aria-labelledby="manage-title">
  <form id="manage-form" method="post" action="/api/projects/register"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="project_name" id="manage-identity">
   <div class="dialog-heading"><div><p class="eyebrow" id="manage-step-label">1 of 2 · Project files</p><h2 id="manage-title">Manage this project</h2></div><button type="button" class="quiet" id="manage-cancel" aria-label="Close project setup">×</button></div>
@@ -65,6 +70,17 @@
   <p id="manage-error" class="notice error" role="alert" hidden></p>
   <div class="dialog-actions"><button type="button" id="manage-back" hidden>← Edit details</button><button type="button" id="manage-next" class="primary">Review connection →</button><button type="submit" class="primary" id="manage-submit" hidden>Confirm and manage</button></div>
  </form>
+</dialog>
+<dialog id="project-console" aria-labelledby="project-console-title" aria-describedby="project-console-help">
+ <div class="dialog-heading"><h2 id="project-console-title">Project console</h2><button type="button" class="quiet" id="close-project-console" aria-label="Close console selection">×</button></div>
+ <p id="project-console-help" class="muted small">Choose a running container. A console tab opens in the persistent panel; choose Connect there to start a shell.</p>
+ <div id="project-console-containers" class="console-container-list"></div>
+</dialog>
+<dialog id="container-details" aria-labelledby="container-detail-title">
+ <div class="dialog-heading"><h2 id="container-detail-title">Container details</h2><button type="button" class="quiet" id="close-container-details" aria-label="Close container details">×</button></div>
+ <p id="container-detail-error" class="notice error" role="status" hidden>This container is no longer in the inventory. Close this panel and select its replacement.</p>
+ <dl id="container-detail-fields" class="container-detail-fields"></dl>
+ <div id="container-detail-actions"></div>
 </dialog>
 <dialog id="container-logs" aria-labelledby="container-logs-title" aria-describedby="container-logs-help">
  <div class="dialog-heading"><div><p class="eyebrow">Application output · read only</p><h2 id="container-logs-title">Container logs</h2></div><button type="button" class="quiet" id="close-container-logs" aria-label="Close container logs">×</button></div>

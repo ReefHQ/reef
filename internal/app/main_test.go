@@ -26,7 +26,7 @@ func call(h http.Handler, method, path, body, origin string, cookie *http.Cookie
 }
 func TestIncorrectPasswordKeepsLoginForm(t *testing.T) {
 	m, _, _ := fixture(t, &fakeExecutor{})
-	s := newServer(m, Config{}, "long-password-123456", false)
+	s := newServer(m, Config{}, "long-password-123456")
 	h := s.Handler()
 	w := call(h, "POST", "/login", "password=wrong-private-value", "http://reef.test", nil)
 	if w.Code != http.StatusUnauthorized || !strings.HasPrefix(w.Header().Get("Content-Type"), "text/html") {
@@ -51,7 +51,7 @@ func TestIncorrectPasswordKeepsLoginForm(t *testing.T) {
 func TestAuthCSRFAndDocumentLock(t *testing.T) {
 	f := &fakeExecutor{}
 	m, p, rev := fixture(t, f)
-	s := newServer(m, Config{}, "long-password-123456", false)
+	s := newServer(m, Config{}, "long-password-123456")
 	h := s.Handler()
 	if w := call(h, "GET", "/api/state", "", "", nil); w.Code != 401 {
 		t.Fatal(w.Code)
@@ -121,7 +121,7 @@ func TestAuthCSRFAndDocumentLock(t *testing.T) {
 func TestLoginRateLimit(t *testing.T) {
 	f := &fakeExecutor{}
 	m, _, _ := fixture(t, f)
-	s := newServer(m, Config{}, "a-long-password-value", false)
+	s := newServer(m, Config{}, "a-long-password-value")
 	for i := 0; i < 11; i++ {
 		w := call(s.Handler(), "POST", "/login", "password=wrong", "http://reef.test", nil)
 		if i == 10 && w.Code != 429 {
@@ -144,19 +144,14 @@ func TestConfigRejectsUnsafeAndDuplicate(t *testing.T) {
 	}
 }
 
-func TestOpaqueOriginExceptionOnlyInDemo(t *testing.T) {
+func TestOpaqueOriginsRejected(t *testing.T) {
 	r := httptest.NewRequest("POST", "http://127.0.0.1:8099/login", nil)
 	r.Header.Set("Origin", "null")
-	r.Header.Set("Sec-Fetch-Site", "same-origin")
-	if (&Server{demo: false}).originOK(r) {
-		t.Fatal("origine opaque acceptée en mode réel")
-	}
-	if !(&Server{demo: true}).originOK(r) {
-		t.Fatal("navigateur intégré démo refusé")
-	}
-	r.Header.Set("Sec-Fetch-Site", "cross-site")
-	if (&Server{demo: true}).originOK(r) {
-		t.Fatal("origine tierce acceptée en démo")
+	for _, site := range []string{"same-origin", "cross-site", ""} {
+		r.Header.Set("Sec-Fetch-Site", site)
+		if (&Server{}).originOK(r) {
+			t.Fatal("Opaque origin accepted", site)
+		}
 	}
 }
 
@@ -182,10 +177,10 @@ func TestValidConfiguration(t *testing.T) {
 func TestEnglishInterfaceAndMessages(t *testing.T) {
 	f := &fakeExecutor{}
 	m, p, rev := fixture(t, f)
-	s := newServer(m, Config{}, "long-password-123456", true)
+	s := newServer(m, Config{}, "long-password-123456")
 	h := s.Handler()
 	login := call(h, "GET", "/login", "", "", nil)
-	for _, text := range []string{`lang="en"`, "Your Compose projects, made simple.", "Password", "Open Reef", "Local simulation"} {
+	for _, text := range []string{`lang="en"`, "Your Compose projects, made simple.", "Password", "Open Reef"} {
 		if !strings.Contains(login.Body.String(), text) {
 			t.Errorf("English login is missing %q", text)
 		}

@@ -3,15 +3,17 @@
  const find=selector=>document.querySelector(selector);
  let snapshot=[],managed=[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null;
  const dialog=find('#manage-project'),form=find('#manage-form');
+ function updateProjectConsole(){const p=current();find('#project-console-open').disabled=!p||!hasSnapshot||!snapshot.some(c=>c.compose_project===p.project_name&&c.state==='running');}
  function setView(view,detail=false){currentView=view;find('#containers-view').hidden=view!=='containers';find('#projects-view').hidden=view!=='projects';find('#project-overview').hidden=detail;find('#project-detail').hidden=!detail;find('#managed-navigation').hidden=view!=='projects'||!managed.length;document.body.dataset.detail=String(detail);document.querySelectorAll('[data-view]').forEach(button=>{if(button.dataset.view===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});}
  document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
  find('#back-projects').addEventListener('click',()=>{setView('projects');find('#projects-title').focus({preventScroll:true});window.scrollTo(0,0);});
- window.addEventListener('reef-open-project',()=>{setView('projects',true);find('#project-name').focus({preventScroll:true});window.scrollTo(0,0);});
+ window.addEventListener('reef-open-project',()=>{setView('projects',true);updateProjectConsole();renderProjectContainers();find('#project-name').focus({preventScroll:true});window.scrollTo(0,0);});
  window.addEventListener('reef-project-overview',()=>setView('projects'));
  window.addEventListener('reef-state',event=>{managed=event.detail;find('#managed-navigation').hidden=currentView!=='projects'||!managed.length;renderProjects();renderContainers();});
  function rootDescription(policy){if(!policy)return 'Loading allowed folders…';if(policy.source==='explicit')return 'Allowed folders are explicitly configured.';if(policy.source==='installation-parent')return `Default: parent of Reef installation (${policy.installation_directory}).`;return 'Installation folder unknown. Set installation_directory or REEF_INSTALLATION_DIR, or configure allowed_project_roots.';}
  function options(selector,values,first){const select=find(selector),signature=JSON.stringify(values);if(select.dataset.options===signature)return;const value=select.value;select.replaceChildren(new Option(first,''),...values.map(([value,label])=>new Option(label,value)));select.value=[...select.options].some(o=>o.value===value)?value:'';select.dataset.options=signature;}
  function renderProjects(){
+  updateProjectConsole();renderProjectContainers();
   const all=ReefUI.projectRows(snapshot,managed),query=find('#project-search').value.trim().toLowerCase(),mode=find('#project-access').value;
   const rows=all.filter(g=>(!query||`${g.name} ${g.managed?.name||''}`.toLowerCase().includes(query))&&(!mode||(mode==='managed'?!!g.managed:!g.managed)));
   find('#compose-nav-count').textContent=hasSnapshot?all.length:'—';find('#project-results').textContent=`${rows.length} of ${all.length} projects · ${managed.length} managed`;
@@ -26,21 +28,36 @@
    const count=textNode('span',group.containers.length?`${running} running · ${group.containers.length} total`:'No containers','muted project-container-count');
    const badge=textNode('span',group.self?'Reef itself':group.managed?'Managed':'View only','tag'+(group.managed?' managed-tag':group.self?' neutral-tag':' neutral-tag'));
    const action=document.createElement('div');action.className='project-row-action';
-   if(group.managed){const button=textNode('button','Open project');button.type='button';button.setAttribute('aria-label',`Open ${group.managed.name}`);button.dataset.focusKey='open-action-'+group.managed.id;button.addEventListener('click',()=>selectProject(group.managed.id));action.append(button);}
-   else if(!group.self){const button=textNode('button','Manage this project');button.type='button';button.setAttribute('aria-label',`Manage ${group.name}`);button.dataset.focusKey='manage-'+group.name;button.disabled=!hasSnapshot;button.addEventListener('click',()=>openManage(group.name));action.append(button);}
-   if(group.containers.length){const logs=textNode('button','Logs');logs.type='button';logs.dataset.focusKey='project-logs-'+group.name;logs.setAttribute('aria-label',`Application logs for ${group.name}`);logs.addEventListener('click',()=>window.openContainerLogs({containers:snapshot.filter(c=>c.compose_project===group.name),project:group.name}));action.append(logs);}
+   if(group.managed){const button=textNode('button','Open project','project-primary-action');button.type='button';button.setAttribute('aria-label',`Open ${group.managed.name}`);button.dataset.focusKey='open-action-'+group.managed.id;button.addEventListener('click',()=>selectProject(group.managed.id));action.append(button);}
+   else if(!group.self){const button=textNode('button','Manage this project','project-primary-action');button.type='button';button.setAttribute('aria-label',`Manage ${group.name}`);button.dataset.focusKey='manage-'+group.name;button.disabled=!hasSnapshot;button.addEventListener('click',()=>openManage(group.name));action.append(button);}
+   if(group.containers.length){const logs=textNode('button','Logs','project-logs-action');logs.type='button';logs.dataset.focusKey='project-logs-'+group.name;logs.setAttribute('aria-label',`Application logs for ${group.name}`);logs.addEventListener('click',()=>window.openContainerLogs({containers:snapshot.filter(c=>c.compose_project===group.name),project:group.name}));action.append(logs);}
+   const consoleButton=textNode('button','Console','project-console-action');consoleButton.type='button';consoleButton.dataset.focusKey='project-console-'+group.name;consoleButton.setAttribute('aria-label',`Console for project ${group.name}`);consoleButton.disabled=!hasSnapshot||!running;if(consoleButton.disabled)consoleButton.title='Console access requires a running container';consoleButton.addEventListener('click',()=>window.openProjectConsole({containers:snapshot.filter(c=>c.compose_project===group.name),project:group.managed?.name||group.name}));action.append(consoleButton);
    row.append(title,count,badge,action);return row;
   });
   if(!rows.length)nodes.push(textNode('div',!hasSnapshot?'Waiting for Docker inventory…':all.length?'No projects match your search. Clear the search or change Access.':'No Compose projects found. Projects appear here when their containers have Compose labels.','empty-state'));
   replaceKeepingFocus(find('#discovered-projects'),nodes);find('#discovered-projects').dataset.signature=signature;
  }
+ function renderProjectContainers(){
+  const p=current(),rows=p?snapshot.filter(c=>c.compose_project===p.project_name):[],table=find('#project-container-rows');
+  const signature=JSON.stringify([p?.id,hasSnapshot,rows]);if(table.dataset.signature===signature)return;
+  const nodes=rows.map(c=>{const row=document.createElement('tr'),name=document.createElement('td'),actions=document.createElement('td');name.append(ReefContainers.name(c));actions.append(ReefContainers.actions(c));row.append(name,textNode('td',c.compose_service||'—'),textNode('td',c.image,'image-name'),ReefContainers.state(c),actions);return row;});
+  replaceKeepingFocus(table,nodes);table.dataset.signature=signature;
+  find('#project-containers-empty').hidden=rows.length>0;find('#project-containers-empty').textContent=hasSnapshot?'No containers currently exist for this project.':'Waiting for Docker inventory…';
+ }
  function renderContainers(){
+  ReefContainers.update(snapshot);
   options('#container-state',[...new Set(snapshot.map(c=>c.state))].sort().map(s=>[s,s]),'All states');
   const groups=[...new Set(snapshot.map(c=>c.compose_project).filter(Boolean))].sort().map(s=>[s,s]);if(snapshot.some(c=>!c.compose_project))groups.push(['__none__','No Compose project']);options('#container-project',groups,'All projects');
   const query={search:find('#container-search').value,state:find('#container-state').value,project:find('#container-project').value,access:find('#container-access').value};const rows=ReefUI.filterContainers(snapshot,query);
   find('#container-nav-count').textContent=hasSnapshot?snapshot.length:'—';find('#total-count').textContent=hasSnapshot?snapshot.length:'—';find('#running-count').textContent=hasSnapshot?snapshot.filter(c=>c.state==='running').length:'—';find('#other-count').textContent=hasSnapshot?snapshot.filter(c=>c.state!=='running').length:'—';find('#container-results').textContent=hasSnapshot?`${rows.length} of ${snapshot.length} containers`:'';find('#clear-container-filters').hidden=!Object.values(query).some(Boolean);
   const signature=JSON.stringify(rows);if(find('#container-rows').dataset.signature!==signature){
-   const nodes=rows.map(c=>{const row=document.createElement('tr');const name=document.createElement('td');name.append(textNode('strong',c.name),textNode('small',c.id.slice(0,12),'muted'));name.title=c.id;const image=textNode('td',c.image,'image-name');image.title=c.image;const state=document.createElement('td');state.append(textNode('span',c.state,'tag '+(c.state==='running'?'running-state':'neutral-tag')),textNode('small',c.status,'muted'));const project=textNode('td',c.compose_project||'—','container-project-name');const permission=document.createElement('td');if(c.managed_project_id){const button=textNode('button','Open project','compact-button');button.type='button';button.dataset.focusKey='container-open-'+c.id;button.setAttribute('aria-label',`Open project for ${c.name}`);button.addEventListener('click',()=>selectProject(c.managed_project_id));permission.append(textNode('span','Managed','managed-label'),button);}else permission.append(textNode('span',c.is_reef?'Reef itself':'View only','muted'));const logs=document.createElement('td'),button=textNode('button','Logs','compact-button');button.type='button';button.dataset.focusKey='container-logs-'+c.id;button.setAttribute('aria-label',`Logs for ${c.name}`);button.addEventListener('click',()=>window.openContainerLogs({containers:[c],id:c.id}));logs.append(button);row.append(name,image,state,project,permission,logs);return row;});
+   const nodes=rows.map(c=>{
+    const row=document.createElement('tr'),name=document.createElement('td');name.append(ReefContainers.name(c),textNode('small',c.id.slice(0,12),'muted'));name.title=c.id;
+    const image=textNode('td',c.image,'image-name');image.title=c.image;
+    const project=textNode('td',c.compose_project||'—','container-project-name'),permission=document.createElement('td');
+    if(c.managed_project_id){const button=textNode('button','Open project','compact-button');button.type='button';button.dataset.focusKey='container-open-'+c.id;button.setAttribute('aria-label',`Open project for ${c.name}`);button.addEventListener('click',()=>selectProject(c.managed_project_id));permission.append(textNode('span','Managed','managed-label'),button);}else permission.append(textNode('span',c.is_reef?'Reef itself':'View only','muted'));
+    const actions=document.createElement('td');actions.append(ReefContainers.actions(c));row.append(name,image,ReefContainers.state(c),project,permission,actions);return row;
+   });
    replaceKeepingFocus(find('#container-rows'),nodes);find('#container-rows').dataset.signature=signature;
   }
   const empty=find('#inventory-empty');empty.hidden=rows.length>0;empty.textContent=!hasSnapshot?'Waiting for Docker inventory…':snapshot.length?'No containers match these filters. Clear filters to see all containers.':'No containers on this engine.';
@@ -54,6 +71,7 @@
  for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).addEventListener(id==='#container-search'?'input':'change',renderContainers);
  find('#clear-container-filters').addEventListener('click',()=>{for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).value='';renderContainers();find('#container-search').focus();});
  window.addEventListener('reef-projects-changed',refresh);
+ find('#project-console-open').addEventListener('click',()=>{const p=current();if(p)window.openProjectConsole({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
  find('#project-container-logs').addEventListener('click',()=>{const p=current();if(p)window.openContainerLogs({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
  find('#project-search').addEventListener('input',renderProjects);find('#project-access').addEventListener('change',renderProjects);find('#refresh-containers').addEventListener('click',refresh);find('#refresh-projects').addEventListener('click',refresh);
  function setupStep(review){find('#manage-confirm').disabled=!review;find('#manage-confirm').required=review;find('#manage-files-step').hidden=review;find('#manage-review-step').hidden=!review;find('#manage-back').hidden=!review;find('#manage-next').hidden=review;find('#manage-submit').hidden=!review;find('#manage-step-label').textContent=review?'2 of 2 · Review connection':'1 of 2 · Project files';if(!review)find('#manage-confirm').checked=false;dialog.scrollTop=0;}

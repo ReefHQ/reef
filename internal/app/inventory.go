@@ -8,10 +8,6 @@ import (
 )
 
 func (s *Server) containers(w http.ResponseWriter, r *http.Request) {
-	if s.demo {
-		http.Error(w, "Docker inventory is unavailable in offline simulation.", 503)
-		return
-	}
 	rows, e := s.discovery.List(r.Context())
 	if e != nil {
 		http.Error(w, e.Error(), 503)
