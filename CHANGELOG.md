@@ -2,6 +2,8 @@
 
 ## 0.2.0 — Unreleased
 
+- Prevented the console frame from flashing white while its document loads.
+
 - Login sessions survive Reef restarts/rebuilds until their original 12-hour
   expiry; logout and password changes revoke them durably.
 
