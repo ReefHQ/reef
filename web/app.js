@@ -4,13 +4,13 @@ const csrf=$('meta[name="csrf-token"]').content;
 let projects=[],selected='',revision='',dirty=false,loading=false,loaded=false,inFlight=false,lastOp='',openedLog='';
 const pendingEdits=new Map();
 function message(text,error=false){$('#message').textContent=text;$('#message').className=text?'notice'+(error?' error':''):'';$('#message').setAttribute('role',error?'alert':'status');}
-async function request(path,opts){const response=await fetch(path,opts);if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');throw error;}return response;}
+async function request(path,opts){if(window.reefHost&&window.reefHost!=='local'&&path.startsWith('/api/')&&!path.startsWith('/api/hosts')&&!path.startsWith('/api/state'))path+=(path.includes('?')?'&':'?')+'host='+encodeURIComponent(window.reefHost);const response=await fetch(path,opts);if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');throw error;}return response;}
 function ask(text){const dialog=$('#confirmation');if(dialog.open)return Promise.resolve(false);$('#confirm-message').textContent=text;dialog.returnValue='cancel';return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true});dialog.showModal();});}
 function current(){return projects.find(p=>p.id===selected);}
 function textNode(tag,value,className){const node=document.createElement(tag);node.textContent=value;if(className)node.className=className;return node;}
 function replaceKeepingFocus(parent,nodes){const key=parent.contains(document.activeElement)?document.activeElement.dataset.focusKey:null;parent.replaceChildren(...nodes);if(key)[...parent.querySelectorAll('[data-focus-key]')].find(n=>n.dataset.focusKey===key)?.focus({preventScroll:true});}
 function controls(){
- const p=current(),busy=!p||p.busy||pendingEdits.has(selected)||loading||inFlight||!loaded;
+ const p=current(),busy=(window.reefHost&&window.reefHost!=='local')||!p||p.busy||pendingEdits.has(selected)||loading||inFlight||!loaded;
  $('#editor').disabled=busy;
  document.querySelectorAll('[data-action]').forEach(button=>button.disabled=busy||(dirty&&['start','stop'].includes(button.dataset.action)));
  $('#reload').disabled=!p||!!p.busy||pendingEdits.has(selected)||loading||inFlight;
@@ -25,6 +25,7 @@ async function loadDocument(){
  catch(error){if(selected===id)message(error.message,true);}finally{loading=false;controls();}
 }
 async function selectProject(id){
+ if(window.reefHost&&window.reefHost!=='local')return;
  if(id===selected&&loaded){window.dispatchEvent(new CustomEvent('reef-open-project'));return;}
  if(dirty&&!await ask('Discard unsaved changes and open another project?'))return;
  document.querySelector('.project-tools').open=false;$('#operation-log').open=false;

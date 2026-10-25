@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"reef/internal/agents"
 	"reef/internal/docker"
 	assets "reef/web"
 )
@@ -32,6 +33,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	agents         *agents.Registry
 	discovery      docker.Lister
 	m              *Manager
 	cfg            Config
@@ -74,6 +76,7 @@ func (s *Server) getSession(r *http.Request) (session, bool) {
 }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/agent/v1/", s.agentProtocol)
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(webFiles))))
 	mux.HandleFunc("/login", s.login)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +104,14 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 		}
+		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && r.URL.Path != "/api/containers" && r.URL.Path != "/api/hosts" {
+			http.Error(w, "This host supports inventory only", 409)
+			return
+		}
 		switch r.URL.Path {
+		case "/api/hosts":
+			s.hosts(w, r)
 		case "/console":
 			if r.Method != "GET" {
 				http.Error(w, "Method not allowed", 405)

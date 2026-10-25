@@ -9,13 +9,15 @@ case "${1:-}" in
     checks='go test -race ./... && go vet ./... &&
       CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/reef-amd64 ./cmd/reef &&
       CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /tmp/reef-arm64 ./cmd/reef &&
-      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/reef-local ./cmd/reef-local'
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/reef-local ./cmd/reef-local &&
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/reef-agent-amd64 ./cmd/reef-agent &&
+      CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /tmp/reef-agent-arm64 ./cmd/reef-agent'
     ;;
   frontend)
     image=node:24-bookworm-slim
     checks='node scripts/check-version.cjs && node --test tests/*.test.cjs &&
       node --check web/model.js && node --check web/app.js &&
-      node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js && node --check web/console.js && node --check web/console-picker.js && node --check web/container-details.js && node --check web/console-dock.js && node --check web/console-frame.js'
+      node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js && node --check web/console.js && node --check web/console-picker.js && node --check web/container-details.js && node --check web/console-dock.js && node --check web/console-frame.js && node --check web/hosts.js'
     ;;
   *) echo 'Usage: sh scripts/ci.sh go|frontend' >&2; exit 2 ;;
 esac

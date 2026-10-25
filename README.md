@@ -263,7 +263,7 @@ when the mirror is added.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.2.0` in development.
+source of truth for the application version, currently `0.3.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
@@ -324,3 +324,19 @@ Real Docker Desktop validation on 22 October 2026 covered image build/execution,
 Official references: [Compose options and paths](https://docs.docker.com/reference/cli/docker/compose/), [interpolation and `.env`](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [include rules](https://docs.docker.com/reference/compose-file/include/), [official Docker client image with Compose](https://github.com/docker-library/docker/blob/master/29/cli/Dockerfile).
 
 Reef is the name selected for this application. No repository, domain or trademark has been checked or published. Free distribution is intended; **no distribution license has been selected**. No external repository has been created.
+
+## Multiple Docker hosts
+
+Reef can display remote inventories through lightweight outbound HTTPS agents.
+**Local** remains the default; existing local projects, logs and consoles keep
+working. Choose a Docker host in the sidebar; **Manage hosts** lists contact,
+inventory freshness and agent version, and provides enrollment, rename and
+revocation. Remote projects are view-only. Remote logs, consoles and Compose
+management are reserved for later increments.
+
+Agents are disabled by default. Enable `agents_enabled: true` in central Reef's
+JSON configuration and restart it after configuring a reachable HTTPS origin
+with a trusted certificate. With TLS at a reverse proxy, also set
+`secure_cookie: true` and forward the agent routes without exposing Docker's API.
+See [agent installation](docs/AGENT_SETUP.md) and the
+[architecture proposal](docs/MULTI_HOST_AGENTS.md).

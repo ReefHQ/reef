@@ -21,3 +21,8 @@ test('container details update state and remove stale actions when a container d
  const p=page();p.api.open(container);p.api.update([{...container,state:'exited',status:'Exited'}]);assert.equal(p.find('#container-detail-actions').children[0].children[1].disabled,true);
  p.api.update([]);assert.equal(p.find('#container-detail-error').hidden,false);assert.equal(p.find('#container-detail-actions').children.length,0);
 });
+test('remote inventory exposes metadata with its host but cannot open local logs or consoles',()=>{
+ const p=page(),remote={...container,host_id:'nas',host_name:'NAS',inventory_only:true};p.api.open(remote);
+ const actions=p.find('#container-detail-actions').children[0].children;assert.equal(actions[0].disabled,true);assert.equal(actions[1].disabled,true);
+ assert.ok(p.find('#container-detail-fields').children.some(c=>c.textContent==='NAS'));assert.equal(p.logs.length,0);assert.equal(p.consoles.length,0);
+});
