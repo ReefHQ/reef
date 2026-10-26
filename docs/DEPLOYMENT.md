@@ -16,9 +16,11 @@ application deployment server has been contacted by this preparation.
    source pipelines skip release creation. A retry at the same revision triggers
    the tag pipeline again, without moving the tag.
 3. The tag pipeline runs Go, frontend, mirror and delivery checks. Only after
-   success does buildx push Linux amd64/arm64 manifests for `$CI_REGISTRY_IMAGE`
-   and `$CI_REGISTRY_IMAGE/agent`, tagged with both the release and full revision.
-   Stable `latest` aliases are also updated; deployments use explicit release tags.
+   success does Buildx use Docker's integrated builder to compile/load each Linux
+   amd64/arm64 image separately, then push revision/architecture references. Once
+   all four images exist, `imagetools create` assembles manifests for
+   `$CI_REGISTRY_IMAGE` and `$CI_REGISTRY_IMAGE/agent`, tagged with the release,
+   full revision and stable `latest` aliases. Deployments use explicit releases.
 4. If `REEF_DEPLOY_ENABLED=true`, a deploy runner calls the authenticated webhook
    with `X-Deploy-Version` and `X-Deploy-Revision`. The updater validates the stable
    tag, pulls only `reef`, checks the image revision label, then recreates only
@@ -63,6 +65,9 @@ The build job checks Buildx in its isolated Docker config. If it is missing,
 `scripts/ensure-buildx.sh` copies the official plugin from a never-started
 `docker:29.9.2-cli` container for the runner architecture. The temporary plugin
 and helper container are cleaned up; no runner installation is modified.
+Builds use the daemon's integrated builder (`default`), without spawning another
+BuildKit daemon or disabling process isolation. Single-platform builds work with
+classic image stores; the manifest indexes are assembled in the registry.
 
 A job-token Git push does not create a pipeline; the release script explicitly
 triggers the tag pipeline afterward. Leave repository push permissions and
