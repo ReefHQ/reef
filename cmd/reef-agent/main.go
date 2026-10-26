@@ -23,10 +23,9 @@ import (
 	"time"
 
 	"reef/internal/agents"
+	"reef/internal/buildinfo"
 	"reef/internal/docker"
 )
-
-var version = "dev"
 
 type identity struct {
 	URL        string `json:"url"`
@@ -189,7 +188,7 @@ func run() error {
 		var connected struct {
 			Generation string `json:"generation"`
 		}
-		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": version}, &connected)
+		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version}, &connected)
 		if e == nil {
 			log.Print("Agent connected (inventory only)")
 			sequence := uint64(0)

@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- Prepared opt-in stable-tag delivery: immutable release tags, multiarch registry
+  images, authenticated deployment webhook and exact version/revision health
+  checks. Production target and CI activation remain operator-configured.
+
 - Shared Reef SVG favicon on the login, main application and console pages.
 
 - GPLv3 licensing and a GitLab-to-GitHub mirror for ReefHQ/reef (ReefLabs), with

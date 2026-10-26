@@ -1,0 +1,85 @@
+# Operator bootstrap only: adapt .env, paths and proxy/network before installation.
+# This file is never applied by CI directly; the existing deployment agent updates reef only.
+services:
+  reef:
+    image: ${REEF_IMAGE:?Set the registry image}:${APP_VERSION:?Set an existing stable version tag}
+    labels:
+      io.reef.instance: "true"
+      traefik.enable: "false"
+    restart: unless-stopped
+    stop_grace_period: 46m
+    ports:
+      - "${REEF_LISTEN_ADDRESS:-0.0.0.0}:${REEF_PORT:-8099}:8099"
+    environment:
+      QCU_PASSWORD_FILE: /run/secrets/reef_password
+      REEF_INSTALLATION_DIR: ${REEF_INSTALLATION_DIR:?Set the canonical host installation folder}
+    secrets: [reef_password]
+    volumes:
+      - type: bind
+        source: ${REEF_PROJECT_ROOT:?Set the explicitly authorized canonical parent/projects folder}
+        target: ${REEF_PROJECT_ROOT}
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${REEF_INSTALLATION_DIR}/state
+        target: /var/lib/reef
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${REEF_INSTALLATION_DIR}/config.json
+        target: /etc/reef/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks:
+      internal:
+      ci:
+        aliases: [reef-app]
+  deploy-agent:
+    build: ./deploy-agent
+    image: reef-deploy-agent:local
+    profiles: [deployment]
+    restart: unless-stopped
+    stop_grace_period: 55m
+    labels:
+      traefik.enable: "false"
+    env_file: .env
+    environment:
+      APP_ENV_FILE: /app/.env
+      APP_COMPOSE_FILE: /app/compose.production.yaml
+      DEPLOY_HEALTHCHECK_URL: http://reef-app:8099/healthz
+    volumes:
+      - type: bind
+        source: ${REEF_INSTALLATION_DIR}
+        target: /app
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks:
+      internal:
+      ci:
+        aliases: [reef-deploy]
+networks:
+  internal:
+    driver: bridge
+  ci:
+    external: true
+    name: ${REEF_CI_NETWORK:-proxy}
+secrets:
+  reef_password:
+    file: ${REEF_INSTALLATION_DIR}/secrets/password.txt

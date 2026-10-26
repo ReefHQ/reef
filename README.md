@@ -2,7 +2,11 @@
 
 **Your Compose projects, made simple.** A personal Docker interface built with Go and its standard library. One process, no external Go packages, no database or CDN. JavaScript and CSS are embedded and served locally. The display name is centralized in `appName` in `internal/app/server.go`; the marine styling is in `web/style.css`.
 
-The target QNAP NAS hosts **production** projects. Reef is developed and checked **separately, locally**. No connection to that NAS or deployment to production has been made or authorized. The suspected behavior of Container Station's “Recreate” action has **not** been verified here.
+The selected deployment target is the same server as the recent applications,
+with a `reef` folder beside `flix_webapp` and access over the local network.
+No external URL is required. Reef is developed and checked separately, locally;
+no server connection or production deployment has been performed by this work.
+The original QNAP/Container Station compatibility questions remain unverified.
 
 ## Quick start — real Docker Desktop
 
@@ -199,6 +203,15 @@ QCU_PASSWORD_FILE=/private/path/password.txt /tmp/reef -config /private/path/con
 
 The password must contain at least 16 characters. `QCU_PASSWORD_FILE` takes precedence over `QCU_PASSWORD`. Docker client and Compose plugin must be installed. The socket is fixed to `/var/run/docker.sock`; remote Docker hosts and contexts are not supported. Docker subprocesses receive only `PATH`, `HOME`, the socket and Compose display settings, not the Reef password or arbitrary server environment variables. Put required interpolation values in project `.env` files rather than the server environment.
 
+## Versioned deployment
+
+The [deployment guide](docs/DEPLOYMENT.md) describes automatic stable tags from
+`VERSION`, multiarch application/agent images, a version-checked deployment
+webhook and operator bootstrap. The runtime `/healthz` endpoint reports only
+status, version and revision without requiring a login. It does not inspect
+Docker or prove the health of managed projects. No server/NAS has been deployed
+by this development work.
+
 ## Container and future NAS installation
 
 The `Dockerfile` builds a static Go executable and adds it to the official **Docker client image with Compose included**. No embedded daemon or additional services. Image versions can be changed with `GO_IMAGE` and `DOCKER_IMAGE`; verify them and pin digests for reproducible distribution. The arm64 image has been built and run on local Docker Desktop; its Docker client/Compose plugin and actual update cycle have been verified. This does not establish QNAP compatibility.
@@ -256,8 +269,10 @@ changes through a merge request; tag pipelines check the version being released.
 Checks cover Go race tests, vet, Linux amd64/arm64 application compilation,
 launcher compilation and frontend tests/syntax. No Docker socket is passed to
 the check containers. Run the same checks locally with `sh scripts/ci.sh go` and
-`sh scripts/ci.sh frontend` (Docker required). CI does not publish releases or
-deploy Reef. A separate job mirrors the source
+`sh scripts/ci.sh frontend` (Docker required). CI can deliver stable SemVer releases through the GitLab registry and a
+protected deployment webhook once explicitly enabled. See
+[deployment setup](docs/DEPLOYMENT.md); both release publication and deployment
+are disabled until their CI flags and target are configured. A separate job mirrors the source
 to [ReefHQ/reef](https://github.com/ReefHQ/reef) after default-branch pushes and
 protected tags, once publication is enabled. Every public branch/tag is rewritten
 to remove private development notes and session identifiers from its entire
