@@ -16,6 +16,8 @@ cleanup(){ docker buildx rm "$builder" >/dev/null 2>&1 || :;rm -rf "$auth"; }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+sh "$script_dir/ensure-buildx.sh"
 printf '%s' "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" --username gitlab-ci-token --password-stdin
 docker buildx create --name "$builder" --driver docker-container --use
 docker buildx inspect --bootstrap "$builder"

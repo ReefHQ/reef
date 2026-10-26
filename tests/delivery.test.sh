@@ -9,11 +9,17 @@ trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 mkdir "$work/bin" "$work/app"
 export PATH="$work/bin:$PATH" TEST_LOG="$work/commands" TEST_HTTP="$work/http"
-unset TEST_TRIGGER BAD_HEALTH FAIL_PULL WRONG_IMAGE_REVISION HEALTH_VERSION
+unset TEST_TRIGGER BAD_HEALTH FAIL_PULL WRONG_IMAGE_REVISION HEALTH_VERSION TEST_REQUIRE_BUILDX_BOOTSTRAP
 export EXPECTED_REVISION=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 cat > "$work/bin/docker" <<'MOCK'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TEST_LOG"
+if [ "${TEST_REQUIRE_BUILDX_BOOTSTRAP:-false}" = true ]; then
+ case "$1 ${2:-}" in
+  'buildx version') [ -x "$DOCKER_CONFIG/cli-plugins/docker-buildx" ] || exit 1;;
+  'cp '*) for argument do destination=$argument;done;printf '#!/bin/sh\nexit 0\n' > "$destination";;
+ esac
+fi
 case " $* " in
  *" login "*) cat >/dev/null;;
  *" image inspect "*) printf '%s\n' "${WRONG_IMAGE_REVISION:-$EXPECTED_REVISION}";;
@@ -94,11 +100,18 @@ test ! -s "$TEST_LOG"
 # Check image publication without running Docker or contacting a registry.
 export CI_REGISTRY=registry.example.invalid CI_REGISTRY_IMAGE=registry.example.invalid/reef CI_JOB_TOKEN=fixture-job-token
 mkdir -p "$work/build-project/scripts"
-cp "$root/scripts/build-release.sh" "$root/scripts/deploy-release.sh" "$root/scripts/read-version.sh" "$work/build-project/scripts/"
+cp "$root/scripts/ensure-buildx.sh" "$root/scripts/build-release.sh" "$root/scripts/deploy-release.sh" "$root/scripts/read-version.sh" "$work/build-project/scripts/"
 printf '0.3.0\n' > "$work/build-project/VERSION"
 export CI_COMMIT_TAG=v0.3.0 CI_COMMIT_SHA="$EXPECTED_REVISION" CI_COMMIT_REF_PROTECTED=true
 (cd "$work/build-project";sh scripts/build-release.sh)
 test "$(grep -c 'buildx build .*--platform linux/amd64,linux/arm64' "$TEST_LOG")" -eq 2
+# Reproduce a runner that has Docker but no Buildx in its isolated config.
+: > "$TEST_LOG"
+(cd "$work/build-project";TEST_REQUIRE_BUILDX_BOOTSTRAP=true sh scripts/build-release.sh)
+grep -q 'create --name reef-buildx-tool-' "$TEST_LOG"
+grep -q 'cp .*docker-buildx' "$TEST_LOG"
+test "$(grep -c 'buildx build .*--platform linux/amd64,linux/arm64' "$TEST_LOG")" -eq 2
+grep -q 'rm -f reef-buildx-tool-' "$TEST_LOG"
 export DEPLOY_WEBHOOK_URL=https://deploy.example.invalid/hooks/deploy DEPLOY_WEBHOOK_TOKEN=fixture-webhook HEALTHCHECK_URL=https://reef.example.invalid/healthz
 (cd "$work/build-project";sh scripts/deploy-release.sh) > "$work/ci-deploy"
 if (cd "$work/build-project";BAD_HEALTH=true sh scripts/deploy-release.sh) > "$work/rejected" 2>&1;then echo 'CI accepted wrong live build';exit 1;fi

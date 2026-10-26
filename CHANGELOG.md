@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.3.1 — Unreleased
+
+- Release builds supply Buildx from the official Docker CLI image when the shell
+  runner lacks it, using an isolated job configuration without changing runners.
+
+## 0.3.0 — 2026-10-26
+
+Source tag created; initial image publication failed because Buildx was unavailable
+on the build runner. No server deployment occurred.
 
 - Prepared opt-in stable-tag delivery: immutable release tags, multiarch registry
   images, authenticated deployment webhook and exact version/revision health

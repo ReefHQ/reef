@@ -28,7 +28,7 @@ pending enrollment tokens are retained.
 Build the separate agent image from this checkout:
 
 ```sh
-docker build --target agent -t reef-agent:0.3.0 .
+docker build --target agent -t reef-agent:0.3.1 .
 ```
 
 Example Compose service, replacing the HTTPS origin and existing secret-file
@@ -37,7 +37,7 @@ path. This is an installation example, not an instruction to contact production.
 ```yaml
 services:
   reef-agent:
-    image: reef-agent:0.3.0
+    image: reef-agent:0.3.1
     restart: unless-stopped
     command:
       - -server
