@@ -2,6 +2,8 @@
 
 ## 0.3.0 — Unreleased
 
+- Shared Reef SVG favicon on the login, main application and console pages.
+
 - GPLv3 licensing and a GitLab-to-GitHub mirror for ReefHQ/reef (ReefLabs), with
   private session notes removed from every public branch/tag and its history.
 

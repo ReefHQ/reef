@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
- <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Container.Name}} · Console · {{.Name}}</title>
+ <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Container.Name}} · Console · {{.Name}}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css"><link rel="stylesheet" href="/assets/vendor/xterm.css">
  <script src="/assets/vendor/xterm.js" defer></script><script src="/assets/vendor/addon-fit.js" defer></script>{{if .Embedded}}<script src="/assets/console-frame.js" defer></script>{{else}}<script src="/assets/console.js" defer></script>{{end}}
 </head><body class="app-shell console-page{{if .Embedded}} console-embedded{{end}}" data-container-id="{{.Container.ID}}" data-console-channel="{{.Channel}}">
