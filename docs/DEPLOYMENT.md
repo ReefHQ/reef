@@ -52,12 +52,17 @@ appropriate.
 | `HEALTHCHECK_URL` | `http://reef-app:8099/healthz`, reachable by the deploy runner on `proxy` |
 | Job-token repository pushes | Enable in project CI/CD Job token permissions |
 | Protected `master`, `v*` | Allow release-bot job-token operations and secret access |
-| Runners `build`, `deploy` | Native buildx/Docker builder and webhook/health access |
+| Runners `build`, `deploy` | Docker builder (Buildx supplied per job if missing) and webhook/health access |
 
 GitLab registry build credentials use the job token. The target requires a
 separate deploy token with `read_registry`, not a CI job token that expires.
 Do not reuse an inventory-agent identity or Reef browser password as the webhook
 token. Public/source mirrors never contain the completed `.env` or credentials.
+
+The build job checks Buildx in its isolated Docker config. If it is missing,
+`scripts/ensure-buildx.sh` copies the official plugin from a never-started
+`docker:29.9.2-cli` container for the runner architecture. The temporary plugin
+and helper container are cleaned up; no runner installation is modified.
 
 A job-token Git push does not create a pipeline; the release script explicitly
 triggers the tag pipeline afterward. Leave repository push permissions and
