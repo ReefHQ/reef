@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- GPLv3 licensing and a GitLab-to-GitHub mirror for ReefHQ/reef (ReefLabs), with
+  private session notes removed from every public branch/tag and its history.
+
 - Multi-host inventory through outbound HTTPS agents, with one-use enrollment,
   durable identities/revocation, host selection and stale inventory indicators.
   Agents are disabled by default; remote logs, consoles and Compose operations

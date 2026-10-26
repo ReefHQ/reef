@@ -23,7 +23,7 @@ import (
 
 var webFiles = assets.Files
 
-const appName = "Reef" // Central display name; no distribution license has been selected.
+const appName = "Reef" // Central display name.
 type session struct {
 	CSRF    string    `json:"csrf"`
 	Expires time.Time `json:"expires"`

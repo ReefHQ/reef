@@ -256,9 +256,14 @@ changes through a merge request; tag pipelines check the version being released.
 Checks cover Go race tests, vet, Linux amd64/arm64 application compilation,
 launcher compilation and frontend tests/syntax. No Docker socket is passed to
 the check containers. Run the same checks locally with `sh scripts/ci.sh go` and
-`sh scripts/ci.sh frontend` (Docker required). This CI does not publish releases,
-deploy Reef or mirror to GitHub; the private-session removal rule above applies
-when the mirror is added.
+`sh scripts/ci.sh frontend` (Docker required). CI does not publish releases or
+deploy Reef. A separate job mirrors the source
+to [ReefHQ/reef](https://github.com/ReefHQ/reef) after default-branch pushes and
+protected tags, once publication is enabled. Every public branch/tag is rewritten
+to remove private development notes and session identifiers from its entire
+history. GitLab remains the source of truth; public commit IDs differ. Quality
+jobs run on merge requests and tags, without repeating after a merge.
+
 
 ### Versioning
 
@@ -323,7 +328,11 @@ Real Docker Desktop validation on 22 October 2026 covered image build/execution,
 
 Official references: [Compose options and paths](https://docs.docker.com/reference/cli/docker/compose/), [interpolation and `.env`](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [include rules](https://docs.docker.com/reference/compose-file/include/), [official Docker client image with Compose](https://github.com/docker-library/docker/blob/master/29/cli/Dockerfile).
 
-Reef is the name selected for this application. No repository, domain or trademark has been checked or published. Free distribution is intended; **no distribution license has been selected**. No external repository has been created.
+Reef is developed under **ReefLabs**, with the GitHub organization identifier
+**ReefHQ**. The public mirror is [ReefHQ/reef](https://github.com/ReefHQ/reef).
+Reef is licensed under the [GNU General Public License v3.0](LICENSE)
+(SPDX: `GPL-3.0-only`). Vendored xterm.js and its fit addon retain their MIT
+licenses and attribution under `web/vendor/`.
 
 ## Multiple Docker hosts
 
