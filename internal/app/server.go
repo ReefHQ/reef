@@ -76,6 +76,7 @@ func (s *Server) getSession(r *http.Request) (session, bool) {
 }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", health)
 	mux.HandleFunc("/agent/v1/", s.agentProtocol)
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(webFiles))))
 	mux.HandleFunc("/login", s.login)

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "deploy",
+    "execute-command": "/scripts/deploy.sh",
+    "command-working-directory": "/app",
+    "http-methods": ["POST"],
+    "pass-arguments-to-command": [
+      { "source": "header", "name": "X-Deploy-Token" },
+      { "source": "header", "name": "X-Deploy-Version" },
+      { "source": "header", "name": "X-Deploy-Revision" }
+    ],
+    "include-command-output-in-response": true,
+    "include-command-output-in-response-on-error": true
+  }
+]

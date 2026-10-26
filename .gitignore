@@ -1,5 +1,6 @@
 # Private local installation: configuration, credentials, data and operation history.
 /.reef-local/
+/.env
 /config.json
 /state/
 /secrets/
