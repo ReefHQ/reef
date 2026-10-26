@@ -9,7 +9,7 @@ trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 mkdir "$work/bin" "$work/app"
 export PATH="$work/bin:$PATH" TEST_LOG="$work/commands" TEST_HTTP="$work/http"
-unset TEST_TRIGGER BAD_HEALTH FAIL_PULL WRONG_IMAGE_REVISION HEALTH_VERSION TEST_REQUIRE_BUILDX_BOOTSTRAP
+unset TEST_TRIGGER BAD_HEALTH FAIL_PULL WRONG_IMAGE_REVISION HEALTH_VERSION TEST_REQUIRE_BUILDX_BOOTSTRAP FAIL_ARM64_BUILD
 export EXPECTED_REVISION=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 cat > "$work/bin/docker" <<'MOCK'
 #!/bin/sh
@@ -21,6 +21,7 @@ if [ "${TEST_REQUIRE_BUILDX_BOOTSTRAP:-false}" = true ]; then
  esac
 fi
 case " $* " in
+ *" buildx build "*"--platform linux/arm64 "*) [ "${FAIL_ARM64_BUILD:-false}" != true ] || exit 1;;
  *" login "*) cat >/dev/null;;
  *" image inspect "*) printf '%s\n' "${WRONG_IMAGE_REVISION:-$EXPECTED_REVISION}";;
  *" pull reef "*) [ "${FAIL_PULL:-false}" != true ] || exit 1;;
@@ -104,13 +105,26 @@ cp "$root/scripts/ensure-buildx.sh" "$root/scripts/build-release.sh" "$root/scri
 printf '0.3.0\n' > "$work/build-project/VERSION"
 export CI_COMMIT_TAG=v0.3.0 CI_COMMIT_SHA="$EXPECTED_REVISION" CI_COMMIT_REF_PROTECTED=true
 (cd "$work/build-project";sh scripts/build-release.sh)
-test "$(grep -c 'buildx build .*--platform linux/amd64,linux/arm64' "$TEST_LOG")" -eq 2
+test "$(grep -c 'buildx build --builder default --platform linux/' "$TEST_LOG")" -eq 4
+if grep -Eq 'buildx create|--driver docker-container' "$TEST_LOG";then echo 'Nested BuildKit runtime used';exit 1;fi
+test "$(grep -c 'buildx build .*--platform linux/amd64' "$TEST_LOG")" -eq 2
+test "$(grep -c 'buildx build .*--platform linux/arm64' "$TEST_LOG")" -eq 2
+test "$(grep -c '^push ' "$TEST_LOG")" -eq 4
+test "$(grep -c 'buildx imagetools create' "$TEST_LOG")" -eq 2
+for image in "$CI_REGISTRY_IMAGE" "$CI_REGISTRY_IMAGE/agent"; do
+ grep -Fq "buildx imagetools create --tag $image:$CI_COMMIT_TAG --tag $image:$CI_COMMIT_SHA --tag $image:latest $image:$CI_COMMIT_SHA-amd64 $image:$CI_COMMIT_SHA-arm64" "$TEST_LOG"
+done
+# A missing platform must prevent all release aliases from being published.
+: > "$TEST_LOG"
+if (cd "$work/build-project";FAIL_ARM64_BUILD=true sh scripts/build-release.sh);then echo 'Failed platform build accepted';exit 1;fi
+if grep -q 'buildx imagetools create' "$TEST_LOG";then echo 'Incomplete release published';exit 1;fi
 # Reproduce a runner that has Docker but no Buildx in its isolated config.
 : > "$TEST_LOG"
 (cd "$work/build-project";TEST_REQUIRE_BUILDX_BOOTSTRAP=true sh scripts/build-release.sh)
 grep -q 'create --name reef-buildx-tool-' "$TEST_LOG"
 grep -q 'cp .*docker-buildx' "$TEST_LOG"
-test "$(grep -c 'buildx build .*--platform linux/amd64,linux/arm64' "$TEST_LOG")" -eq 2
+test "$(grep -c 'buildx build --builder default --platform linux/' "$TEST_LOG")" -eq 4
+if grep -Eq 'buildx create|--driver docker-container' "$TEST_LOG";then echo 'Nested BuildKit runtime used';exit 1;fi
 grep -q 'rm -f reef-buildx-tool-' "$TEST_LOG"
 export DEPLOY_WEBHOOK_URL=https://deploy.example.invalid/hooks/deploy DEPLOY_WEBHOOK_TOKEN=fixture-webhook HEALTHCHECK_URL=https://reef.example.invalid/healthz
 (cd "$work/build-project";sh scripts/deploy-release.sh) > "$work/ci-deploy"

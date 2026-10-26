@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.3.1 — Unreleased
+## 0.3.2 — Unreleased
+
+- Build release platforms separately with Docker's integrated builder and assemble
+  registry manifests afterward, avoiding a nested BuildKit/runc incompatibility.
+
+## 0.3.1 — 2026-10-26
+
+Buildx provisioning succeeded; initial image publication then failed in the nested
+BuildKit runtime while masking /proc/acpi. No server deployment occurred.
 
 - Release builds supply Buildx from the official Docker CLI image when the shell
   runner lacks it, using an isolated job configuration without changing runners.
