@@ -1,13 +1,19 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),view=find('images-view');
- let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,operation='',timer,hostsReady=false;
+ let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,operation='',timer,hostsReady=false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('images-v1');
  const bytes=value=>{if(value<1024)return value+' B';const units=['KiB','MiB','GiB','TiB'];let n=value/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toFixed(1)+' '+units[i];};
  const name=row=>row.tags?.join(', ')||'<untagged>';
  const target=row=>({id:row.id,fingerprint:row.fingerprint});
  function notice(text,error=false){find('images-error').textContent=text;find('images-error').hidden=!text;find('images-error').className='notice'+(error?' error':'');}
  function controls(){
+  const pending=available()&&(loading||(!hasSnapshot&&!loadError));
+  find('images-loading').hidden=!pending;
+  find('images-loading-text').textContent=hasSnapshot?'Refreshing images…':'Loading images…';
+  find('images-rows').setAttribute('aria-busy',String(pending));
+  if(!hasSnapshot){find('images-results').textContent='';find('images-empty').hidden=false;find('images-empty').textContent=pending?'Loading images…':available()?'Inventory unavailable. Use Refresh to try again.':'Upgrade the agent to manage images.';}
+
   const disabled=!available()||busy||loading||!loaded;
   find('images-refresh').disabled=!available()||loading;
   find('images-pull-submit').disabled=!available()||busy;
@@ -34,19 +40,19 @@
    const tag=textNode('button','Add tag','compact-button');tag.type='button';tag.disabled=busy;tag.addEventListener('click',()=>tagDialog(row));actions.append(tag);
    tr.append(selection,title,textNode('td',bytes(row.size)),textNode('td',`${row.os}/${row.architecture}${row.variant?'/'+row.variant:''}`),textNode('td',row.containers.length?row.containers.join(', '):'Unused'),actions);return tr;
   });
-  replaceKeepingFocus(find('images-rows'),nodes);find('images-empty').hidden=!!filtered.length;find('images-empty').textContent=loaded?'No images match this selection.':'Open Images to load the selected host inventory.';
+  replaceKeepingFocus(find('images-rows'),nodes);find('images-empty').hidden=!!filtered.length;find('images-empty').textContent=hasSnapshot?'No images match this selection.':'Loading images…';
   find('images-select-all').checked=filtered.some(r=>!r.containers.length)&&filtered.filter(r=>!r.containers.length).every(r=>selected.has(r.id));
   controls();
  }
  async function refresh(){
   if(!hostsReady||loading||document.hidden)return;
   if(!available()){notice('Upgrade this host’s agent to manage images.',true);controls();window.reefImagesReady=true;window.dispatchEvent(new CustomEvent('reef-images-ready'));return;}
-  const current=epoch;loading=true;controls();
+  const current=epoch;loading=true;loadError=false;controls();
   try{const data=await(await request('/api/images',undefined,host)).json();if(current!==epoch)return;
    const prior=new Map(rows.map(row=>[row.id,row.fingerprint]));rows=data.images;loaded=true;hasSnapshot=true;
    selected=new Set([...selected].filter(id=>rows.some(row=>row.id===id&&!row.containers.length&&row.fingerprint===prior.get(id))));
    notice('');status(data.operation);render();
-  }catch(error){if(current===epoch){notice(`${error.message}${loaded?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;controls();}}
+  }catch(error){if(current===epoch){loadError=true;notice(`${error.message}${hasSnapshot?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;controls();}}
   finally{if(current===epoch){loading=false;controls();window.reefImagesReady=true;window.dispatchEvent(new CustomEvent('reef-images-ready'));}}
  }
  async function poll(){
@@ -87,7 +93,7 @@
  // Batch deletion uses the exact reviewed IDs/fingerprints; never Docker's global prune.
  find('images-cleanup').addEventListener('click',()=>remove(rows.filter(row=>!row.containers.length&&(find('images-cleanup-mode').value==='all'||!row.tags?.length)),'cleanup'));
  window.addEventListener('reef-view-changed',()=>{if(!view.hidden){refresh();clearTimeout(timer);timer=setTimeout(poll,1500);}});
- window.addEventListener('reef-host-changed',()=>{epoch++;window.reefImagesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;operation='';for(const id of ['image-details','image-tag-dialog'])if(find(id).open)find(id).close();find('images-search').value='';find('images-usage').value='';find('images-operation').hidden=true;notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
+ window.addEventListener('reef-host-changed',()=>{epoch++;window.reefImagesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;loadError=false;operation='';for(const id of ['image-details','image-tag-dialog'])if(find(id).open)find(id).close();find('images-search').value='';find('images-usage').value='';find('images-operation').hidden=true;notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  render();(window.reefHostsReady||Promise.resolve()).then(()=>{hostsReady=true;refresh();clearTimeout(timer);timer=setTimeout(poll,1500);});
 })();

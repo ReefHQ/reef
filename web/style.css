@@ -203,3 +203,11 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 #volumes-view input[type=checkbox]{width:18px;height:18px;min-height:18px;margin:0;vertical-align:middle}
 #volumes-operation{max-height:220px;overflow:auto}#volume-detail-fields dd{overflow-wrap:anywhere}
 @media(max-width:760px){.primary-nav{overflow-x:auto;max-width:100%}.primary-nav button{flex-shrink:0}}
+
+/* Reserve status space so background reads do not move the table or filters. */
+.list-loading-slot{min-height:24px;margin:8px 0}
+.list-loading{display:flex;align-items:center;gap:8px;margin:0;color:var(--muted);font-size:12px}
+.list-loading[hidden]{display:none}
+.loading-spinner{display:inline-block;flex:none;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:reef-loading-spin .8s linear infinite}
+@keyframes reef-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}

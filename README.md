@@ -42,6 +42,12 @@ The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopbac
 
 ## Containers and Projects
 
+Containers, Projects, Images and Volumes display an animated loading indicator
+for their first inventory read and a refreshing indicator during later reads.
+Previously loaded rows remain visible. A reserved status area avoids shifting
+filters/tables on refresh, and reduced-motion preferences disable the animation.
+An unavailable inventory ends the loading state and reports the error.
+
 Reloading the same browser tab restores the Containers/Projects/Images/Volumes view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
@@ -403,7 +409,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.8.0` in development.
+source of truth for the application version, currently `0.8.1` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
