@@ -110,6 +110,14 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && r.URL.Path == "/api/images/action" && r.Method == "POST" && (s.agents == nil || !s.agents.CanImageBatch(host)) {
+			var targets []ImageTarget
+			if json.Unmarshal([]byte(r.Form.Get("targets")), &targets) == nil && len(targets) > imageCleanupBatchSize {
+				http.Error(w, "Upgrade the remote agent to clean more than 100 images in one operation", 409)
+				return
+			}
+		}
+
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/volumes") && (s.agents == nil || !s.agents.CanVolumes(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage volumes", 409)
 			return

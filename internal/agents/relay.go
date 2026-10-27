@@ -13,6 +13,7 @@ import (
 
 const ControlCapability = "control-v1"
 const ImagesCapability = "images-v1"
+const ImageBatchCapability = "images-batch-v1"
 const VolumesCapability = "volumes-v1"
 const MaxCommandBytes = 4 << 20
 const MaxFrameBytes = 16 << 10

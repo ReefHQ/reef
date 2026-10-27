@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.8.1 — Unreleased
+## 0.8.2 — Unreleased
+
+- Accept the full image selection in one cleanup request, process it in automatic
+  batches and report live per-image progress instead of stopping at 100 images.
+- Scan inventory once per batch, recheck exact images before removal and retain
+  container/identity protections; negotiate large selections with remote agents.
+
+## 0.8.1 — 2026-10-27
 
 - Show visible loading/refreshing indicators across inventory lists, preserve
   existing rows and layout during refresh, and distinguish unavailable inventories.

@@ -99,7 +99,10 @@ history, volumes and build cache are not exposed or cleaned.
 
 Select unused images for batch deletion, or use Review cleanup with either
 unused images without tags (default) or all unused images. The confirmation lists
-the exact candidate images and host. Each batch is limited to 100 images.
+the exact candidate images and host. A single request accepts the entire selection
+(up to the inventory limit of 2000 images), processes automatic batches of 100
+and reports per-image progress. The whole accepted operation continues without
+keeping the browser open; do not submit later batches manually.
 Before each removal, Reef verifies the image ID, tags/digests and current usage;
 changed images are retained for review. It removes explicit references without
 force or parent pruning. Multi-tag deletion can partially succeed if Docker
@@ -108,15 +111,20 @@ retrying. Other Docker clients can still change the engine concurrently.
 
 One image mutation runs per host, excluding Reef Compose operations. Pulls and
 batches continue after closing the page or disconnecting an agent and have a
-15-minute deadline. Their latest per-image report is kept in memory only;
+15-minute deadline for pull/tag operations and a 45-minute deadline for deletion
+or cleanup. Timed-out selections report unprocessed images and are never replayed.
+Their latest per-image report is kept in memory only;
 after a process restart, refresh inventory to reconcile an interrupted operation.
 Inventory reads are limited to 2000 images/10000 containers and ten seconds.
 Docker errors are summarized without exposing registry credentials.
 
 Local and upgraded remote agents use the same implementation. Upgrade central
-first, then agents to v0.7.0 while preserving their existing identity volume,
+first, then agents to v0.8.2 while preserving their existing identity volume,
 CA and configuration. The images-v1 capability is negotiated per connection;
 older agents retain their existing features and request an upgrade for Images.
+Selections above 100 also require images-batch-v1 (agent v0.8.2). Older image
+agents keep small operations available and show a clear upgrade message for a
+large selection. Upgrade central before agents and preserve identity/CA/config.
 
 ## Volumes
 
@@ -409,7 +417,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.8.1` in development.
+source of truth for the application version, currently `0.8.2` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
