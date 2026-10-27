@@ -322,7 +322,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.5.0` in development.
+source of truth for the application version, currently `0.6.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
@@ -390,16 +390,19 @@ licenses and attribution under `web/vendor/`.
 
 ## Multiple Docker hosts
 
-Reef can display remote inventories through lightweight outbound HTTPS agents.
-**Local** remains the default; existing local projects, logs and consoles keep
-working. Choose a Docker host in the sidebar; **Manage hosts** lists contact,
-inventory freshness and agent version, and provides enrollment, rename and
-revocation. Remote projects are view-only. Remote logs, consoles and Compose
-management are reserved for later increments.
+Reef manages remote Docker hosts through outbound HTTPS agents. Upgraded agents
+provide the same logs, consoles, project registration, Compose editing/actions,
+image checks and targeted cleanup as Local. The selected host owns its files,
+Docker operations, backups and history. Editor drafts are isolated by host;
+console tabs stay attached to their original host while you navigate.
 
-Agents are disabled by default. Enable `agents_enabled: true` in central Reef's
-JSON configuration and restart it after configuring a reachable HTTPS origin
-with a trusted certificate. With TLS at a reverse proxy, also set
-`secure_cookie: true` and forward the agent routes without exposing Docker's API.
-See [agent installation](docs/AGENT_SETUP.md) and the
-[architecture proposal](docs/MULTI_HOST_AGENTS.md).
+Agents are disabled by default centrally. Enable `agents_enabled: true` and
+provide an HTTPS endpoint reachable from the agent, with certificate verification.
+No incoming remote-agent port is needed. Existing inventory agents continue to
+work until upgraded; management requires the negotiated `control-v1` capability.
+
+See [agent setup and upgrades](docs/AGENT_SETUP.md) and the
+[multi-host architecture](docs/MULTI_HOST_AGENTS.md). The example agent mounts
+its installation's parent read/write at the identical host path, following Local's
+authorization rule. Explicit roots can restrict adoption. An upgrade preserves its
+private identity/state volume and needs no new enrollment token.

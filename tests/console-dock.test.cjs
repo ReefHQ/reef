@@ -36,3 +36,12 @@ test('console panel enforces the configured tab limit and ignores messages from 
  const frame=p.frames()[0];p.events.message({origin:'http://evil.test',source:frame.contentWindow,data:{type:'reef-console-frame',channel:'console-1',action:'open'}});p.events.message({origin:'http://reef.test',source:{},data:{type:'reef-console-frame',channel:'console-1',action:'open'}});assert.equal(p.requests.length,0);
  assert.equal(p.events.beforeunload,undefined);assert.equal(typeof p.events.pagehide,'function');
 });
+test('remote console keeps its original host while sharing the local panel connection',async()=>{
+ const p=page();p.open({...c,host_id:'remote-one',host_name:'Server one',inventory_only:false});const remote=p.frames()[0];p.open(c);const local=p.frames()[1];
+ assert.equal(new URL('http://reef.test'+remote.src).searchParams.get('host'),'remote-one');
+ p.message(remote,'open',{shell:'/bin/sh',cols:80,rows:24});p.message(local,'open',{shell:'/bin/sh',cols:80,rows:24});assert.equal(p.requests.length,1);assert.equal(p.requests[0].url,'/api/console/stream');
+ let writer;const body=new ReadableStream({start(controller){writer=controller;}});p.requests[0].resolve({ok:true,status:200,body});writer.enqueue(new TextEncoder().encode(JSON.stringify({type:'transport',id:'shared'})+'\n'));await settle();
+ assert.equal(p.requests.filter(r=>r.url==='/api/console/open?host=remote-one').length,1);assert.equal(p.requests.filter(r=>r.url==='/api/console/open').length,1);
+ for(const request of p.requests.slice(1))request.resolve({ok:true,status:200});await settle();p.find('#console-dock-tabs').children[1].children[1].events.click();assert.equal(p.frames()[0],remote);assert.equal(p.requests[0].options.signal.aborted,false);
+ p.find('#console-dock-tabs').children[0].children[1].events.click();
+});

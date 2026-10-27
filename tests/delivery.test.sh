@@ -173,4 +173,16 @@ CI_COMMIT_SHA=$(git -C "$work/source" rev-parse HEAD);export CI_COMMIT_SHA
 test "$(git -C "$work/origin.git" rev-parse 'v0.3.0^{}')" = "$tag_commit"
 printf '01.3.0\n' > "$work/bad-version"
 if sh "$root/scripts/read-version.sh" "$work/bad-version" > "$work/rejected" 2>&1;then echo 'Invalid release accepted';exit 1;fi
-echo 'PASS: idempotent private server preparation, release immutability, multiarch build, token/version/revision checks, serialized deployment, preservation after pull/health failures, and exact live build verification.'
+# Upgrade preparation derives agent-host paths and preserves identity/credentials.
+mkdir -p "$work/agent-parent/reef-agent" "$work/docker-auth"
+printf 'COMPOSE_PROJECT_NAME=reef-agent\nREEF_SERVER=https://reef.example.invalid:8100\nREEF_AGENT_IMAGE=old:version\nOTHER=keep\n' > "$work/agent-parent/reef-agent/.env"
+(cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.6.0) > "$work/agent-preparation"
+grep -Fxq 'OTHER=keep' "$work/agent-parent/reef-agent/.env"
+grep -Fxq "REEF_AGENT_PROJECT_ROOT=$work/agent-parent" "$work/agent-parent/reef-agent/.env"
+grep -Fxq "REEF_AGENT_INSTALLATION_DIR=$work/agent-parent/reef-agent" "$work/agent-parent/reef-agent/.env"
+grep -Fxq 'REEF_AGENT_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.6.0' "$work/agent-parent/reef-agent/.env"
+cp "$work/agent-parent/reef-agent/.env" "$work/agent-env-before"
+(cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.6.0) > "$work/agent-preparation-again"
+cmp "$work/agent-env-before" "$work/agent-parent/reef-agent/.env"
+
+echo 'PASS: idempotent private server/agent preparation, release immutability, multiarch build, token/version/revision checks, serialized deployment, preservation after pull/health failures, and exact live build verification.'

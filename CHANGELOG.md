@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.5.0 — Unreleased
+## 0.6.0 — Unreleased
+
+- Extend outbound agents with remote logs, consoles, project registration, Compose
+  editing/actions, image checks and targeted cleanup using the shared Reef engine.
+- Keep editor drafts, operation state and console routing isolated by host; preserve
+  agent identities when upgrading and negotiate capabilities with older agents.
+
+## 0.5.0 — 2026-10-27
 
 - Check managed-project image updates automatically and on demand by comparing
   registry manifests with deployed image contents for the matching platform.

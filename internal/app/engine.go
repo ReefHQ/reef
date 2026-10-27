@@ -21,21 +21,24 @@ import (
 type Executor interface {
 	Run(context.Context, Project, []string, io.Writer) error
 }
-type DockerExecutor struct{}
+type DockerExecutor struct{ Socket string }
 
-func (DockerExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
-	return dockerCommand(ctx, p, args, w, w)
+func (d DockerExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
+	return dockerCommand(ctx, p, args, w, w, d.Socket)
 }
 
 // Output keeps diagnostic stderr separate from machine-readable JSON/IDs.
-func (DockerExecutor) Output(ctx context.Context, p Project, args []string, w io.Writer) error {
-	return dockerCommand(ctx, p, args, w, io.Discard)
+func (d DockerExecutor) Output(ctx context.Context, p Project, args []string, w io.Writer) error {
+	return dockerCommand(ctx, p, args, w, io.Discard, d.Socket)
 }
-func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr io.Writer) error {
+func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr io.Writer, socket string) error {
+	if socket == "" {
+		socket = "/var/run/docker.sock"
+	}
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = p.Directory
 	// Do not leak the UI password or inherit Compose/Docker overrides from the server.
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix:///var/run/docker.sock", "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain"}
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix://" + socket, "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain"}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()

@@ -34,6 +34,7 @@ type attempt struct {
 }
 type Server struct {
 	agents         *agents.Registry
+	relay          *agents.Relay
 	discovery      docker.Lister
 	m              *Manager
 	cfg            Config
@@ -46,7 +47,7 @@ type Server struct {
 }
 
 func newServer(m *Manager, c Config, password string) *Server {
-	return &Server{discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+	return &Server{relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	u, e := url.Parse(r.Header.Get("Origin"))
@@ -60,6 +61,9 @@ func (s *Server) originOK(r *http.Request) bool {
 	return u.Scheme == scheme
 }
 func (s *Server) getSession(r *http.Request) (session, bool) {
+	if sess, ok := r.Context().Value(agentSessionKey{}).(session); ok {
+		return sess, time.Now().Before(sess.Expires)
+	}
 	c, e := r.Cookie("qcu_session")
 	if e != nil {
 		return session{}, false
@@ -106,9 +110,21 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
-		if host != "" && host != "local" && r.URL.Path != "/api/containers" && r.URL.Path != "/api/hosts" {
-			http.Error(w, "This host supports inventory only", 409)
-			return
+		if host != "" && host != "local" {
+			switch r.URL.Path {
+			case "/api/hosts", "/api/containers", "/api/container-logs", "/console", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close":
+				if r.URL.Path != "/api/hosts" && r.URL.Path != "/api/containers" && !s.remoteReady(host) {
+					http.Error(w, "Remote host is disconnected or needs an agent upgrade", 409)
+					return
+				}
+			default:
+				if agents.AllowedCommand(r.Method, r.URL.Path) && s.remoteReady(host) {
+					s.remoteHTTP(w, r, sess, host)
+					return
+				}
+				http.Error(w, "This host supports inventory only or is disconnected", 409)
+				return
+			}
 		}
 		switch r.URL.Path {
 		case "/api/hosts":

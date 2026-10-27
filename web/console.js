@@ -10,7 +10,7 @@
  const base64=b=>btoa(String.fromCharCode(...b));
  function controls(busy){connect.disabled=busy;shell.disabled=busy;disconnect.disabled=!busy;}
  async function post(path,fields,signal){
-  const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,...fields}),signal});
+  const response=await fetch(path+(path==='/api/console/open'&&document.body.dataset.hostId&&document.body.dataset.hostId!=='local'?'?host='+encodeURIComponent(document.body.dataset.hostId):''),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,...fields}),signal});
   if(response.status===401){location.href='/login';throw Error('Sign-in required');}
   if(!response.ok)throw Error(await response.text());return response;
  }

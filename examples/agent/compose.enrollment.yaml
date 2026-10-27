@@ -1,0 +1,19 @@
+# First enrollment only. Remove this override after identity.json is persisted.
+services:
+  reef-agent:
+    command:
+      - -server
+      - ${REEF_SERVER:?}
+      - -state-dir
+      - /var/lib/reef-agent/state
+      - -ca-file
+      - /etc/reef-ca/ca.crt
+      - -enrollment-file
+      - /run/reef-enrollment
+    volumes:
+      - type: bind
+        source: ./secrets/enrollment-token
+        target: /run/reef-enrollment
+        read_only: true
+        bind:
+          create_host_path: false

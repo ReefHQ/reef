@@ -4,7 +4,7 @@
  const output=document.querySelector('#container-log-output'),status=document.querySelector('#container-logs-status');
  const error=document.querySelector('#container-logs-error'),limit=document.querySelector('#container-logs-limit');
  const refresh=document.querySelector('#refresh-container-logs'),toggle=document.querySelector('#toggle-container-logs');
- let timer=null,controller=null,generation=0,automatic=true,lastStatus='';
+ let timer=null,controller=null,generation=0,automatic=true,lastStatus='',logHost='local';
  function cancel(){clearTimeout(timer);timer=null;controller?.abort();controller=null;generation++;refresh.disabled=false;}
  function setAutomatic(value){automatic=value;toggle.textContent=value?'Pause updates':'Resume updates';toggle.setAttribute('aria-pressed',String(value));if(!value)clearTimeout(timer);}
  async function load(reset=false,background=false){
@@ -13,7 +13,7 @@
   if(reset){output.textContent='Loading logs…';limit.hidden=true;status.textContent=automatic?'Loading · updates every 3 seconds':'Loading · automatic updates paused';}
   try{
    const query=new URLSearchParams({id:picker.value,stream:document.querySelector('#log-stream').value,tail:document.querySelector('#log-tail').value});
-   const response=await request('/api/container-logs?'+query,{signal:controller.signal});
+   const response=await request('/api/container-logs?'+query,{signal:controller.signal},logHost);
    const result=await response.json();if(token!==generation||!dialog.open)return;
    const follow=reset||output.scrollTop+output.clientHeight>=output.scrollHeight-30,scroll=output.scrollTop;
    const text=result.text||'No output in this selection. The application may log to files or the selected stream may be empty.';
@@ -32,9 +32,10 @@
  }
  window.openContainerLogs=({containers,project='',id=''})=>{
   if(containers.some(c=>c.inventory_only))return;
+  logHost=containers[0]?.host_id||window.reefHost||'local';
   cancel();picker.replaceChildren(...containers.map(c=>new Option(`${c.compose_service?c.compose_service+' · ':''}${c.name} (${c.state})`,c.id)));
   if(id)picker.value=id;
-  document.querySelector('#container-logs-title').textContent=project?`Application logs · ${project}`:'Container logs';
+  document.querySelector('#container-logs-title').textContent=project?`Application logs · ${project} · ${containers[0]?.host_name||window.reefHostName||'Local'}`:`Container logs · ${containers[0]?.host_name||window.reefHostName||'Local'}`;
   setAutomatic(true);lastStatus='';toggle.disabled=!containers.length;error.hidden=true;limit.hidden=true;output.textContent='';
   if(!dialog.open)dialog.showModal();
   if(containers.length)load(true);else{status.textContent='No containers currently exist for this project.';output.textContent='Start the project, then reopen its application logs.';refresh.disabled=true;setAutomatic(false);}

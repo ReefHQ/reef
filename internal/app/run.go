@@ -73,6 +73,7 @@ func Run() {
 		stopChecks()
 		log.Print("Stopping new requests; waiting for active operations (up to 45 minutes). Do not force termination.")
 		s.closeConsoles()
+		s.relay.Close()
 		_ = server.Shutdown(context.Background())
 		m.wg.Wait()
 		close(stopped)

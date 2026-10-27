@@ -4,7 +4,7 @@
  const error=find('#console-dock-error'),csrf=find('meta[name="csrf-token"]').content;
  const entries=new Map(),limit=Number(document.body.dataset.consoleSessionLimit)||8;
  let selected='',sequence=0,height=380,collapsed=false,maximized=false,transport=null,drag=null;
- function post(path,fields={},signal){return fetch('/api/console/'+path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...fields,csrf}),signal}).then(async response=>{if(response.status===401)throw Error('Sign-in expired. Reload Reef to sign in again.');if(!response.ok)throw Error(await response.text());return response;});}
+ function post(path,fields={},signal,host='local'){return fetch('/api/console/'+path+(host!=='local'?'?host='+encodeURIComponent(host):''),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...fields,csrf}),signal}).then(async response=>{if(response.status===401)throw Error('Sign-in expired. Reload Reef to sign in again.');if(!response.ok)throw Error(await response.text());return response;});}
  function tell(entry,message){entry.frame.contentWindow?.postMessage({type:'reef-console-host',channel:entry.key,...message},location.origin);}
  function count(){const active=[...entries.values()].filter(e=>['connected','connecting'].includes(e.phase)).length;find('#console-dock-count').textContent=`${active} active / ${limit} · ${entries.size} tab${entries.size===1?'':'s'}`;}
  function phase(entry,value){entry.phase=value;entry.tab.dataset.state=value;entry.tab.setAttribute('aria-label',`${entry.label} — ${value}`);entry.state.textContent=value;count();}
@@ -46,13 +46,13 @@
   if(c.state!=='running'||c.inventory_only)return;
   collapsed=false;layout();
   if(entries.size>=limit){error.textContent=`${limit} console tabs are open. Close a tab before opening another.`;error.hidden=false;return;}
-  error.hidden=true;const key='console-'+(++sequence),label=`${sequence} · ${c.name}${c.compose_project?' · '+c.compose_project:''} · Local`;
+  error.hidden=true;const key='console-'+(++sequence),label=`${sequence} · ${c.name}${c.compose_project?' · '+c.compose_project:''} · ${c.host_name||'Local'}`;
   const tabGroup=document.createElement('div');tabGroup.className='console-dock-tab';tabGroup.setAttribute('role','presentation');
   const tab=document.createElement('button');tab.type='button';tab.id=key+'-tab';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',key+'-pane');tab.title=label;
   const name=document.createElement('span');name.textContent=`${sequence} · ${c.name}`;const state=document.createElement('span');state.className='console-tab-state';state.textContent='not connected';tab.append(name,state);tab.setAttribute('aria-label',`${label} — not connected`);
   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Close and disconnect ${label}`);tabGroup.append(tab,remove);
   const pane=document.createElement('div');pane.className='console-dock-pane';pane.id=key+'-pane';pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',tab.id);
-  const frame=document.createElement('iframe');frame.classList.add('is-loading');frame.title=`Terminal for ${label}`;frame.src='/console?'+new URLSearchParams({id:c.id,embedded:'1',channel:key});pane.append(frame);
+  const frame=document.createElement('iframe');frame.classList.add('is-loading');frame.title=`Terminal for ${label}`;frame.src='/console?'+new URLSearchParams({id:c.id,embedded:'1',channel:key,host:c.host_id||'local'});pane.append(frame);
   const entry={key,c,label,tabGroup,tab,state,pane,frame,phase:'idle',console:'',controller:null};entries.set(key,entry);tabs.append(tabGroup);panes.append(pane);size(height);select(key);count();
   tab.addEventListener('click',()=>{collapsed=false;select(key);});remove.addEventListener('click',()=>close(key));
   tab.addEventListener('keydown',event=>{const keys=[...entries.keys()],index=keys.indexOf(key);let target;if(event.key==='ArrowRight')target=keys[(index+1)%keys.length];if(event.key==='ArrowLeft')target=keys[(index+keys.length-1)%keys.length];if(event.key==='Home')target=keys[0];if(event.key==='End')target=keys.at(-1);if(target){event.preventDefault();select(target,true);}if(event.key==='Delete'){event.preventDefault();close(key);}});
@@ -66,7 +66,7 @@
    if(action==='loaded'){tell(entry,{action:'activate',active:entry.key===selected&&!collapsed});return;}
    if(action==='open'){
     phase(entry,'connecting');entry.openRequest=request;const opening=new AbortController();entry.controller=opening;const current=await ensureTransport();if(!entries.has(entry.key)||entry.controller!==opening||opening.signal.aborted)return;
-    await post('open',{id:entry.c.id,shell:fields.shell,cols:fields.cols,rows:fields.rows,confirmed:'yes',transport:current.id,client:entry.key},opening.signal);reply(true);return;
+    await post('open',{id:entry.c.id,shell:fields.shell,cols:fields.cols,rows:fields.rows,confirmed:'yes',transport:current.id,client:entry.key},opening.signal,entry.c.host_id||'local');reply(true);return;
    }
    if(action==='close'){entry.openRequest=null;entry.controller?.abort();if(transport?.id)await post('close',{console:entry.console,transport:transport.id,client:entry.key});entry.console='';phase(entry,'disconnected');reply(true);return;}
    if(!entry.console)throw Error('Console is not connected.');

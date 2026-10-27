@@ -1,4 +1,4 @@
-// reef-agent publishes only inventory through an outbound HTTPS connection.
+// reef-agent provides inventory and authorized host operations over outbound HTTPS.
 package main
 
 import (
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"reef/internal/agents"
+	"reef/internal/app"
 	"reef/internal/buildinfo"
 	"reef/internal/docker"
 )
@@ -64,7 +65,11 @@ func (c *client) post(ctx context.Context, path string, input, output any) error
 		return fmt.Errorf("central Reef rejected %s (HTTP %d)", path, res.StatusCode)
 	}
 	if output != nil {
-		return json.NewDecoder(io.LimitReader(res.Body, 4096)).Decode(output)
+		limit := int64(4096)
+		if path == "commands" {
+			limit = agents.MaxPayload
+		}
+		return json.NewDecoder(io.LimitReader(res.Body, limit)).Decode(output)
 	}
 	return nil
 }
@@ -106,6 +111,7 @@ func run() error {
 	token := flag.String("enrollment-file", "", "Private one-use enrollment token file (first run only)")
 	socket := flag.String("socket", "/var/run/docker.sock", "Local Docker socket")
 	ca := flag.String("ca-file", "", "Optional trusted private CA bundle")
+	config := flag.String("config", "", "Optional agent project configuration file; roots remain explicitly local")
 	flag.Parse()
 	u, e := url.Parse(*central)
 	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
@@ -182,18 +188,26 @@ func run() error {
 	} else {
 		return e
 	}
+	backend, e := app.NewAgentBackend(*config, filepath.Join(*state, "managed"), *socket)
+	if e != nil {
+		return e
+	}
+	defer backend.Close()
 	dockerClient := docker.NewClient(*socket)
 	backoff := time.Second
 	for ctx.Err() == nil {
 		var connected struct {
 			Generation string `json:"generation"`
 		}
-		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version}, &connected)
+		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": []string{agents.ControlCapability}}, &connected)
 		if e == nil {
-			log.Print("Agent connected (inventory only)")
+			log.Print("Agent connected (logs, consoles and project management)")
+			connection, stopConnection := context.WithCancel(ctx)
+			controlDone := make(chan error, 1)
+			go func() { controlDone <- c.control(connection, backend, connected.Generation); stopConnection() }()
 			sequence := uint64(0)
-			for ctx.Err() == nil {
-				rows, err := dockerClient.List(ctx)
+			for connection.Err() == nil {
+				rows, err := dockerClient.List(connection)
 				sequence++
 				update := agents.Update{Protocol: agents.Protocol, Generation: connected.Generation, Sequence: sequence, Containers: rows}
 				if err != nil {
@@ -204,16 +218,21 @@ func run() error {
 					update.Containers = nil
 					update.Error = "Local Docker inventory exceeds protocol limits"
 				}
-				e = c.post(ctx, "inventory", update, nil)
+				e = c.post(connection, "inventory", update, nil)
 				if e != nil {
 					break
 				}
 				backoff = time.Second
 				select {
-				case <-ctx.Done():
-					return nil
+				case <-connection.Done():
+					break
 				case <-time.After(5 * time.Second):
 				}
+			}
+			stopConnection()
+			controlErr := <-controlDone
+			if e == nil {
+				e = controlErr
 			}
 		}
 		if ctx.Err() != nil {

@@ -12,7 +12,7 @@ function page(){
  const window={};
  vm.runInNewContext(source,{document,window,Option:function(label,value){return {label,value};},URLSearchParams,AbortController,Date,
   setTimeout(fn){timers.set(++next,fn);return next;},clearTimeout(id){timers.delete(id);},
-  request(url,options){return new Promise((resolve,reject)=>pending.push({url,signal:options.signal,resolve(value){resolve({json:async()=>value});},reject}));}
+  request(url,options,host){return new Promise((resolve,reject)=>pending.push({url,host,signal:options.signal,resolve(value){resolve({json:async()=>value});},reject}));}
  });
  return {node,document,events,pending,timers,open:window.openContainerLogs};
 }
@@ -65,4 +65,8 @@ test('automatic refresh keeps dialog controls and status stable while preserving
  assert.equal(p.node('#container-log-output').scrollTop,10);
  assert.equal(p.node('#container-logs-title').textContent,title);
  assert.equal(p.node('#log-container').value,selection);
+});
+
+test('remote log snapshots keep the selected host pinned',()=>{
+ const p=page();p.open({containers:[{...containers[0],host_id:'remote-host',host_name:'Remote',inventory_only:false}]});assert.equal(p.pending[0].host,'remote-host');assert.match(p.node('#container-logs-title').textContent,/Remote/);
 });
