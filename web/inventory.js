@@ -48,13 +48,14 @@
   const all=ReefUI.projectRows(snapshot,visibleManaged()),query=find('#project-search').value.trim().toLowerCase(),mode=find('#project-access').value;
   const rows=all.filter(g=>(!query||`${g.name} ${g.managed?.name||''}`.toLowerCase().includes(query))&&(!mode||(mode==='managed'?!!g.managed:!g.managed)));
   find('#compose-nav-count').textContent=hasSnapshot?all.length:'—';find('#project-results').textContent=`${rows.length} of ${all.length} projects · ${visibleManaged().length} managed`;
-  const signature=JSON.stringify(rows.map(g=>[g.name,g.self,g.managed?.id,g.managed?.name,g.containers.map(c=>[c.state,c.managed_project_id])]))+query+mode+hostEpoch+hasSnapshot;
+  const signature=JSON.stringify(rows.map(g=>[g.name,g.self,g.managed?.id,g.managed?.name,g.managed?.busy,g.managed?.image_updates,g.containers.map(c=>[c.state,c.managed_project_id])]))+query+mode+hostEpoch+hasSnapshot;
   if(find('#discovered-projects').dataset.signature===signature)return;
   const nodes=rows.map(group=>{
    const row=document.createElement('article');row.className='project-row';
    const title=document.createElement('div');title.className='project-row-name';
    if(group.managed){const open=textNode('button',group.managed.name,'text-button');open.type='button';open.dataset.focusKey='open-'+group.managed.id;open.addEventListener('click',()=>selectProject(group.managed.id));title.append(open);if(group.managed.name!==group.name)title.append(textNode('small',group.name,'muted'));}
    else title.append(textNode('strong',group.name));
+   if(group.managed)title.append(textNode('small',ReefUI.imageUpdateSummary(group.managed.image_updates),'muted'));
    const running=group.containers.filter(c=>c.state==='running').length;
    const count=textNode('span',group.containers.length?`${running} running · ${group.containers.length} total`:'No containers','muted project-container-count');
    const badge=textNode('span',group.self?'Reef itself':group.managed?'Managed':'View only','tag'+(group.managed?' managed-tag':group.self?' neutral-tag':' neutral-tag'));

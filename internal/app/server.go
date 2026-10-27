@@ -219,6 +219,8 @@ func (s *Server) Handler() http.Handler {
 			}
 			w.WriteHeader(202)
 			fmt.Fprint(w, "Operation started")
+		case "/api/image-updates":
+			s.imageUpdates(w, r)
 		case "/logout":
 			if r.Method != "POST" {
 				http.Error(w, "Method not allowed", 405)
@@ -329,21 +331,22 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) state(w http.ResponseWriter) {
 	type row struct {
-		ID               string    `json:"id"`
-		Name             string    `json:"name"`
-		Directory        string    `json:"directory"`
-		Files            []string  `json:"files"`
-		ProjectName      string    `json:"project_name"`
-		Operation        Operation `json:"operation"`
-		Busy             bool      `json:"busy"`
-		PersistenceError string    `json:"persistence_error"`
-		RegisteredInUI   bool      `json:"registered_in_ui"`
+		ID               string       `json:"id"`
+		Name             string       `json:"name"`
+		Directory        string       `json:"directory"`
+		Files            []string     `json:"files"`
+		ProjectName      string       `json:"project_name"`
+		Operation        Operation    `json:"operation"`
+		Busy             bool         `json:"busy"`
+		PersistenceError string       `json:"persistence_error"`
+		RegisteredInUI   bool         `json:"registered_in_ui"`
+		ImageUpdates     ImageUpdates `json:"image_updates"`
 	}
 	rows := []row{}
 	for _, p := range s.m.snapshot() {
 		registered := s.m.registeredID(p.Project.ProjectName) != ""
 		p.mu.Lock()
-		rows = append(rows, row{p.Project.ID, p.Project.Name, p.Project.Directory, p.Project.ComposeFiles, p.Project.ProjectName, p.Op, p.busy, p.persistError, registered})
+		rows = append(rows, row{p.Project.ID, p.Project.Name, p.Project.Directory, p.Project.ComposeFiles, p.Project.ProjectName, p.Op, p.busy, p.persistError, registered, p.ImageUpdates})
 		p.mu.Unlock()
 	}
 	writeJSON(w, rows)

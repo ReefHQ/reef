@@ -12,9 +12,9 @@ function replaceKeepingFocus(parent,nodes){const key=parent.contains(document.ac
 function controls(){
  const p=current(),busy=(window.reefHost&&window.reefHost!=='local')||!p||p.busy||pendingEdits.has(selected)||loading||inFlight||!loaded;
  $('#editor').disabled=busy;
- document.querySelectorAll('[data-action]').forEach(button=>button.disabled=busy||(dirty&&['start','stop'].includes(button.dataset.action)));
- $('#reload').disabled=!p||!!p.busy||pendingEdits.has(selected)||loading||inFlight;
- $('#unmanage-current').disabled=!p||!!p.busy||pendingEdits.has(selected)||loading||inFlight;
+ document.querySelectorAll('[data-action]').forEach(button=>button.disabled=busy||p?.image_updates?.checking||(dirty&&['start','stop'].includes(button.dataset.action)));
+ $('#reload').disabled=!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
+ $('#unmanage-current').disabled=!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
  $('#edit-state').textContent=p?.busy||inFlight||pendingEdits.has(selected)?'Operation in progress':loading?'Loading file…':!loaded?'File unavailable':dirty?'Unsaved changes':'Saved';
  $('#edit-state').className='save-status'+(dirty?' unsaved':'');
  $('#chars').textContent=`${$('#editor').value.split('\n').length} lines · ${$('#editor').value.length.toLocaleString('en-GB')} characters`;
@@ -49,7 +49,7 @@ function render(){
  $('#needs-start').hidden=!op.needs_start;$('#operation-next').hidden=!['failed','interrupted'].includes(op.phase)||op.needs_start;$('#operation-next').textContent='Review the error and command log, then retry. Reload the file first if it changed outside Reef.';
  const log=op.log||'Operation logs will appear here.';if($('#logs').textContent!==log){const pre=$('#logs'),follow=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30;pre.textContent=log;if(follow)pre.scrollTop=pre.scrollHeight;}
  if(['failed','interrupted'].includes(op.phase)&&openedLog!==op.id){$('#operation-log').open=true;openedLog=op.id;}else if(op.id&&openedLog!==op.id){$('#operation-log').open=false;openedLog=op.id;}
- if(p.persistence_error)message(p.persistence_error,true);controls();
+ if(p.persistence_error)message(p.persistence_error,true);controls();window.ReefImageUpdates?.render(p);
 }
 async function poll(){
  try{
@@ -65,9 +65,9 @@ document.addEventListener('click',event=>{if(!event.target.closest('.project-too
 $('#editor').addEventListener('input',()=>{dirty=true;controls();});
 $('#reload').addEventListener('click',async()=>{if(!dirty||await ask('Reload the file and discard your unsaved changes?')){message('');await loadDocument();}});
 async function runAction(action){
- const p=current();if(!p||p.busy||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
+ const p=current();if(!p||p.busy||p.image_updates?.checking||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
  if(['start','stop'].includes(action)&&dirty)return;
- if(['apply','stop'].includes(action)&&!await ask(action==='apply'?`Apply update to ${p.name}? Reef will validate and save, pull images, then stop and recreate this project. Downtime is expected.`:`Stop ${p.name}? Reef will run Compose down without deleting named volumes.`))return;
+ if(['apply','stop'].includes(action)&&!await ask(action==='apply'?`Apply update to ${p.name}? Reef will validate and save, pull images, then stop and recreate this project. Downtime is expected. Replaced images will be removed only if untagged, unused and the updated containers are running (and healthy when a healthcheck exists).`:`Stop ${p.name}? Reef will run Compose down without deleting named volumes.`))return;
  inFlight=true;controls();message('');
  const submitted={content:$('#editor').value,revision,dirty,previousOpID:p.operation.id};
  try{await request('/api/action',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,id:selected,action,revision,content:$('#editor').value})});if(['save','apply'].includes(action))pendingEdits.set(p.id,submitted);else loaded=false;p.busy=true;message('Operation started. It will continue if you close this tab.');document.querySelector('.project-tools').open=false;}

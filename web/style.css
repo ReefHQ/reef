@@ -176,3 +176,11 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 @media(max-width:760px){.console-dock-toolbar{flex-wrap:wrap;gap:6px;padding:6px 10px}.console-dock-heading{width:100%;justify-content:space-between}.console-dock-buttons{width:100%;justify-content:flex-end}.console-dock-buttons button{font-size:9px;padding:5px}.console-dock-tab>[role=tab]{max-width:210px}.console-embedded .console-workspace{padding:6px}.console-embedded .console-intro{font-size:9px}}
 
 .host-picker{margin-bottom:18px}.host-picker select{margin-top:5px}.host-picker button{font-size:11px;margin-top:5px}#hosts-dialog{width:680px}.host-row{padding:16px 0;border-bottom:1px solid var(--border)}.host-controls{display:flex;gap:8px;align-items:center;margin:8px 0 16px}.host-controls input{flex:1;min-width:0}.host-controls button{flex:none;font-size:11px}#host-enrollment-token{display:block;overflow-wrap:anywhere;user-select:all}@media(max-width:760px){.host-picker{display:flex;align-items:center;gap:10px;margin-bottom:10px}.host-picker select{flex:1;width:auto;margin:0}.host-controls{flex-wrap:wrap}.host-controls input{flex-basis:100%}}
+
+.image-update-services{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.image-update-services li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:8px}
+.image-update-reference{overflow-wrap:anywhere;min-width:0}
+.image-update-services small{flex-basis:100%}
+.image-updates-card .card-heading{flex-wrap:wrap;gap:12px}
+.image-updates-card .card-heading button{margin-left:auto}
+.update-available{font-weight:600}
