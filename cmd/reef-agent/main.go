@@ -199,7 +199,7 @@ func run() error {
 		var connected struct {
 			Generation string `json:"generation"`
 		}
-		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": []string{agents.ControlCapability, agents.ImagesCapability}}, &connected)
+		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": []string{agents.ControlCapability, agents.ImagesCapability, agents.VolumesCapability}}, &connected)
 		if e == nil {
 			log.Print("Agent connected (logs, consoles and project management)")
 			connection, stopConnection := context.WithCancel(ctx)

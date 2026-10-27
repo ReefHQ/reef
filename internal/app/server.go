@@ -110,6 +110,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/volumes") && (s.agents == nil || !s.agents.CanVolumes(host)) {
+			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage volumes", 409)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/images") && (s.agents == nil || !s.agents.CanImages(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage images", 409)
 			return
@@ -131,6 +135,8 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		switch r.URL.Path {
+		case "/api/volumes", "/api/volumes/operation", "/api/volumes/action":
+			s.volumeCatalog(w, r)
 		case "/api/images", "/api/images/operation", "/api/images/action":
 			s.imageCatalog(w, r)
 		case "/api/hosts":

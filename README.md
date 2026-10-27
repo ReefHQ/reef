@@ -42,7 +42,7 @@ The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopbac
 
 ## Containers and Projects
 
-Reloading the same browser tab restores the Containers/Projects/Images view, open
+Reloading the same browser tab restores the Containers/Projects/Images/Volumes view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
 overview and revoked/missing hosts fall back to Local. If browser storage is
@@ -110,6 +110,48 @@ Local and upgraded remote agents use the same implementation. Upgrade central
 first, then agents to v0.7.0 while preserving their existing identity volume,
 CA and configuration. The images-v1 capability is negotiated per connection;
 older agents retain their existing features and request an upgrade for Images.
+
+## Volumes
+
+**Volumes** lists named and anonymous Docker volumes on the selected host.
+Search by name, driver or Compose project and filter used/unused volumes.
+Details show driver, scope, creation date, Docker mountpoint, Compose project and
+referencing containers, including stopped containers. Mountpoints are metadata
+only: Reef never opens their paths or browses/edits volume contents. Bind mounts,
+volume driver options and arbitrary labels are not exposed. Volume sizes are not
+estimated by scanning application data.
+
+Create volume accepts a name and uses Docker's local driver with no custom
+options. Existing names are refused; a unique creation label verifies whether
+Docker actually created the volume rather than reusing a concurrent creation.
+Creating a volume does not attach it to any container or edit Compose files.
+
+Delete a volume, select several, or choose Review unused volumes. The confirmation
+names the host and each exact candidate and explicitly warns of permanent data
+loss. A volume without a container reference can still contain valuable data;
+review backups before deletion. No undo or automatic backup is provided.
+Batches contain at most 100 volumes, and may partially succeed with a result for
+each volume. Docker volumes backed by external drivers follow that driver's
+removal semantics; external users of their storage are not visible to Reef.
+
+Before removal Reef rechecks metadata/creation identity, all running/stopped
+container references and the current fingerprint. Volumes without a recorded
+creation identity are retained. Docker removal runs without force and refuses
+new container references. There is no global volume/system prune. Other Docker
+clients can still race named-volume recreation; pause conflicting external
+operations while reviewing/removing volumes.
+
+Image, volume and Reef Compose mutations are mutually exclusive per host.
+Volume workers continue after closing the page/disconnecting and have a
+five-minute deadline. The latest result is in memory, so reconcile inventory
+after a process restart before retrying. Inventory reads have a ten-second limit,
+with at most 2000 volumes and 10000 containers. Visible views refresh every ten
+seconds; page/filters/scroll are restored per tab on reload.
+
+The same backend runs locally and on agents advertising volumes-v1. Upgrade
+central first, then agents to v0.8.0 while preserving identity volumes, CA and
+configuration. Older agents keep their existing capabilities and show an upgrade
+message for Volumes.
 
 ## Container and application logs
 
@@ -359,7 +401,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.7.0` in development.
+source of truth for the application version, currently `0.8.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

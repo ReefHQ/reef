@@ -20,7 +20,8 @@ UI continues using a private HTTP listener. `secure_cookie: true` is needed when
 the browser UI itself uses HTTPS. Keep central machine endpoints separate from
 browser credentials; never send the Reef UI password to an agent.
 
-Upgrade central Reef before agents. Image management requires v0.7.0 agents
+Upgrade central Reef before agents. Volume management requires v0.8.0 and
+`volumes-v1`; preserve the existing agent identity volume during upgrades. Image management requires v0.7.0 agents
 with the negotiated `images-v1` capability; older control agents keep their
 existing features. The transport negotiates `control-v1` per
 connection rather than inferring support from application version. Older agents
@@ -32,13 +33,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.7.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.8.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.7.0
+sh prepare-agent.sh v0.8.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent

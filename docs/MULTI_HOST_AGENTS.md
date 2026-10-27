@@ -1,6 +1,6 @@
 # Multi-host Reef through agents
 
-Status: full host functionality implemented for development version 0.7.0.
+Status: full host functionality implemented for development version 0.8.0.
 See [agent setup](AGENT_SETUP.md) for operator configuration and upgrade order.
 Existing inventory agents remain compatible with the central service.
 
@@ -25,6 +25,10 @@ Agents enroll once through a short-lived one-use token and maintain their own
 private identity volume. Central stores hashes under state_dir/agents rather
 than raw machine secrets. TLS verification, origin/cookie separation, generation
 isolation, revocation and inventory limits from protocol 1 remain unchanged.
+
+Volume inventory/create/delete/cleanup use the shared host backend and require
+`volumes-v1` from v0.8.0. The capability resets on reconnect; a previous agent
+keeps its other features and cannot route volume operations to Local.
 
 A connection explicitly advertises `control-v1` and, for the Images catalog,
 `images-v1`. Image inventory, pull, tagging and reviewed cleanup use the same
