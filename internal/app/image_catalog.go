@@ -34,17 +34,27 @@ type ImageTarget struct {
 	Fingerprint string `json:"fingerprint"`
 }
 type ImageResult struct {
-	ID      string `json:"id"`
-	OK      bool   `json:"ok"`
-	Message string `json:"message"`
+	Unprocessed bool   `json:"unprocessed,omitempty"`
+	ID          string `json:"id"`
+	OK          bool   `json:"ok"`
+	Message     string `json:"message"`
 }
+
+const maxImageSelection = 2000
+const imageCleanupBatchSize = 100
+
 type CatalogOperation struct {
-	ID       string        `json:"id"`
-	Action   string        `json:"action"`
-	Running  bool          `json:"running"`
-	Started  time.Time     `json:"started"`
-	Finished time.Time     `json:"finished"`
-	Results  []ImageResult `json:"results"`
+	Skipped   int           `json:"skipped,omitempty"`
+	Total     int           `json:"total,omitempty"`
+	Completed int           `json:"completed,omitempty"`
+	Batch     int           `json:"batch,omitempty"`
+	Batches   int           `json:"batches,omitempty"`
+	ID        string        `json:"id"`
+	Action    string        `json:"action"`
+	Running   bool          `json:"running"`
+	Started   time.Time     `json:"started"`
+	Finished  time.Time     `json:"finished"`
+	Results   []ImageResult `json:"results"`
 }
 
 const catalogFormat = `{"id":{{json .Id}},"tags":{{json (index . "RepoTags")}},"digests":{{json (index . "RepoDigests")}},"created":{{json (index . "Created")}},"size":{{.Size}},"os":{{json .Os}},"architecture":{{json .Architecture}},"variant":{{json (index . "Variant")}}}`
@@ -97,7 +107,7 @@ func (s *ImageService) catalog(ctx context.Context) ([]CatalogImage, error) {
 			seen[id] = true
 		}
 	}
-	if len(unique) > 2000 {
+	if len(unique) > maxImageSelection {
 		return nil, errors.New("Image inventory exceeds 2000 images")
 	}
 	rows := []CatalogImage{}
@@ -243,8 +253,8 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 			return fail("Enter a valid image reference")
 		}
 	case "tag", "untag", "remove", "cleanup":
-		if json.Unmarshal([]byte(raw), &targets) != nil || len(targets) == 0 || len(targets) > 100 {
-			return fail("Select between 1 and 100 images")
+		if json.Unmarshal([]byte(raw), &targets) != nil || len(targets) == 0 || len(targets) > maxImageSelection {
+			return fail("Select between 1 and 2000 images")
 		}
 		seen := map[string]bool{}
 		for _, target := range targets {
@@ -279,14 +289,33 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 		}
 	}
 	op := CatalogOperation{ID: randomID(), Action: action, Running: true, Started: time.Now(), Results: []ImageResult{}}
+	op.Total = len(targets)
+	if action == "pull" {
+		op.Total = 1
+	}
+	op.Batches = (op.Total + imageCleanupBatchSize - 1) / imageCleanupBatchSize
 	s.catalogOp = op
 	m.storageBusy = true
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		timeout := 15 * time.Minute
+		if action == "remove" || action == "cleanup" {
+			timeout = 45 * time.Minute
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		results := s.runCatalog(ctx, action, ref, tag, targets)
+		results := s.runCatalog(ctx, action, ref, tag, targets, func(result ImageResult, batch int) {
+			s.catalogMu.Lock()
+			s.catalogOp.Results = append(s.catalogOp.Results, result)
+			if result.Unprocessed {
+				s.catalogOp.Skipped++
+			} else {
+				s.catalogOp.Completed++
+			}
+			s.catalogOp.Batch = batch
+			s.catalogMu.Unlock()
+		})
 		m.mu.Lock()
 		s.catalogMu.Lock()
 		s.catalogOp.Results = results
@@ -298,7 +327,7 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 	}()
 	return op, nil
 }
-func (s *ImageService) runCatalog(ctx context.Context, action, ref, tag string, targets []ImageTarget) []ImageResult {
+func (s *ImageService) runCatalog(ctx context.Context, action, ref, tag string, targets []ImageTarget, progress ...func(ImageResult, int)) []ImageResult {
 	result := func(id string, err error) ImageResult {
 		if err != nil {
 			return ImageResult{ID: id, Message: err.Error()}
@@ -310,12 +339,44 @@ func (s *ImageService) runCatalog(ctx context.Context, action, ref, tag string, 
 		if err != nil {
 			err = errors.New("Pull failed or timed out; check the reference, registry access and host Docker credentials")
 		}
-		return []ImageResult{result(ref, err)}
+		row := result(ref, err)
+		for _, notify := range progress {
+			notify(row, 1)
+		}
+		return []ImageResult{row}
 	}
 	results := []ImageResult{}
-	for _, target := range targets {
-		err := s.mutateCatalogImage(ctx, action, tag, target)
-		results = append(results, result(target.ID, err))
+	emit := func(row ImageResult, batch int) {
+		results = append(results, row)
+		for _, notify := range progress {
+			notify(row, batch)
+		}
+	}
+	for start := 0; start < len(targets); start += imageCleanupBatchSize {
+		end := start + imageCleanupBatchSize
+		if end > len(targets) {
+			end = len(targets)
+		}
+		batch := start/imageCleanupBatchSize + 1
+		if ctx.Err() != nil {
+			for _, target := range targets[start:] {
+				emit(ImageResult{ID: target.ID, Message: "Not processed: operation timed out; refresh before retrying", Unprocessed: true}, batch)
+			}
+			break
+		}
+		// Read the bounded global inventory once per batch, then inspect each exact
+		// target again before removing any references. Avoid a full scan per image.
+		rows, scanErr := s.catalog(ctx)
+		for _, target := range targets[start:end] {
+			err := scanErr
+			if ctx.Err() != nil {
+				emit(ImageResult{ID: target.ID, Message: "Not processed: operation timed out; refresh before retrying", Unprocessed: true}, batch)
+				continue
+			} else if err == nil {
+				err = s.mutateCatalogSelection(ctx, action, tag, target, rows)
+			}
+			emit(result(target.ID, err), batch)
+		}
 	}
 	return results
 }
@@ -324,6 +385,9 @@ func (s *ImageService) mutateCatalogImage(ctx context.Context, action, tag strin
 	if err != nil {
 		return err
 	}
+	return s.mutateCatalogSelection(ctx, action, tag, target, rows)
+}
+func (s *ImageService) mutateCatalogSelection(ctx context.Context, action, tag string, target ImageTarget, rows []CatalogImage) error {
 	var row *CatalogImage
 	for i := range rows {
 		if rows[i].ID == target.ID {
@@ -338,6 +402,13 @@ func (s *ImageService) mutateCatalogImage(ctx context.Context, action, tag strin
 		}
 	}
 	if row == nil || row.Fingerprint != target.Fingerprint {
+		return errors.New("Image or tags changed; refresh and review the selection")
+	}
+	// Protect against changes since the batch snapshot without rescanning the
+	// entire host for every image. Container references are rechecked below.
+	raw, err := s.command(ctx, Project{}, "image", "inspect", "--format", catalogFormat, target.ID)
+	var current CatalogImage
+	if err != nil || json.Unmarshal(raw, &current) != nil || current.ID != target.ID || imageFingerprint(current) != target.Fingerprint {
 		return errors.New("Image or tags changed; refresh and review the selection")
 	}
 	if action == "tag" {

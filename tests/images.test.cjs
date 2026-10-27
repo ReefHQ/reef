@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../web/images.js'),'utf8');
 const image=(id='a',overrides={})=>({id:'sha256:'+id.repeat(64),tags:['example/app:'+id],digests:[],fingerprint:id.repeat(64),containers:[],size:2048,os:'linux',architecture:'amd64',created:'2026-10-27',...overrides});
-function page({host='local',capabilities=[],rows=[image()],defer=false,confirm=async()=>true}={}){
+function page({host='local',capabilities=[],rows=[image()],defer=false,report={},confirm=async()=>true}={}){
  const nodes=new Map(),events={},requests=[],timers=[],pending=[];
  class Node{
   constructor(tag='div'){this.tagName=tag;this.value='';this.hidden=false;this.disabled=false;this.dataset={};this.children=[];this.listeners={};this.checked=false;this.textContent='';}
@@ -11,7 +11,7 @@ function page({host='local',capabilities=[],rows=[image()],defer=false,confirm=a
  }
  const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};find('images-cleanup-mode').value='untagged';
  const window={reefHost:host,reefHostName:host,reefCapabilities:capabilities,addEventListener(type,fn){(events[type]??=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);}};
- const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/images')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/images'?{images:rows,operation:{}}:{id:'worker',action:'pull',running:true,results:[]}};}};
+ const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/images')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/images'?{images:rows,operation:report}:url==='/api/images/operation'?report:{id:'worker',action:'pull',running:true,results:[]}};}};
  vm.runInNewContext(source,context);
  return {nodes,window,requests,find,pending,timers,async settle(){for(let i=0;i<20;i++)await Promise.resolve();},async host(host,capabilities=[]){window.reefHost=host;window.reefCapabilities=capabilities;window.dispatchEvent({type:'reef-host-changed'});await this.settle();}};
 }
@@ -38,4 +38,20 @@ test('late image response from a previous host cannot replace its successor inve
 });
 test('batch selection deletes multiple unused images and ignores used rows',async()=>{
  const p=page({rows:[image('a'),image('b'),image('c',{containers:['stopped']})]});await p.settle();p.find('images-select-all').checked=true;await p.find('images-select-all').fire('change');await p.find('images-delete').fire('click');await p.settle();const body=p.requests.at(-1).opts.body;assert.equal(body.get('action'),'remove');assert.equal(JSON.parse(body.get('targets')).length,2);
+});
+
+const manyImages=n=>Array.from({length:n},(_,i)=>image('a',{id:'sha256:'+(i+1).toString(16).padStart(64,'0'),tags:[]}));
+test('cleanup submits a selection above 100 once with every reviewed fingerprint',async()=>{
+ let confirmation='';const p=page({rows:manyImages(250),confirm:async text=>{confirmation=text;return true;}});await p.settle();await p.find('images-cleanup').fire('click');await p.settle();
+ const calls=p.requests.filter(r=>r.opts?.method==='POST');assert.equal(calls.length,1);const targets=JSON.parse(calls[0].opts.body.get('targets'));assert.equal(targets.length,250);assert.equal(targets[249].id,manyImages(250)[249].id);assert.match(confirmation,/250/);assert.match(confirmation,/automatically in batches/);
+});
+test('large remote cleanup requires negotiated batch support and pins its host',async()=>{
+ const old=page({host:'old-agent',capabilities:['control-v1','images-v1'],rows:manyImages(150)});await old.settle();await old.find('images-cleanup').fire('click');await old.settle();assert.equal(old.requests.filter(r=>r.opts?.method==='POST').length,0);assert.match(old.find('images-error').textContent,/Upgrade/);
+ const ready=page({host:'ego',capabilities:['control-v1','images-v1','images-batch-v1'],rows:manyImages(150)});await ready.settle();await ready.find('images-cleanup').fire('click');await ready.settle();const call=ready.requests.at(-1);assert.equal(call.host,'ego');assert.equal(JSON.parse(call.opts.body.get('targets')).length,150);
+});
+
+test('image operation reports progress without replacing rows on every update',async()=>{
+ const report={id:'large-job',action:'cleanup',running:true,total:250,completed:121,batch:2,batches:3,results:[{id:'used-image',ok:false,message:'Image retained: used by a running or stopped container'}]};
+ const p=page({report});await p.settle();const lines=p.find('images-operation').children;assert.match(lines[0].textContent,/121 \/ 250 images processed/);assert.match(lines[0].textContent,/batch 2 \/ 3/);assert.match(lines[1].textContent,/Image retained/);assert.equal(p.find('images-cleanup').disabled,true);
+ const originalRow=p.find('images-rows').children[0];report.completed=122;await p.timers.at(-1)();assert.equal(p.find('images-rows').children[0],originalRow);assert.match(p.find('images-operation').children[0].textContent,/122 \/ 250 images processed/);report.running=false;report.skipped=128;await p.timers.at(-1)();assert.match(p.find('images-operation').children[0].textContent,/stopped/);assert.match(p.find('images-operation').children[0].textContent,/128 not processed/);
 });

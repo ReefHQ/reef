@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -355,5 +356,159 @@ func TestCatalogBatchValidationAndMultipleSelection(t *testing.T) {
 	op := m.Images.catalogOperation()
 	if len(op.Results) != 2 || !op.Results[0].OK || !op.Results[1].OK || len(x.rows) != 0 {
 		t.Fatal(op, x.rows)
+	}
+}
+
+type gatedCatalogExecutor struct {
+	*catalogExecutor
+	id            string
+	entered, gate chan struct{}
+	once          sync.Once
+}
+
+func (x *gatedCatalogExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
+	if len(args) == 5 && args[0] == "image" && args[1] == "inspect" && args[3] == catalogFormat && args[4] == x.id {
+		x.once.Do(func() {
+			close(x.entered)
+			select {
+			case <-x.gate:
+			case <-ctx.Done():
+			}
+		})
+	}
+	return x.catalogExecutor.Run(ctx, p, args, w)
+}
+func largeCatalogFixture(n int) *catalogExecutor {
+	x := catalogFixture()
+	x.rows = nil
+	for i := 1; i <= n; i++ {
+		x.rows = append(x.rows, CatalogImage{ID: fmt.Sprintf("sha256:%064x", i), Tags: []string{}, Digests: []string{}, OS: "linux", Architecture: "amd64", Created: "2026-10-27"})
+	}
+	return x
+}
+func TestLargeImageCleanupProgressAndPerImageGuards(t *testing.T) {
+	base := largeCatalogFixture(205)
+	changedID := base.rows[100].ID
+	usedID := base.rows[204].ID
+	base.used[usedID] = true
+	x := &gatedCatalogExecutor{catalogExecutor: base, id: changedID, entered: make(chan struct{}), gate: make(chan struct{})}
+	m, _, _ := fixture(t, &fakeExecutor{})
+	m.Images = &ImageService{Exec: x}
+	targets := catalogTargets(t, m.Images)
+	raw, _ := json.Marshal(targets)
+	op, err := m.beginCatalog("cleanup", "", "", string(raw))
+	if err != nil || op.Total != 205 || op.Batches != 3 {
+		t.Fatal(op, err)
+	}
+	<-x.entered
+	progress := m.Images.catalogOperation()
+	if !progress.Running || progress.Completed != 100 || len(progress.Results) != 100 || progress.Batch != 1 {
+		t.Fatal(progress)
+	}
+	if _, err := m.beginVolumes("create", "new-volume", ""); err == nil {
+		t.Fatal("storage lock released between batches")
+	}
+	base.mu.Lock()
+	for i := range base.rows {
+		if base.rows[i].ID == changedID {
+			base.rows[i].Tags = []string{"changed:after-review"}
+		}
+	}
+	base.mu.Unlock()
+	close(x.gate)
+	m.wg.Wait()
+	op = m.Images.catalogOperation()
+	if op.Running || op.Completed != 205 || len(op.Results) != 205 || op.Batch != 3 {
+		t.Fatal(op)
+	}
+	successes := 0
+	for _, result := range op.Results {
+		if result.OK {
+			successes++
+		} else if result.ID != changedID && result.ID != usedID {
+			t.Fatal(result)
+		}
+	}
+	if successes != 203 || len(base.rows) != 2 {
+		t.Fatal(successes, len(base.rows))
+	}
+	scans := 0
+	for _, args := range base.calls {
+		if args[0] == "image" && args[1] == "ls" {
+			scans++
+		}
+		for _, arg := range args {
+			if arg == "--force" || arg == "prune" {
+				t.Fatal(args)
+			}
+		}
+	}
+	if scans != 4 {
+		t.Fatal("expected initial inventory plus three batch scans", scans)
+	}
+}
+func TestLargeCleanupCancellationReportsUnprocessedSelection(t *testing.T) {
+	x := largeCatalogFixture(205)
+	s := &ImageService{Exec: x}
+	targets := catalogTargets(t, s)
+	ctx, cancel := context.WithCancel(context.Background())
+	results := s.runCatalog(ctx, "remove", "", "", targets, func(result ImageResult, batch int) { cancel() })
+	if len(results) != 205 || !results[0].OK || len(x.rows) != 204 {
+		t.Fatal(len(results), len(x.rows))
+	}
+	for _, result := range results[1:] {
+		if result.OK || !result.Unprocessed || !strings.Contains(result.Message, "Not processed") {
+			t.Fatal(result)
+		}
+	}
+}
+func TestLargeImageSelectionRejectsOversizedAndDuplicates(t *testing.T) {
+	m, _, _ := fixture(t, &fakeExecutor{})
+	m.Images = &ImageService{Exec: catalogFixture()}
+	targets := []ImageTarget{}
+	for i := 1; i <= maxImageSelection+1; i++ {
+		targets = append(targets, ImageTarget{fmt.Sprintf("sha256:%064x", i), strings.Repeat("a", 64)})
+	}
+	raw, _ := json.Marshal(targets)
+	if _, err := m.beginCatalog("remove", "", "", string(raw)); err == nil {
+		t.Fatal("unbounded selection accepted")
+	}
+}
+
+func TestRemoteLargeImageSelectionNegotiatesBatchCapability(t *testing.T) {
+	local, _, _ := fixture(t, &fakeExecutor{})
+	localExec := catalogFixture()
+	local.Images = &ImageService{Exec: localExec}
+	central := newServer(local, Config{AgentsEnabled: true}, "password-long-enough")
+	central.agents, _ = agents.Open(t.TempDir())
+	central.sessions[sessionKey("cookie")] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
+	cookie := &http.Cookie{Name: "qcu_session", Value: "cookie"}
+	remote, _, _ := fixture(t, &fakeExecutor{})
+	remote.Images = &ImageService{Exec: largeCatalogFixture(101)}
+	backend := newServer(remote, Config{}, "unused-password")
+	backend.discovery = &inventoryStub{}
+	raw, _ := json.Marshal(catalogTargets(t, remote.Images))
+	body := url.Values{"csrf": {"csrf"}, "action": {"cleanup"}, "targets": {string(raw)}}.Encode()
+	h := central.Handler()
+	old, stopOld := relayAgentFixture(t, central, backend, "old-images", agents.ImagesCapability)
+	defer stopOld()
+	response := call(h, "POST", "/api/images/action?host="+old, body, "http://reef.test", cookie)
+	if response.Code != 409 || !strings.Contains(response.Body.String(), "Upgrade") {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	ready, stopReady := relayAgentFixture(t, central, backend, "new-images", agents.ImagesCapability, agents.ImageBatchCapability)
+	defer stopReady()
+	response = call(h, "POST", "/api/images/action?host="+ready, body, "http://reef.test", cookie)
+	if response.Code != 202 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	remote.wg.Wait()
+	response = call(h, "GET", "/api/images/operation?host="+ready, "", "", cookie)
+	var op CatalogOperation
+	if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &op) != nil || op.Completed != 101 || op.Total != 101 || op.Batches != 2 || op.Running {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	if len(localExec.calls) != 0 {
+		t.Fatal("remote cleanup touched Local")
 	}
 }

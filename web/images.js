@@ -24,7 +24,7 @@
  function status(op){
   busy=!!op?.running;operation=op?.id||'';
   const node=find('images-operation');node.hidden=!operation;
-  if(operation){node.replaceChildren(textNode('strong',`${op.action}: ${busy?'in progress…':'finished'}`));for(const result of op.results||[]){node.append(textNode('p',`${result.id.slice(0,28)}: ${result.message}`,result.ok?'small':'small error-text'));}}
+  if(operation){node.replaceChildren(textNode('strong',`${op.action}: ${busy?'in progress…':op.skipped?'stopped':'finished'}${op.total?` · ${op.completed||0} / ${op.total} images processed`:''}${op.skipped?` · ${op.skipped} not processed`:''}${busy&&op.batches>1?` · batch ${op.batch||1} / ${op.batches}`:''}`));for(const result of op.results||[]){node.append(textNode('p',`${result.id.slice(0,28)}: ${result.message}`,result.ok?'small':'small error-text'));}}
   controls();
  }
  function render(){
@@ -57,7 +57,7 @@
  }
  async function poll(){
   clearTimeout(timer);const current=epoch;
-  try{if(available()&&!document.hidden){if(busy){const op=await(await request('/api/images/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
+  try{if(available()&&!document.hidden){if(busy){const op=await(await request('/api/images/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);if(wasBusy!==busy)render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
   catch(error){if(current===epoch)notice(`Operation status unavailable. ${error.message} Refresh before retrying.`,true);}
   finally{if(current===epoch)timer=setTimeout(poll,busy?1500:10000);}
  }
@@ -88,7 +88,7 @@
  for(const id of ['images-search','images-usage'])find(id).addEventListener(id==='images-search'?'input':'change',render);
  find('images-cleanup-mode').addEventListener('change',controls);
  find('images-select-all').addEventListener('change',event=>{const checked=event.target.checked,query=find('images-search').value.toLowerCase().trim(),usage=find('images-usage').value;for(const row of rows){if(row.containers.length||usage==='used'||(query&&!`${row.id} ${name(row)} ${(row.digests||[]).join(' ')}`.toLowerCase().includes(query)))continue;if(checked)selected.add(row.id);else selected.delete(row.id);}render();});
- async function remove(targets,kind){if(targets.length>100){notice('Select at most 100 images per operation.',true);return;}await action(kind,targets,'','',`Delete ${targets.length} unused image(s) and all their tags from ${hostName()}? Images used by running or stopped containers will be retained. This cannot be undone without downloading or rebuilding them.\n\n${targets.map(row=>name(row)+' ['+row.id.slice(7,19)+']').join('\n')}`);}
+ async function remove(targets,kind){if(!targets.length)return;if(host!=='local'&&targets.length>100&&!window.reefCapabilities?.includes('images-batch-v1')){notice('Upgrade this host’s agent to clean this entire selection in one operation.',true);return;}await action(kind,targets,'','',`Delete ${targets.length} unused image(s) and all their tags from ${hostName()}? Images used by running or stopped containers will be retained. This cannot be undone without downloading or rebuilding them. Large selections are processed automatically in batches.\n\n${targets.map(row=>name(row)+' ['+row.id.slice(7,19)+']').join('\n')}`);}
  find('images-delete').addEventListener('click',()=>remove(rows.filter(row=>selected.has(row.id)),'remove'));
  // Batch deletion uses the exact reviewed IDs/fingerprints; never Docker's global prune.
  find('images-cleanup').addEventListener('click',()=>remove(rows.filter(row=>!row.containers.length&&(find('images-cleanup-mode').value==='all'||!row.tags?.length)),'cleanup'));
