@@ -1,6 +1,6 @@
 # Multi-host Reef through agents
 
-Status: full host functionality implemented for development version 0.6.0.
+Status: full host functionality implemented for development version 0.7.0.
 See [agent setup](AGENT_SETUP.md) for operator configuration and upgrade order.
 Existing inventory agents remain compatible with the central service.
 
@@ -26,7 +26,10 @@ private identity volume. Central stores hashes under state_dir/agents rather
 than raw machine secrets. TLS verification, origin/cookie separation, generation
 isolation, revocation and inventory limits from protocol 1 remain unchanged.
 
-A connection explicitly advertises `control-v1`. Capability state is ephemeral
+A connection explicitly advertises `control-v1` and, for the Images catalog,
+`images-v1`. Image inventory, pull, tagging and reviewed cleanup use the same
+backend locally and remotely. Older control agents keep their existing features;
+Images requires upgrading the agent. Capability state is ephemeral
 and reset by reconnect. An old agent's version string never enables commands.
 Upgrade central first, then the agent image/configuration without replacing its
 volume, URL or enrollment identity. Revocation prevents further commands and

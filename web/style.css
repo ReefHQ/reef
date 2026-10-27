@@ -184,3 +184,16 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .image-updates-card .card-heading{flex-wrap:wrap;gap:12px}
 .image-updates-card .card-heading button{margin-left:auto}
 .update-available{font-weight:600}
+
+/* Image management follows the existing control sizes and table layout. */
+.image-pull-form,.image-batch-actions{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0}
+.image-pull-form>div{flex:1;min-width:200px}.image-pull-form input{width:100%}
+.image-batch-actions>div{margin-left:auto;min-width:200px}
+#images-view td:nth-child(2){min-width:200px;max-width:420px;overflow-wrap:anywhere}
+#images-view td:nth-child(2) small{display:block}#images-view td:nth-child(5){max-width:240px;overflow-wrap:anywhere}
+#images-view input[type=checkbox]{width:18px;height:18px;min-height:18px;margin:0;vertical-align:middle}
+.image-detail-actions{display:flex;gap:8px;flex-wrap:wrap}#image-detail-fields dd{white-space:pre-wrap;overflow-wrap:anywhere}
+#images-operation{max-height:220px;overflow:auto}#image-tag-reference{width:100%}
+@media(max-width:600px){.image-batch-actions>div{margin-left:0;flex:1}.image-pull-form button{width:100%}}
+
+#confirm-message{white-space:pre-line;max-height:55vh;overflow:auto;overflow-wrap:anywhere}

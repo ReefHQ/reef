@@ -83,6 +83,11 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		}
 		host := r.Header.Get("X-Reef-Host")
 		_ = s.agents.Control(host, generation, enabled)
+		for _, capability := range input.Capabilities {
+			if capability == agents.ImagesCapability {
+				_ = s.agents.Images(host, generation, true)
+			}
+		}
 		s.relay.Connect(host, generation)
 		writeJSON(w, map[string]string{"generation": generation})
 	default:

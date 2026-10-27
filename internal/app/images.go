@@ -54,9 +54,11 @@ type manifestCache struct {
 	Manifests []registryManifest
 }
 type ImageService struct {
-	Exec  Executor
-	mu    sync.Mutex
-	cache map[string]manifestCache
+	catalogMu sync.Mutex
+	catalogOp CatalogOperation
+	Exec      Executor
+	mu        sync.Mutex
+	cache     map[string]manifestCache
 }
 
 var imageIDPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)

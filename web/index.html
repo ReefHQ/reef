@@ -4,7 +4,7 @@
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
  <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
- <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/inventory.js" defer></script>
+ <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/inventory.js" defer></script><script src="/assets/images.js" defer></script>
 </head>
 <body class="app-shell" data-console-session-limit="{{.ConsoleSessionLimit}}">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
@@ -12,7 +12,7 @@
 <main class="layout">
  <nav aria-label="Main navigation">
   <div class="host-picker"><label for="host-select">Docker host</label><select id="host-select"><option value="local">Local</option></select><button type="button" id="open-hosts" class="quiet">Manage hosts</button></div>
-  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button></div>
+  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images</button></div>
   <div id="managed-navigation" hidden><div class="nav-heading">MANAGED <span id="project-count">0</span></div><div id="projects"></div><div class="mobile-managed-navigation"><label for="managed-project-select">Managed project</label><select id="managed-project-select"><option value="">Choose a project</option></select></div></div>
   <p class="nav-note" id="host-note">Visible containers stay read-only until you connect their project.</p>
  </nav>
@@ -25,6 +25,17 @@
   <div class="result-line"><span id="container-results" role="status"></span><button class="quiet" id="clear-container-filters" type="button" hidden>Clear filters</button></div>
   <p class="mobile-table-hint muted">Swipe the table to see all columns.</p>
   <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Containers on the connected Docker engine</caption><thead><tr><th scope="col">Container</th><th scope="col">Image</th><th scope="col">State</th><th scope="col">Compose project</th><th scope="col">Access</th><th scope="col">Actions</th></tr></thead><tbody id="container-rows"></tbody></table></div><div id="inventory-empty" class="empty-state">Loading containers…</div></div>
+ </section>
+ <section class="workspace" id="images-view" aria-labelledby="images-title" hidden>
+  <div class="page-heading"><div><h1 id="images-title" tabindex="-1">Images</h1><p class="muted">Images stored on the selected Docker host.</p></div><button id="images-refresh" type="button">Refresh</button></div>
+  <p id="images-error" class="notice error" role="alert" hidden></p>
+  <p id="images-summary" class="muted small"></p>
+  <form id="images-pull" class="image-pull-form"><div><label for="images-reference">Download image</label><input id="images-reference" placeholder="registry/repository:tag" maxlength="512" required autocomplete="off" spellcheck="false"></div><button id="images-pull-submit" type="submit">Pull image</button></form>
+  <div class="filter-bar project-filters"><div class="search-field"><label for="images-search">Search images</label><input id="images-search" type="search" placeholder="Tag, ID or digest" autocomplete="off"></div><div><label for="images-usage">Usage</label><select id="images-usage"><option value="">All images</option><option value="used">Used</option><option value="unused">Unused</option></select></div></div>
+  <div class="image-batch-actions"><button id="images-delete" type="button" disabled>Delete selected</button><div><label for="images-cleanup-mode">Cleanup scope</label><select id="images-cleanup-mode"><option value="untagged">Unused images without tags</option><option value="all">All unused images</option></select></div><button id="images-cleanup" type="button" disabled>Review cleanup</button></div>
+  <p id="images-results" role="status" class="muted small"></p>
+  <div id="images-operation" class="notice" role="status" hidden></div>
+  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Docker images on the selected host</caption><thead><tr><th><input id="images-select-all" type="checkbox" aria-label="Select unused images in the filtered list"></th><th>Image / tags</th><th>Size</th><th>Platform</th><th>Containers</th><th>Actions</th></tr></thead><tbody id="images-rows"></tbody></table></div><p id="images-empty" class="empty-state">Loading images…</p></div>
  </section>
  <section class="workspace" id="projects-view" aria-label="Compose projects" hidden>
   <div id="project-overview">
@@ -102,5 +113,7 @@
  <p id="container-logs-limit" class="notice" hidden>Output limited to 256 KiB. Choose fewer recent lines to reduce the response.</p>
  <pre id="container-log-output" tabindex="0" aria-label="Application log output"></pre>
 </dialog>
+<dialog id="image-details" aria-labelledby="image-detail-title"><div class="dialog-heading"><h2 id="image-detail-title">Image details</h2><button type="button" class="quiet" id="image-detail-close" aria-label="Close image details">×</button></div><dl id="image-detail-fields" class="container-detail-fields"></dl><div id="image-detail-actions" class="image-detail-actions"></div></dialog>
+<dialog id="image-tag-dialog" aria-labelledby="image-tag-title"><form id="image-tag-form"><h2 id="image-tag-title">Add image tag</h2><p id="image-tag-source" class="path"></p><label for="image-tag-reference">Repository:tag</label><input id="image-tag-reference" required maxlength="512" placeholder="repository:tag" spellcheck="false" autocomplete="off"><div class="dialog-actions"><button id="image-tag-cancel" type="button">Cancel</button><button type="submit" class="primary">Review tag</button></div></form></dialog>
 <dialog id="confirmation" aria-labelledby="confirm-title"><form method="dialog"><h2 id="confirm-title">Confirm operation</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" autofocus>Cancel</button><button value="confirm" class="primary">Confirm</button></div></form></dialog>
 </body></html>

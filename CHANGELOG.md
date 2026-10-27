@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.6.1 — Unreleased
+## 0.7.0 — Unreleased
+
+- Manage Docker images on Local and remote hosts: inventory/details, pull,
+  add/remove tags, selected deletion and reviewed cleanup of unused images.
+- Retain images used by stopped/running containers, recheck changed references,
+  and report bounded background operations per host without force/global prune.
+- Negotiate images-v1 with upgraded agents and restore the Images view on reload.
+
+## 0.6.1 — 2026-10-27
 
 - Remove Docker Desktop as a launcher requirement on Linux/macOS. Accept local
   Unix-socket Docker contexts and mount the selected native Linux engine socket,
