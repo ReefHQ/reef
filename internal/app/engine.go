@@ -183,6 +183,9 @@ func (m *Manager) update(p *Managed, fn func(*Operation)) error {
 func (m *Manager) begin(id, action, rev, content string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if m.Images != nil && m.Images.catalogOperation().Running {
+		return errors.New("an image operation is already running")
+	}
 	p, ok := m.Projects[id]
 	if !ok {
 		return errors.New("unknown project")

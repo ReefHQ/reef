@@ -28,7 +28,7 @@ function page(saved,{blocked=false,hosts=['local'],containers=[],projects=[],ear
  let ready;if(hostScript)vm.runInContext(source('hosts.js'),context);else window.reefHostsReady=new Promise(resolve=>ready=resolve);
  if(earlyState)window.reefProjects=projects;
  vm.runInContext(source('inventory.js'),context);
- return {storage,nodes,window,nav,context,get documentLoads(){return documentLoads;},get inventoryRequests(){return inventoryRequests;},async start(){if(!earlyState)window.dispatchEvent({type:'reef-state',detail:projects});const host=hosts.includes(saved?.host)?saved.host:'local';if(!hostScript&&host!=='local'){window.reefHost=host;window.dispatchEvent({type:'reef-host-changed',detail:{id:host,name:host,restoring:true}});}if(!hostScript)ready();for(let i=0;i<15;i++)await Promise.resolve();window.reefProjects=projects;window.dispatchEvent({type:'reef-state',detail:projects});for(let i=0;i<15;i++)await Promise.resolve();while(frames.length)frames.shift()();},reloadState(){return JSON.parse(storage.get('reef.navigation.v1'));}};
+ return {storage,nodes,window,nav,context,flushFrames(){while(frames.length)frames.shift()();},get documentLoads(){return documentLoads;},get inventoryRequests(){return inventoryRequests;},async start(){if(!earlyState)window.dispatchEvent({type:'reef-state',detail:projects});const host=hosts.includes(saved?.host)?saved.host:'local';if(!hostScript&&host!=='local'){window.reefHost=host;window.dispatchEvent({type:'reef-host-changed',detail:{id:host,name:host,restoring:true}});}if(!hostScript)ready();for(let i=0;i<15;i++)await Promise.resolve();window.reefProjects=projects;window.dispatchEvent({type:'reef-state',detail:projects});for(let i=0;i<15;i++)await Promise.resolve();while(frames.length)frames.shift()();},reloadState(){return JSON.parse(storage.get('reef.navigation.v1'));}};
 }
 test('reload restores project detail, filters and scroll after host/inventory/state validation',async()=>{
  const saved={view:'projects',host:'local',project:'p1',scroll:420,filters:{'project-search':'media'}};
@@ -66,4 +66,12 @@ test('invalid preference data is normalized and expired select values are discar
 
 test('upgraded remote host restores its selected managed project after reload',async()=>{
  const p=page({view:'projects',host:'remote',project:'p1',scroll:70},{hosts:['local','remote'],hostScript:true,capabilities:['control-v1'],projects:[{id:'p1',name:'Remote project',project_name:'remote-app',operation:{}}]});await p.start();assert.equal(p.documentLoads,1);assert.equal(p.nodes.get('#project-detail').hidden,false);assert.equal(p.reloadState().host,'remote');assert.equal(p.reloadState().project,'p1');
+});
+
+test('Images restoration waits for its inventory before restoring filters and scroll',async()=>{
+ const p=page({view:'images',host:'local',filters:{'images-search':'alpine'},scroll:240});await p.start();
+ assert.equal(p.nodes.get('#images-view').hidden,false);assert.equal(p.window.scrollY,0);
+ p.window.reefImagesReady=true;p.window.dispatchEvent({type:'reef-images-ready'});
+ // Restoration schedules one animation frame, just as inventory-backed views do.
+ p.flushFrames();assert.equal(p.window.scrollY,240);assert.equal(p.nodes.get('#images-search').value,'alpine');assert.equal(p.reloadState().view,'images');
 });

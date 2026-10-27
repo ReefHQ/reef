@@ -63,7 +63,7 @@ func (w *relayTestWriter) Flush() {
 	}
 }
 func (w *relayTestWriter) SetWriteDeadline(time.Time) error { return nil }
-func relayAgentFixture(t *testing.T, central *Server, backend *Server, name string) (string, context.CancelFunc) {
+func relayAgentFixture(t *testing.T, central *Server, backend *Server, name string, capabilities ...string) (string, context.CancelFunc) {
 	t.Helper()
 	token, err := central.agents.Token(name)
 	if err != nil {
@@ -78,6 +78,11 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 		t.Fatal(err)
 	}
 	central.agents.Control(id, gen, true)
+	for _, capability := range capabilities {
+		if capability == agents.ImagesCapability {
+			central.agents.Images(id, gen, true)
+		}
+	}
 	central.relay.Connect(id, gen)
 	rows, _ := backend.discovery.List(context.Background())
 	central.agents.Publish(id, key, agents.Update{Protocol: agents.Protocol, Generation: gen, Sequence: 1, Containers: rows})

@@ -42,7 +42,7 @@ The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopbac
 
 ## Containers and Projects
 
-Reloading the same browser tab restores the Containers/Projects view, open
+Reloading the same browser tab restores the Containers/Projects/Images view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
 overview and revoked/missing hosts fall back to Local. If browser storage is
@@ -73,6 +73,43 @@ For example, the supplied manual example uses `"installation_directory": "/CANON
 On this development Mac, the installation is `/path/to/reef`, so the applied default root and bind are `/path/to/projects`. This service authorization does **not** grant the coding agent permission to explore other Workspace projects; verification uses disposable fixtures under Reef only. Containers remain visible-only until the user confirms registration.
 
 In the project editor, **More actions → Stop managing** removes a UI registration after confirmation, without stopping containers, running Compose, deleting project files or deleting operation history. An active operation blocks removal. Entries originally configured in `config.json` cannot be removed by this button. Reef's own Compose project cannot be registered.
+
+## Images
+
+**Images** lists the selected host's Docker images, including untagged images.
+Search tags, IDs and digests, filter used/unused images, and open an image for
+its full ID, tags, registry digests, creation date, platform, size and containers.
+Usage includes stopped containers. Cumulative sizes include shared layers and
+are not an estimate of recoverable disk space. Refresh updates the inventory;
+background refresh runs every ten seconds while this view is visible.
+
+Pull downloads an image reference using the selected host's Docker credentials.
+It can move an existing tag but does not restart containers or apply a project.
+Add tag requires an explicit repository:tag and refuses existing destinations.
+Image details offer Remove tag; removing the last reference may delete the
+unused image. Used images retain their tags. Image configuration, environments,
+history, volumes and build cache are not exposed or cleaned.
+
+Select unused images for batch deletion, or use Review cleanup with either
+unused images without tags (default) or all unused images. The confirmation lists
+the exact candidate images and host. Each batch is limited to 100 images.
+Before each removal, Reef verifies the image ID, tags/digests and current usage;
+changed images are retained for review. It removes explicit references without
+force or parent pruning. Multi-tag deletion can partially succeed if Docker
+refuses a later reference; refresh and inspect the per-image result before
+retrying. Other Docker clients can still change the engine concurrently.
+
+One image mutation runs per host, excluding Reef Compose operations. Pulls and
+batches continue after closing the page or disconnecting an agent and have a
+15-minute deadline. Their latest per-image report is kept in memory only;
+after a process restart, refresh inventory to reconcile an interrupted operation.
+Inventory reads are limited to 2000 images/10000 containers and ten seconds.
+Docker errors are summarized without exposing registry credentials.
+
+Local and upgraded remote agents use the same implementation. Upgrade central
+first, then agents to v0.7.0 while preserving their existing identity volume,
+CA and configuration. The images-v1 capability is negotiated per connection;
+older agents retain their existing features and request an upgrade for Images.
 
 ## Container and application logs
 
@@ -322,7 +359,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.6.1` in development.
+source of truth for the application version, currently `0.7.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

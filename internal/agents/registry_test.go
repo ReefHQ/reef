@@ -187,3 +187,38 @@ func TestUnsafeRegistryRejected(t *testing.T) {
 		t.Fatal("symlink accepted")
 	}
 }
+
+func TestImageCapabilityBelongsToCurrentConnection(t *testing.T) {
+	r, _ := Open(t.TempDir())
+	id, key := enrolled(t, r, "images")
+	gen, _ := r.Begin(id, key, "test", Protocol)
+	if err := r.Images(id, gen, true); err != nil || r.CanImages(id) {
+		t.Fatal("images requires control", err)
+	}
+	r.Control(id, gen, true)
+	r.Images(id, gen, true)
+	if !r.CanImages(id) {
+		t.Fatal("missing image capability")
+	}
+	views := r.Views()
+	found := false
+	for _, cap := range views[0].Capabilities {
+		found = found || cap == ImagesCapability
+	}
+	if !found {
+		t.Fatal(views)
+	}
+	next, _ := r.Begin(id, key, "test", Protocol)
+	r.Control(id, next, true)
+	if r.CanImages(id) {
+		t.Fatal("capability survived reconnect")
+	}
+	if err := r.Images(id, gen, true); err == nil {
+		t.Fatal("stale generation accepted")
+	}
+	r.Images(id, next, true)
+	r.Change(id, "", true)
+	if r.CanImages(id) {
+		t.Fatal("revoked host retained capability")
+	}
+}
