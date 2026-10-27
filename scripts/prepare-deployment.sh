@@ -23,7 +23,14 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 random_secret(){
- value=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
+ if command -v openssl >/dev/null 2>&1; then
+  value=$(openssl rand -hex 32) || { echo 'Could not generate a private secret with OpenSSL.' >&2;exit 1; }
+ elif command -v od >/dev/null 2>&1; then
+  value=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
+ else
+  echo 'Secret generation requires openssl or od; install either and rerun preparation.' >&2;exit 1
+ fi
+ case "$value" in ''|*[!0-9a-f]*) echo 'Invalid private secret generated.' >&2;exit 1;; esac
  [ "${#value}" -eq 64 ] || { echo 'Could not generate a private secret.' >&2;exit 1; }
  printf '%s' "$value"
 }

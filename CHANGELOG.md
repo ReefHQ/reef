@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.3.2 — Unreleased
+## 0.3.3 — Unreleased
+
+- Generate bootstrap secrets with OpenSSL on NAS systems without od, keeping
+  existing installation files intact when preparation is retried.
+
+## 0.3.2 — 2026-10-26
 
 - Build release platforms separately with Docker's integrated builder and assemble
   registry manifests afterward, avoiding a nested BuildKit/runc incompatibility.

@@ -62,6 +62,23 @@ cmp "$work/env-before" "$work/reef/.env"
 cmp "$work/config-before" "$work/reef/config.json"
 cmp "$work/password-before" "$work/reef/secrets/password.txt"
 test ! -e "$TEST_LOG"
+# QNAP-like PATH: OpenSSL available, od absent. Retry after missing tools must
+# preserve existing private files and remove temporary files/preparation locks.
+mkdir -p "$work/nas-bin" "$work/nas/reef/deploy-agent"
+for utility in sh dirname basename mkdir rmdir mktemp ln rm awk; do
+ ln -s "$(command -v "$utility")" "$work/nas-bin/$utility"
+done
+cp "$root/compose.production.yaml" "$work/nas/reef/compose.production.yaml"
+if PATH="$work/nas-bin" sh "$root/scripts/prepare-deployment.sh" "$work/nas/reef" > "$work/no-random-tool" 2>&1;then echo 'Missing random generator accepted';exit 1;fi
+test ! -e "$work/nas/reef/secrets/password.txt"
+test ! -e "$work/nas/reef/.reef-prepare.lock"
+ln -s "$(command -v openssl)" "$work/nas-bin/openssl"
+PATH="$work/nas-bin" sh "$root/scripts/prepare-deployment.sh" "$work/nas/reef" > "$work/nas-preparation"
+grep -Eq '^[0-9a-f]{64}$' "$work/nas/reef/secrets/password.txt"
+grep -Eq '^DEPLOY_TOKEN=[0-9a-f]{64}$' "$work/nas/reef/.env"
+cp "$work/nas/reef/secrets/password.txt" "$work/nas-password-before"
+PATH="$work/nas-bin" sh "$root/scripts/prepare-deployment.sh" "$work/nas/reef" > "$work/nas-preparation-again"
+cmp "$work/nas-password-before" "$work/nas/reef/secrets/password.txt"
 mkdir -p "$work/other/reef/deploy-agent" "$work/outside-state"
 cp "$root/compose.production.yaml" "$work/other/reef/compose.production.yaml"
 ln -s "$work/outside-state" "$work/other/reef/state"
