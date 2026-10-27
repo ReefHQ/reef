@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
  const find=selector=>document.querySelector(selector);
- let snapshot=[],managed=window.reefProjects||[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null;
+ let snapshot=[],managed=window.reefProjects||[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null,inventoryFailed=false;
  const dialog=find('#manage-project'),form=find('#manage-form');
  const saved=ReefNavigation.read();let restoring=true,restoringProject=false,hostsReady=false,managedReady=Array.isArray(window.reefProjects),restoreInFlight=false,scrollTimer;
  if('scrollRestoration' in history)history.scrollRestoration='manual';
@@ -51,7 +51,7 @@
   updateProjectConsole();renderProjectContainers();
   const all=ReefUI.projectRows(snapshot,visibleManaged()),query=find('#project-search').value.trim().toLowerCase(),mode=find('#project-access').value;
   const rows=all.filter(g=>(!query||`${g.name} ${g.managed?.name||''}`.toLowerCase().includes(query))&&(!mode||(mode==='managed'?!!g.managed:!g.managed)));
-  find('#compose-nav-count').textContent=hasSnapshot?all.length:'—';find('#project-results').textContent=`${rows.length} of ${all.length} projects · ${visibleManaged().length} managed`;
+  find('#compose-nav-count').textContent=hasSnapshot?all.length:'—';find('#project-results').textContent=hasSnapshot?`${rows.length} of ${all.length} projects · ${visibleManaged().length} managed`:'';
   const signature=JSON.stringify(rows.map(g=>[g.name,g.self,g.managed?.id,g.managed?.name,g.managed?.busy,g.managed?.image_updates,g.containers.map(c=>[c.state,c.managed_project_id])]))+query+mode+hostEpoch+hasSnapshot;
   if(find('#discovered-projects').dataset.signature===signature)return;
   const nodes=rows.map(group=>{
@@ -70,7 +70,7 @@
    const consoleButton=textNode('button','Console','project-console-action');consoleButton.type='button';consoleButton.dataset.focusKey='project-console-'+group.name;consoleButton.setAttribute('aria-label',`Console for project ${group.name}`);consoleButton.disabled=!management()||!hasSnapshot||!running;if(consoleButton.disabled)consoleButton.title=!management()?'Upgrade the remote agent to use consoles':'Console access requires a running container';consoleButton.addEventListener('click',()=>window.openProjectConsole({containers:snapshot.filter(c=>c.compose_project===group.name),project:group.managed?.name||group.name}));action.append(consoleButton);
    row.append(title,count,badge,action);return row;
   });
-  if(!rows.length)nodes.push(textNode('div',!hasSnapshot?'Waiting for Docker inventory…':all.length?'No projects match your search. Clear the search or change Access.':'No Compose projects found. Projects appear here when their containers have Compose labels.','empty-state'));
+  if(!rows.length)nodes.push(textNode('div',!hasSnapshot?(inventoryFailed?'Docker inventory unavailable. Use Refresh to try again.':'Loading projects…'):all.length?'No projects match your search. Clear the search or change Access.':'No Compose projects found. Projects appear here when their containers have Compose labels.','empty-state'));
   replaceKeepingFocus(find('#discovered-projects'),nodes);find('#discovered-projects').dataset.signature=signature;
  }
  function renderProjectContainers(){
@@ -96,14 +96,22 @@
    });
    replaceKeepingFocus(find('#container-rows'),nodes);find('#container-rows').dataset.signature=signature;
   }
-  const empty=find('#inventory-empty');empty.hidden=rows.length>0;empty.textContent=!hasSnapshot?'Waiting for Docker inventory…':snapshot.length?'No containers match these filters. Clear filters to see all containers.':'No containers on this engine.';
+  const empty=find('#inventory-empty');empty.hidden=rows.length>0;empty.textContent=!hasSnapshot?(inventoryFailed?'Docker inventory unavailable. Use Refresh to try again.':'Loading containers…'):snapshot.length?'No containers match these filters. Clear filters to see all containers.':'No containers on this engine.';
+ }
+ function inventoryLoading(){
+  const pending=busy||(!hasSnapshot&&!inventoryFailed);
+  for(const [prefix,content] of [['containers','#container-rows'],['projects','#discovered-projects']]){
+   find('#'+prefix+'-loading').hidden=!pending;
+   find('#'+prefix+'-loading-text').textContent=(hasSnapshot?'Refreshing ':'Loading ')+prefix+'…';
+   find(content).setAttribute('aria-busy',String(pending));
+  }
  }
  async function refresh(){
   const requestedHost=hostEpoch;
-  if(busy)return;busy=true;find('#refresh-containers').disabled=true;find('#refresh-projects').disabled=true;
+  if(busy)return;busy=true;inventoryFailed=false;inventoryLoading();find('#refresh-containers').disabled=true;find('#refresh-projects').disabled=true;
   try{const result=await(await request('/api/containers')).json();if(requestedHost!==hostEpoch)return;snapshot=result.containers.map(c=>({...c,host_id:host,host_name:hostName,inventory_only:host!=='local'&&!management()}));hasSnapshot=true;access=result.project_access;find('#inventory-error').hidden=true;find('#connection-status').textContent=host==='local'?'Docker connected':`${hostName} · ${result.host.status}${result.host.stale?' · stale':''}`;find('#connection-status').dataset.connected=String(!result.host?.stale);if(result.host?.stale){find('#inventory-error').textContent=`${hostName}: ${result.host.error||result.host.status}. Showing the last inventory; it may be outdated.`;find('#inventory-error').hidden=false;}find('#updated-at').textContent=`Updated ${new Date(result.checked_at).toLocaleTimeString('en-GB')}`;find('#project-root-summary').textContent=rootDescription(access)+(access.roots.length?'\n'+access.roots.join('\n'):'');}
-  catch(error){if(requestedHost!==hostEpoch)return;find('#inventory-error').textContent=`Docker inventory unavailable. ${error.message}${hasSnapshot?' Showing the last successful snapshot.':''}`;find('#inventory-error').hidden=false;find('#connection-status').textContent='Docker unavailable';find('#connection-status').dataset.connected='false';}
-  finally{if(requestedHost!==hostEpoch)return;busy=false;find('#refresh-containers').disabled=false;find('#refresh-projects').disabled=false;renderContainers();renderProjects();restore();}
+  catch(error){if(requestedHost!==hostEpoch)return;inventoryFailed=true;find('#inventory-error').textContent=`Docker inventory unavailable. ${error.message}${hasSnapshot?' Showing the last successful snapshot.':''}`;find('#inventory-error').hidden=false;find('#connection-status').textContent='Docker unavailable';find('#connection-status').dataset.connected='false';}
+  finally{if(requestedHost!==hostEpoch)return;busy=false;inventoryLoading();find('#refresh-containers').disabled=false;find('#refresh-projects').disabled=false;renderContainers();renderProjects();restore();}
  }
  for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).addEventListener(id==='#container-search'?'input':'change',()=>{userNavigation();renderContainers();remember();});
  find('#clear-container-filters').addEventListener('click',()=>{userNavigation();for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).value='';renderContainers();find('#container-search').focus();remember();});
@@ -130,12 +138,12 @@
   finally{managing=false;find('#manage-submit').disabled=false;find('#manage-submit').textContent='Confirm and manage';find('#manage-cancel').disabled=false;find('#manage-back').disabled=false;}
  });
  window.addEventListener('reef-host-changed',event=>{
-  if(!event.detail.restoring)userNavigation();hostViews.set(host,{view:currentView,detail:document.body.dataset.detail==='true'});hostEpoch++;host=event.detail.id;managed=window.reefProjects||[];managedReady=false;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;
+  if(!event.detail.restoring)userNavigation();hostViews.set(host,{view:currentView,detail:document.body.dataset.detail==='true'});hostEpoch++;host=event.detail.id;managed=window.reefProjects||[];managedReady=false;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;inventoryFailed=false;inventoryLoading();
   for(const id of ['#container-details','#project-console','#container-logs','#manage-project']){const d=find(id);if(d?.open)d.close();}
   find('#connection-status').textContent=`${hostName} · connecting…`;find('#updated-at').textContent='';find('#inventory-error').hidden=true;
   for(const id of ['#container-search','#container-state','#container-project','#container-access','#project-search','#project-access'])find(id).value='';
   const previous=hostViews.get(host);setView(event.detail.restoring?saved.view:previous?.view||'containers',!!previous?.detail&&!!current());renderContainers();renderProjects();remember();if(hostsReady)refresh();
  });
- setView(saved.view);
+ setView(saved.view);inventoryLoading();
  window.reefHostsReady.then(()=>{hostsReady=true;refresh();setInterval(refresh,5000);});
 })();

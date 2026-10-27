@@ -1,12 +1,18 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),view=find('volumes-view');
- let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,timer,hostsReady=false;
+ let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,timer,hostsReady=false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('volumes-v1');
  const candidates=()=>rows.filter(row=>row.removable);
  const target=row=>({name:row.name,fingerprint:row.fingerprint});
  function notice(text,error=false){find('volumes-error').textContent=text;find('volumes-error').hidden=!text;find('volumes-error').className='notice'+(error?' error':'');}
  function controls(){
+  const pending=available()&&(loading||(!hasSnapshot&&!loadError));
+  find('volumes-loading').hidden=!pending;
+  find('volumes-loading-text').textContent=hasSnapshot?'Refreshing volumes…':'Loading volumes…';
+  find('volumes-rows').setAttribute('aria-busy',String(pending));
+  if(!hasSnapshot){find('volumes-results').textContent='';find('volumes-empty').hidden=false;find('volumes-empty').textContent=pending?'Loading volumes…':available()?'Inventory unavailable. Use Refresh to try again.':'Upgrade the agent to manage volumes.';}
+
   const disabled=!available()||busy||loading||!loaded;
   find('volumes-refresh').disabled=!available()||loading;
   find('volumes-create-submit').disabled=!available()||busy;
@@ -30,16 +36,16 @@
    const open=textNode('button',row.name,'text-button');open.type='button';open.dataset.focusKey='volume-open-'+row.name;open.addEventListener('click',()=>details(row));title.append(open);
    const remove=textNode('button','Delete','compact-button');remove.type='button';remove.disabled=busy||loading||!loaded||!row.removable;remove.title=row.retain_reason||'';remove.dataset.focusKey='volume-delete-'+row.name;remove.setAttribute('aria-label',`Delete volume ${row.name}`);remove.addEventListener('click',()=>removeVolumes([row],'remove'));actions.append(remove);
    tr.append(selection,title,textNode('td',row.driver),textNode('td',row.project||'—'),textNode('td',row.containers.length?row.containers.join(', '):'Unused'),actions);return tr;
-  });replaceKeepingFocus(find('volumes-rows'),nodes);find('volumes-empty').hidden=!!visible.length;find('volumes-empty').textContent=loaded?'No volumes match this selection.':'Open Volumes to load the selected host inventory.';
+  });replaceKeepingFocus(find('volumes-rows'),nodes);find('volumes-empty').hidden=!!visible.length;find('volumes-empty').textContent=hasSnapshot?'No volumes match this selection.':'Loading volumes…';
   const eligible=visible.filter(row=>row.removable);find('volumes-select-all').checked=!!eligible.length&&eligible.every(row=>selected.has(row.name));controls();
  }
  async function refresh(){
   if(!hostsReady||loading||document.hidden)return;
   if(!available()){notice('Upgrade this host’s agent to manage volumes.',true);controls();window.reefVolumesReady=true;window.dispatchEvent(new CustomEvent('reef-volumes-ready'));return;}
-  const current=epoch;loading=true;controls();
+  const current=epoch;loading=true;loadError=false;controls();
   try{const data=await(await request('/api/volumes',undefined,host)).json();if(current!==epoch)return;
    const prior=new Map(rows.map(row=>[row.name,row.fingerprint]));rows=data.volumes;loaded=true;hasSnapshot=true;selected=new Set([...selected].filter(name=>rows.some(row=>row.name===name&&row.removable&&row.fingerprint===prior.get(name))));notice('');status(data.operation);render();
-  }catch(error){if(current===epoch){notice(`${error.message}${loaded?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;render();}}
+  }catch(error){if(current===epoch){loadError=true;notice(`${error.message}${hasSnapshot?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;render();}}
   finally{if(current===epoch){loading=false;render();window.reefVolumesReady=true;window.dispatchEvent(new CustomEvent('reef-volumes-ready'));}}
  }
  async function poll(){
@@ -72,7 +78,7 @@
  find('volumes-delete').addEventListener('click',()=>removeVolumes(rows.filter(row=>selected.has(row.name)),'remove'));
  find('volumes-cleanup').addEventListener('click',()=>removeVolumes(candidates(),'cleanup'));
  window.addEventListener('reef-view-changed',()=>{if(!view.hidden){refresh();clearTimeout(timer);timer=setTimeout(poll,1500);}});
- window.addEventListener('reef-host-changed',()=>{epoch++;window.reefVolumesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;find('volumes-operation').hidden=true;if(find('volume-details').open)find('volume-details').close();for(const id of ['volumes-search','volumes-usage','volumes-name'])find(id).value='';notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
+ window.addEventListener('reef-host-changed',()=>{epoch++;window.reefVolumesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;loadError=false;find('volumes-operation').hidden=true;if(find('volume-details').open)find('volume-details').close();for(const id of ['volumes-search','volumes-usage','volumes-name'])find(id).value='';notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  render();(window.reefHostsReady||Promise.resolve()).then(()=>{hostsReady=true;refresh();clearTimeout(timer);timer=setTimeout(poll,1500);});
 })();

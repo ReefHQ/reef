@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.8.0 — Unreleased
+## 0.8.1 — Unreleased
+
+- Show visible loading/refreshing indicators across inventory lists, preserve
+  existing rows and layout during refresh, and distinguish unavailable inventories.
+
+## 0.8.0 — 2026-10-27
 
 - Show host-scoped total counts for Images and Volumes in the main navigation,
   refreshed in the background independently of page filters.
