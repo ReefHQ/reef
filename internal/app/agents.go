@@ -84,6 +84,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		host := r.Header.Get("X-Reef-Host")
 		_ = s.agents.Control(host, generation, enabled)
 		for _, capability := range input.Capabilities {
+			if capability == agents.VolumesCapability {
+				_ = s.agents.Volumes(host, generation, true)
+			}
 			if capability == agents.ImagesCapability {
 				_ = s.agents.Images(host, generation, true)
 			}

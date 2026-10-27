@@ -73,6 +73,7 @@ type Manager struct {
 	StateDir      string
 	Exec          Executor
 	wg            sync.WaitGroup
+	storageBusy   bool // Protected by mu; excludes image/volume mutations and Compose work.
 	Images        *ImageService
 	imageCheckMu  sync.Mutex
 	imagesContext context.Context
@@ -183,8 +184,8 @@ func (m *Manager) update(p *Managed, fn func(*Operation)) error {
 func (m *Manager) begin(id, action, rev, content string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	if m.Images != nil && m.Images.catalogOperation().Running {
-		return errors.New("an image operation is already running")
+	if m.storageBusy {
+		return errors.New("an image or volume operation is already running")
 	}
 	p, ok := m.Projects[id]
 	if !ok {

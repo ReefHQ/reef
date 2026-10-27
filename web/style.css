@@ -197,3 +197,9 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 @media(max-width:600px){.image-batch-actions>div{margin-left:0;flex:1}.image-pull-form button{width:100%}}
 
 #confirm-message{white-space:pre-line;max-height:55vh;overflow:auto;overflow-wrap:anywhere}
+
+#volumes-view td:nth-child(2){min-width:200px;max-width:360px;overflow-wrap:anywhere}
+#volumes-view td:nth-child(5){max-width:240px;overflow-wrap:anywhere}
+#volumes-view input[type=checkbox]{width:18px;height:18px;min-height:18px;margin:0;vertical-align:middle}
+#volumes-operation{max-height:220px;overflow:auto}#volume-detail-fields dd{overflow-wrap:anywhere}
+@media(max-width:760px){.primary-nav{overflow-x:auto;max-width:100%}.primary-nav button{flex-shrink:0}}

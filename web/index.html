@@ -4,7 +4,7 @@
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
  <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
- <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/inventory.js" defer></script><script src="/assets/images.js" defer></script>
+ <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/inventory.js" defer></script><script src="/assets/images.js" defer></script><script src="/assets/volumes.js" defer></script>
 </head>
 <body class="app-shell" data-console-session-limit="{{.ConsoleSessionLimit}}">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
@@ -12,7 +12,7 @@
 <main class="layout">
  <nav aria-label="Main navigation">
   <div class="host-picker"><label for="host-select">Docker host</label><select id="host-select"><option value="local">Local</option></select><button type="button" id="open-hosts" class="quiet">Manage hosts</button></div>
-  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images</button></div>
+  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images</button><button type="button" data-view="volumes">Volumes</button></div>
   <div id="managed-navigation" hidden><div class="nav-heading">MANAGED <span id="project-count">0</span></div><div id="projects"></div><div class="mobile-managed-navigation"><label for="managed-project-select">Managed project</label><select id="managed-project-select"><option value="">Choose a project</option></select></div></div>
   <p class="nav-note" id="host-note">Visible containers stay read-only until you connect their project.</p>
  </nav>
@@ -36,6 +36,16 @@
   <p id="images-results" role="status" class="muted small"></p>
   <div id="images-operation" class="notice" role="status" hidden></div>
   <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Docker images on the selected host</caption><thead><tr><th><input id="images-select-all" type="checkbox" aria-label="Select unused images in the filtered list"></th><th>Image / tags</th><th>Size</th><th>Platform</th><th>Containers</th><th>Actions</th></tr></thead><tbody id="images-rows"></tbody></table></div><p id="images-empty" class="empty-state">Loading images…</p></div>
+ </section>
+ <section class="workspace" id="volumes-view" aria-labelledby="volumes-title" hidden>
+  <div class="page-heading"><div><h1 id="volumes-title" tabindex="-1">Volumes</h1><p class="muted">Docker volumes on the selected host, including anonymous volumes. Bind mounts are not included.</p></div><button id="volumes-refresh" type="button">Refresh</button></div>
+  <p class="notice">Unused volumes can still hold valuable data. Deleting a volume permanently removes its stored data.</p>
+  <p id="volumes-error" class="notice error" role="alert" hidden></p><p id="volumes-summary" class="muted small"></p>
+  <form id="volumes-create" class="image-pull-form"><div><label for="volumes-name">New volume name</label><input id="volumes-name" required minlength="2" maxlength="255" placeholder="application-data" autocomplete="off" spellcheck="false" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]+"></div><button id="volumes-create-submit" type="submit">Create volume</button></form>
+  <div class="filter-bar project-filters"><div class="search-field"><label for="volumes-search">Search volumes</label><input id="volumes-search" type="search" placeholder="Name, driver or Compose project" autocomplete="off"></div><div><label for="volumes-usage">Usage</label><select id="volumes-usage"><option value="">All volumes</option><option value="used">Used</option><option value="unused">Unused</option></select></div></div>
+  <div class="image-batch-actions"><button id="volumes-delete" type="button" disabled>Delete selected</button><button id="volumes-cleanup" type="button" disabled>Review unused volumes</button></div>
+  <p id="volumes-results" class="muted small" role="status"></p><div id="volumes-operation" class="notice" role="status" hidden></div>
+  <div class="table-card"><div class="table-scroll"><table><caption class="sr-only">Docker volumes on the selected host</caption><thead><tr><th><input id="volumes-select-all" type="checkbox" aria-label="Select removable volumes in the filtered list"></th><th>Name</th><th>Driver</th><th>Compose project</th><th>Containers</th><th>Actions</th></tr></thead><tbody id="volumes-rows"></tbody></table></div><p id="volumes-empty" class="empty-state">Loading volumes…</p></div>
  </section>
  <section class="workspace" id="projects-view" aria-label="Compose projects" hidden>
   <div id="project-overview">
@@ -115,5 +125,6 @@
 </dialog>
 <dialog id="image-details" aria-labelledby="image-detail-title"><div class="dialog-heading"><h2 id="image-detail-title">Image details</h2><button type="button" class="quiet" id="image-detail-close" aria-label="Close image details">×</button></div><dl id="image-detail-fields" class="container-detail-fields"></dl><div id="image-detail-actions" class="image-detail-actions"></div></dialog>
 <dialog id="image-tag-dialog" aria-labelledby="image-tag-title"><form id="image-tag-form"><h2 id="image-tag-title">Add image tag</h2><p id="image-tag-source" class="path"></p><label for="image-tag-reference">Repository:tag</label><input id="image-tag-reference" required maxlength="512" placeholder="repository:tag" spellcheck="false" autocomplete="off"><div class="dialog-actions"><button id="image-tag-cancel" type="button">Cancel</button><button type="submit" class="primary">Review tag</button></div></form></dialog>
+<dialog id="volume-details" aria-labelledby="volume-detail-title"><div class="dialog-heading"><h2 id="volume-detail-title">Volume details</h2><button type="button" class="quiet" id="volume-detail-close" aria-label="Close volume details">×</button></div><dl id="volume-detail-fields" class="container-detail-fields"></dl><p class="muted small">Mountpoint is Docker metadata. Reef does not browse or edit volume contents.</p><div class="dialog-actions"><button id="volume-detail-delete" type="button" class="danger">Delete volume and data</button></div></dialog>
 <dialog id="confirmation" aria-labelledby="confirm-title"><form method="dialog"><h2 id="confirm-title">Confirm operation</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" autofocus>Cancel</button><button value="confirm" class="primary">Confirm</button></div></form></dialog>
 </body></html>

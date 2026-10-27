@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.7.0 — Unreleased
+## 0.8.0 — Unreleased
+
+- Manage Docker volumes on Local and upgraded remote agents: inventory, details,
+  creation, explicit deletion and reviewed batch cleanup of unused volumes.
+- Protect running/stopped container references and changed volume identities;
+  confirm permanent data loss and serialize volumes/images/Compose mutations.
+- Negotiate volumes-v1 per agent connection and restore the Volumes view on reload.
+
+## 0.7.0 — 2026-10-27
 
 - Manage Docker images on Local and remote hosts: inventory/details, pull,
   add/remove tags, selected deletion and reviewed cleanup of unused images.

@@ -75,3 +75,10 @@ test('Images restoration waits for its inventory before restoring filters and sc
  // Restoration schedules one animation frame, just as inventory-backed views do.
  p.flushFrames();assert.equal(p.window.scrollY,240);assert.equal(p.nodes.get('#images-search').value,'alpine');assert.equal(p.reloadState().view,'images');
 });
+
+test('Volumes restoration waits for volume inventory and restores its filters and scroll',async()=>{
+ const p=page({view:'volumes',host:'local',filters:{'volumes-search':'database','volumes-usage':'unused'},scroll:280});await p.start();
+ assert.equal(p.nodes.get('#volumes-view').hidden,false);assert.equal(p.window.scrollY,0);
+ p.window.reefVolumesReady=true;p.window.dispatchEvent({type:'reef-volumes-ready'});p.flushFrames();
+ assert.equal(p.window.scrollY,280);assert.equal(p.nodes.get('#volumes-search').value,'database');assert.equal(p.reloadState().view,'volumes');
+});

@@ -267,8 +267,8 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 	s := m.Images
 	s.catalogMu.Lock()
 	defer s.catalogMu.Unlock()
-	if s.catalogOp.Running {
-		return fail("An image operation is already running")
+	if m.storageBusy {
+		return fail("An image or volume operation is already running")
 	}
 	for _, p := range m.Projects {
 		p.mu.Lock()
@@ -280,17 +280,21 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 	}
 	op := CatalogOperation{ID: randomID(), Action: action, Running: true, Started: time.Now(), Results: []ImageResult{}}
 	s.catalogOp = op
+	m.storageBusy = true
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()
 		results := s.runCatalog(ctx, action, ref, tag, targets)
+		m.mu.Lock()
 		s.catalogMu.Lock()
 		s.catalogOp.Results = results
 		s.catalogOp.Running = false
 		s.catalogOp.Finished = time.Now()
+		m.storageBusy = false
 		s.catalogMu.Unlock()
+		m.mu.Unlock()
 	}()
 	return op, nil
 }
