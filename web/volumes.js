@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),view=find('volumes-view');
- let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,timer,hostsReady=false;
+ let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,timer,hostsReady=false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('volumes-v1');
  const candidates=()=>rows.filter(row=>row.removable);
  const target=row=>({name:row.name,fingerprint:row.fingerprint});
@@ -21,6 +21,7 @@
  }
  function filtered(){const query=find('volumes-search').value.trim().toLowerCase(),usage=find('volumes-usage').value;return rows.filter(row=>(!query||`${row.name} ${row.driver} ${row.project}`.toLowerCase().includes(query))&&(!usage||(usage==='used'?row.containers.length:!row.containers.length)));}
  function render(){
+  find('volume-nav-count').textContent=hasSnapshot?rows.length:'—';
   const visible=filtered();find('volumes-summary').textContent=loaded?`${rows.length} volumes · ${rows.filter(row=>!row.containers.length).length} not referenced by containers`:'';
   find('volumes-results').textContent=`${visible.length} shown · ${selected.size} selected`;
   const nodes=visible.map(row=>{
@@ -33,17 +34,17 @@
   const eligible=visible.filter(row=>row.removable);find('volumes-select-all').checked=!!eligible.length&&eligible.every(row=>selected.has(row.name));controls();
  }
  async function refresh(){
-  if(!hostsReady||view.hidden||loading)return;
+  if(!hostsReady||loading||document.hidden)return;
   if(!available()){notice('Upgrade this host’s agent to manage volumes.',true);controls();window.reefVolumesReady=true;window.dispatchEvent(new CustomEvent('reef-volumes-ready'));return;}
   const current=epoch;loading=true;controls();
   try{const data=await(await request('/api/volumes',undefined,host)).json();if(current!==epoch)return;
-   const prior=new Map(rows.map(row=>[row.name,row.fingerprint]));rows=data.volumes;loaded=true;selected=new Set([...selected].filter(name=>rows.some(row=>row.name===name&&row.removable&&row.fingerprint===prior.get(name))));notice('');status(data.operation);render();
+   const prior=new Map(rows.map(row=>[row.name,row.fingerprint]));rows=data.volumes;loaded=true;hasSnapshot=true;selected=new Set([...selected].filter(name=>rows.some(row=>row.name===name&&row.removable&&row.fingerprint===prior.get(name))));notice('');status(data.operation);render();
   }catch(error){if(current===epoch){notice(`${error.message}${loaded?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;render();}}
   finally{if(current===epoch){loading=false;render();window.reefVolumesReady=true;window.dispatchEvent(new CustomEvent('reef-volumes-ready'));}}
  }
  async function poll(){
   clearTimeout(timer);const current=epoch;
-  try{if(available()&&!view.hidden&&!document.hidden){if(busy){const op=await(await request('/api/volumes/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
+  try{if(available()&&!document.hidden){if(busy){const op=await(await request('/api/volumes/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
   catch(error){if(current===epoch)notice(`Operation status unavailable. ${error.message} Refresh before retrying.`,true);}
   finally{if(current===epoch)timer=setTimeout(poll,busy?1500:10000);}
  }
@@ -71,7 +72,7 @@
  find('volumes-delete').addEventListener('click',()=>removeVolumes(rows.filter(row=>selected.has(row.name)),'remove'));
  find('volumes-cleanup').addEventListener('click',()=>removeVolumes(candidates(),'cleanup'));
  window.addEventListener('reef-view-changed',()=>{if(!view.hidden){refresh();clearTimeout(timer);timer=setTimeout(poll,1500);}});
- window.addEventListener('reef-host-changed',()=>{epoch++;window.reefVolumesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;find('volumes-operation').hidden=true;if(find('volume-details').open)find('volume-details').close();for(const id of ['volumes-search','volumes-usage','volumes-name'])find(id).value='';notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!view.hidden)refresh();});
+ window.addEventListener('reef-host-changed',()=>{epoch++;window.reefVolumesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;find('volumes-operation').hidden=true;if(find('volume-details').open)find('volume-details').close();for(const id of ['volumes-search','volumes-usage','volumes-name'])find(id).value='';notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  render();(window.reefHostsReady||Promise.resolve()).then(()=>{hostsReady=true;refresh();clearTimeout(timer);timer=setTimeout(poll,1500);});
 })();

@@ -2,6 +2,9 @@
 
 ## 0.8.0 — Unreleased
 
+- Show host-scoped total counts for Images and Volumes in the main navigation,
+  refreshed in the background independently of page filters.
+
 - Manage Docker volumes on Local and upgraded remote agents: inventory, details,
   creation, explicit deletion and reviewed batch cleanup of unused volumes.
 - Protect running/stopped container references and changed volume identities;
