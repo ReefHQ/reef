@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.4.0 — Unreleased
+## 0.5.0 — Unreleased
+
+- Check managed-project image updates automatically and on demand by comparing
+  registry manifests with deployed image contents for the matching platform.
+- After a successful Apply update, remove replaced untagged images only when
+  updated containers are running/healthy and no container still uses the image.
+
+## 0.4.0 — 2026-10-27
 
 - Restore the current page, managed project, Docker host, filters and scroll
   position after reloading the same browser tab.

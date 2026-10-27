@@ -24,12 +24,20 @@ type Executor interface {
 type DockerExecutor struct{}
 
 func (DockerExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
+	return dockerCommand(ctx, p, args, w, w)
+}
+
+// Output keeps diagnostic stderr separate from machine-readable JSON/IDs.
+func (DockerExecutor) Output(ctx context.Context, p Project, args []string, w io.Writer) error {
+	return dockerCommand(ctx, p, args, w, io.Discard)
+}
+func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr io.Writer) error {
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = p.Directory
 	// Do not leak the UI password or inherit Compose/Docker overrides from the server.
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix:///var/run/docker.sock", "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain"}
-	cmd.Stdout = w
-	cmd.Stderr = w
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd.Run()
 }
 
@@ -50,17 +58,21 @@ type Managed struct {
 	Op           Operation
 	busy         bool
 	persistError string
+	ImageUpdates ImageUpdates
 }
 type Manager struct {
-	mu           sync.RWMutex
-	config       Config
-	registered   []Project
-	registryHash string
-	Projects     map[string]*Managed
-	Order        []string
-	StateDir     string
-	Exec         Executor
-	wg           sync.WaitGroup
+	mu            sync.RWMutex
+	config        Config
+	registered    []Project
+	registryHash  string
+	Projects      map[string]*Managed
+	Order         []string
+	StateDir      string
+	Exec          Executor
+	wg            sync.WaitGroup
+	Images        *ImageService
+	imageCheckMu  sync.Mutex
+	imagesContext context.Context
 }
 
 func newManager(c Config, x Executor) (*Manager, error) {
@@ -179,7 +191,7 @@ func (m *Manager) begin(id, action, rev, content string) error {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.busy {
+	if p.busy || p.ImageUpdates.Checking {
 		return errors.New("an operation is already running")
 	}
 	current, e := revision(p.Project)
@@ -203,6 +215,7 @@ func (m *Manager) begin(id, action, rev, content string) error {
 		return e
 	}
 	p.busy = true
+	p.ImageUpdates = ImageUpdates{Services: []ImageUpdate{}}
 	m.wg.Add(1)
 	go func() { defer m.wg.Done(); m.work(p, action, rev, content) }()
 	return nil
@@ -340,6 +353,7 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 	defer cancel()
 	w := &logWriter{m: m, p: p, secrets: secrets(p.Project)}
 	var e error
+	var oldImages []containerImage
 	e = func() error {
 		if e := sameRevision(p.Project, rev); e != nil {
 			return e
@@ -394,6 +408,14 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 			return e
 		}
 		if action == "apply" {
+			if m.Images != nil {
+				var captureErr error
+				oldImages, captureErr = m.Images.containers(ctx, p.Project)
+				if captureErr != nil {
+					fmt.Fprintln(w, "Image cleanup will be skipped: cannot capture previous project images.")
+					oldImages = nil
+				}
+			}
 			if e = m.run(ctx, p, w, "", "pull"); e != nil {
 				return e
 			}
@@ -435,7 +457,19 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 		if e = m.run(ctx, p, w, "", "up", "-d"); e != nil {
 			return e
 		}
-		return m.update(p, func(o *Operation) { o.NeedsStart = false })
+		if e = m.update(p, func(o *Operation) { o.NeedsStart = false }); e != nil {
+			return e
+		}
+		if action == "apply" && m.Images != nil {
+			if e = sameRevision(p.Project, rev); e != nil {
+				return e
+			}
+			if e = m.update(p, func(o *Operation) { o.Phase = "image cleanup" }); e != nil {
+				return e
+			}
+			m.Images.cleanup(ctx, p.Project, oldImages, w)
+		}
+		return nil
 	}()
 	w.flush()
 	p.mu.Lock()

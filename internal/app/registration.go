@@ -208,7 +208,7 @@ func (m *Manager) unregisterProject(id string) error {
 	p := m.Projects[id]
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.busy {
+	if p.busy || p.ImageUpdates.Checking {
 		return errors.New("Wait for the active project operation to finish")
 	}
 	next := append([]Project{}, m.registered[:index]...)

@@ -51,6 +51,10 @@ func Run() {
 	if e != nil {
 		log.Fatal(e)
 	}
+	checksContext, stopChecks := context.WithCancel(context.Background())
+	defer stopChecks()
+	m.Images = &ImageService{Exec: m.Exec}
+	m.startImageChecks(checksContext)
 	s := newServer(m, c, password)
 	s.agents, e = agents.Open(c.StateDir)
 	if e != nil {
@@ -66,6 +70,7 @@ func Run() {
 	stopped := make(chan struct{})
 	go func() {
 		<-done
+		stopChecks()
 		log.Print("Stopping new requests; waiting for active operations (up to 45 minutes). Do not force termination.")
 		s.closeConsoles()
 		_ = server.Shutdown(context.Background())

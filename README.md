@@ -174,12 +174,44 @@ Each authorized project is explicitly listed in configuration or confirmed and p
 4. Validate the saved file, then run **`pull`**.
 5. Check the revision and validate again before stopping anything.
 6. Run **`down`**, then **`up -d`**. No `-v`, no `prune`, no directory deletion.
+7. Verify the new containers are running and, when configured, healthy (up to two
+   minutes). Remove only replaced image IDs captured before pull, with no tags
+   and no containers using them, including stopped containers in other projects.
+   Docker removal is never forced and does not prune parent images. Skipped or
+   refused cleanup is recorded in the command log and leaves the old image intact.
 
 A validation failure before saving leaves the original intact. A pull failure leaves the edited Compose saved, but prevents `down`. Backups are not restored automatically. If `down` or `up -d` fails, containers may be stopped or partially running; Reef makes this clear and offers **Start / retry** (`config --quiet`, then `up -d`). There is no automatic rollback or availability guarantee.
 
 **More actions → Stop project** validates, then runs `down`, without deleting named volumes. A down/up cycle can remove and recreate containers and networks; anonymous volumes may not be reattached as before. Prefer existing bind mounts or named volumes. **Save file** stops after validation, backup and saving; it does not restart services. Compose action requests cannot provide arbitrary commands: the server constructs their arguments using `exec.CommandContext`, without a host shell. The separately authorized container console uses Docker exec.
 
 Operations continue after closing the tab and have a total timeout of 45 minutes. A project lock prevents editing and simultaneous operations on that project. A content hash covers configured Compose files, configured interpolation files and the default `.env`, rejecting outdated edits. SSH changes are detected at checkpoints, but Reef cannot lock an external editor: do not change these files while an operation is running. Files referenced through `include`, `extends`, service `env_file`, secrets, configs or build contexts are outside this revision hash.
+
+### Image update checks
+
+Managed local projects are checked at startup, after an Apply update and every
+six hours. Newly managed projects and invalidated checks are picked up within a
+minute. Open a project's **Image updates** panel and choose **Check for updates**
+for a manual check (limited to once per minute). The projects overview shows its
+latest summary. Checks continue without an open browser, are serialized and
+exclude simultaneous Compose operations on that project.
+
+Reef reads the saved Compose configuration and registry manifests; it does not
+pull or recreate containers during a check. It compares the deployed image's
+configuration digest for its OS/architecture/variant, including tags such as
+`latest` whose contents can change. It does not search for newer tag names or
+edit Compose versions. Missing/unreachable/private registries show an unknown
+status, never an assumed update. Locally built services, digest-pinned images
+and services without deployed containers have explicit separate statuses.
+Checks use the Docker CLI's existing registry credentials in Reef's own runtime
+(`HOME/.docker`), not the deployment webhook's credentials or the browser's.
+
+Reports are transient and refreshed after restart. A check of saved files can
+differ from an unsaved editor draft. There is no automatic application update;
+use **Apply update** when ready. Cleanup runs only after this action succeeds,
+never after a failed pull/recreation or a standalone Start / retry. Tagged old
+versions remain available. A healthcheck-free container must be running, which
+does not establish application-level health. No rollback image is guaranteed
+after eligible old images are removed.
 
 ## Configuration
 
@@ -290,7 +322,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.4.0` in development.
+source of truth for the application version, currently `0.5.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
