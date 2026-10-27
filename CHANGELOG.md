@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.3.3 — Unreleased
+## 0.4.0 — Unreleased
+
+- Restore the current page, managed project, Docker host, filters and scroll
+  position after reloading the same browser tab.
+
+## 0.3.3 — 2026-10-27
 
 - Generate bootstrap secrets with OpenSSL on NAS systems without od, keeping
   existing installation files intact when preparation is retried.

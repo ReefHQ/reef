@@ -1,16 +1,43 @@
 'use strict';
 (()=>{
  const find=selector=>document.querySelector(selector);
- let snapshot=[],managed=[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null;
+ let snapshot=[],managed=window.reefProjects||[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null;
  const dialog=find('#manage-project'),form=find('#manage-form');
- let host='local',hostName='Local',hostEpoch=0;const visibleManaged=()=>host==='local'?managed:[];
+ const saved=ReefNavigation.read();let restoring=true,restoringProject=false,hostsReady=false,managedReady=Array.isArray(window.reefProjects),restoreInFlight=false,scrollTimer;
+ if('scrollRestoration' in history)history.scrollRestoration='manual';
+ function remember(){
+  if(restoring)return;
+  const filters={};for(const id of ReefNavigation.filterIds)filters[id]=find('#'+id).value;
+  ReefNavigation.write({view:currentView,host,project:currentView==='projects'&&document.body.dataset.detail==='true'?current()?.id||'':'',filters,scroll:window.scrollY});
+ }
+ function userNavigation(){restoring=false;}
+ async function restore(){
+  if(!restoring||restoreInFlight||!hostsReady||!hasSnapshot||(host==='local'&&!managedReady))return;
+  restoreInFlight=true;
+  try{
+   setView(saved.view);
+   if(saved.view==='projects'&&saved.host===host&&host==='local'&&managed.some(p=>p.id===saved.project)){
+    restoringProject=true;await selectProject(saved.project);restoringProject=false;
+    if(current()?.id!==saved.project){restoring=false;remember();return;}
+   }
+   if(!restoring)return;
+   if(saved.host===host){
+    for(const id of ReefNavigation.filterIds){const field=find('#'+id),value=saved.filters[id];if(field.tagName!=='SELECT'||[...field.options].some(o=>o.value===value))field.value=value;}
+   }
+   renderContainers();renderProjects();
+   requestAnimationFrame(()=>{if(!restoring)return;window.scrollTo(0,saved.host===host?saved.scroll:0);restoring=false;remember();});
+  }finally{restoringProject=false;restoreInFlight=false;}
+ }
+ window.addEventListener('pagehide',remember);
+ window.addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(remember,150);},{passive:true});
+ let host=window.reefHost||'local',hostName=window.reefHostName||'Local',hostEpoch=0;const visibleManaged=()=>host==='local'?managed:[];
  function updateProjectConsole(){const p=current();find('#project-console-open').disabled=!p||!hasSnapshot||!snapshot.some(c=>c.compose_project===p.project_name&&c.state==='running');}
  function setView(view,detail=false){currentView=view;find('#containers-view').hidden=view!=='containers';find('#projects-view').hidden=view!=='projects';find('#project-overview').hidden=detail;find('#project-detail').hidden=!detail;find('#managed-navigation').hidden=view!=='projects'||!visibleManaged().length;document.body.dataset.detail=String(detail);document.querySelectorAll('[data-view]').forEach(button=>{if(button.dataset.view===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});}
- document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
- find('#back-projects').addEventListener('click',()=>{setView('projects');find('#projects-title').focus({preventScroll:true});window.scrollTo(0,0);});
- window.addEventListener('reef-open-project',()=>{setView('projects',true);updateProjectConsole();renderProjectContainers();find('#project-name').focus({preventScroll:true});window.scrollTo(0,0);});
- window.addEventListener('reef-project-overview',()=>setView('projects'));
- window.addEventListener('reef-state',event=>{managed=event.detail;find('#managed-navigation').hidden=currentView!=='projects'||!visibleManaged().length;renderProjects();renderContainers();});
+ document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{userNavigation();setView(button.dataset.view);remember();}));
+ find('#back-projects').addEventListener('click',()=>{userNavigation();setView('projects');find('#projects-title').focus({preventScroll:true});window.scrollTo(0,0);remember();});
+ window.addEventListener('reef-open-project',()=>{if(!restoringProject)userNavigation();setView('projects',true);updateProjectConsole();renderProjectContainers();find('#project-name').focus({preventScroll:true});window.scrollTo(0,0);remember();});
+ window.addEventListener('reef-project-overview',()=>{userNavigation();setView('projects');remember();});
+ window.addEventListener('reef-state',event=>{managed=event.detail;managedReady=true;find('#managed-navigation').hidden=currentView!=='projects'||!visibleManaged().length;renderProjects();renderContainers();restore();});
  function rootDescription(policy){if(!policy)return 'Loading allowed folders…';if(policy.source==='explicit')return 'Allowed folders are explicitly configured.';if(policy.source==='installation-parent')return `Default: parent of Reef installation (${policy.installation_directory}).`;return 'Installation folder unknown. Set installation_directory or REEF_INSTALLATION_DIR, or configure allowed_project_roots.';}
  function options(selector,values,first){const select=find(selector),signature=JSON.stringify(values);if(select.dataset.options===signature)return;const value=select.value;select.replaceChildren(new Option(first,''),...values.map(([value,label])=>new Option(label,value)));select.value=[...select.options].some(o=>o.value===value)?value:'';select.dataset.options=signature;}
  function renderProjects(){
@@ -71,14 +98,14 @@
   if(busy)return;busy=true;find('#refresh-containers').disabled=true;find('#refresh-projects').disabled=true;
   try{const result=await(await request('/api/containers')).json();if(requestedHost!==hostEpoch)return;snapshot=result.containers.map(c=>host==='local'?c:{...c,host_id:host,host_name:hostName,inventory_only:true});hasSnapshot=true;access=result.project_access;find('#inventory-error').hidden=true;find('#connection-status').textContent=host==='local'?'Docker connected':`${hostName} · ${result.host.status}${result.host.stale?' · stale':''}`;find('#connection-status').dataset.connected=String(!result.host?.stale);if(result.host?.stale){find('#inventory-error').textContent=`${hostName}: ${result.host.error||result.host.status}. Showing the last inventory; it may be outdated.`;find('#inventory-error').hidden=false;}find('#updated-at').textContent=`Updated ${new Date(result.checked_at).toLocaleTimeString('en-GB')}`;find('#project-root-summary').textContent=rootDescription(access)+(access.roots.length?'\n'+access.roots.join('\n'):'');}
   catch(error){if(requestedHost!==hostEpoch)return;find('#inventory-error').textContent=`Docker inventory unavailable. ${error.message}${hasSnapshot?' Showing the last successful snapshot.':''}`;find('#inventory-error').hidden=false;find('#connection-status').textContent='Docker unavailable';find('#connection-status').dataset.connected='false';}
-  finally{if(requestedHost!==hostEpoch)return;busy=false;find('#refresh-containers').disabled=false;find('#refresh-projects').disabled=false;renderContainers();renderProjects();}
+  finally{if(requestedHost!==hostEpoch)return;busy=false;find('#refresh-containers').disabled=false;find('#refresh-projects').disabled=false;renderContainers();renderProjects();restore();}
  }
- for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).addEventListener(id==='#container-search'?'input':'change',renderContainers);
- find('#clear-container-filters').addEventListener('click',()=>{for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).value='';renderContainers();find('#container-search').focus();});
+ for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).addEventListener(id==='#container-search'?'input':'change',()=>{userNavigation();renderContainers();remember();});
+ find('#clear-container-filters').addEventListener('click',()=>{userNavigation();for(const id of ['#container-search','#container-state','#container-project','#container-access'])find(id).value='';renderContainers();find('#container-search').focus();remember();});
  window.addEventListener('reef-projects-changed',refresh);
  find('#project-console-open').addEventListener('click',()=>{const p=current();if(p)window.openProjectConsole({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
  find('#project-container-logs').addEventListener('click',()=>{const p=current();if(p)window.openContainerLogs({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
- find('#project-search').addEventListener('input',renderProjects);find('#project-access').addEventListener('change',renderProjects);find('#refresh-containers').addEventListener('click',refresh);find('#refresh-projects').addEventListener('click',refresh);
+ for(const [id,event] of [['#project-search','input'],['#project-access','change']])find(id).addEventListener(event,()=>{userNavigation();renderProjects();remember();});find('#refresh-containers').addEventListener('click',refresh);find('#refresh-projects').addEventListener('click',refresh);
  function setupStep(review){find('#manage-confirm').disabled=!review;find('#manage-confirm').required=review;find('#manage-files-step').hidden=review;find('#manage-review-step').hidden=!review;find('#manage-back').hidden=!review;find('#manage-next').hidden=review;find('#manage-submit').hidden=!review;find('#manage-step-label').textContent=review?'2 of 2 · Review connection':'1 of 2 · Project files';if(!review)find('#manage-confirm').checked=false;dialog.scrollTop=0;}
  async function openManage(name){
   if(managing||dialog.open)return;managing=true;
@@ -98,11 +125,12 @@
   finally{managing=false;find('#manage-submit').disabled=false;find('#manage-submit').textContent='Confirm and manage';find('#manage-cancel').disabled=false;find('#manage-back').disabled=false;}
  });
  window.addEventListener('reef-host-changed',event=>{
-  hostEpoch++;host=event.detail.id;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;
+  if(!event.detail.restoring)userNavigation();hostEpoch++;host=event.detail.id;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;
   for(const id of ['#container-details','#project-console','#container-logs','#manage-project']){const d=find(id);if(d?.open)d.close();}
   find('#connection-status').textContent=`${hostName} · connecting…`;find('#updated-at').textContent='';find('#inventory-error').hidden=true;
   for(const id of ['#container-search','#container-state','#container-project','#container-access','#project-search','#project-access'])find(id).value='';
-  setView('containers');renderContainers();renderProjects();refresh();
+  setView(event.detail.restoring?saved.view:'containers');renderContainers();renderProjects();remember();if(hostsReady)refresh();
  });
- refresh();setInterval(refresh,5000);
+ setView(saved.view);
+ window.reefHostsReady.then(()=>{hostsReady=true;refresh();setInterval(refresh,5000);});
 })();

@@ -53,10 +53,10 @@ function render(){
 }
 async function poll(){
  try{
-  projects=await(await request('/api/state')).json();$('#app-notice').hidden=true;render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));
+  projects=await(await request('/api/state')).json();window.reefProjects=projects;$('#app-notice').hidden=true;render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));
   const p=current();if(p&&!p.busy&&$('#message').textContent.startsWith('Operation started.'))message('');
   if(p&&!p.busy&&!inFlight&&pendingEdits.has(p.id)&&p.operation.id!==pendingEdits.get(p.id).previousOpID)await settleEdit(p);
-  else if(p&&!p.busy&&!dirty&&!inFlight&&!pendingEdits.has(p.id)&&(!loaded||lastOp!==p.operation.id))await loadDocument();
+  else if(p&&!p.busy&&!dirty&&!inFlight&&!loading&&!pendingEdits.has(p.id)&&(!loaded||lastOp!==p.operation.id))await loadDocument();
  }catch(error){$('#app-notice').textContent='Project status unavailable. '+error.message;$('#app-notice').hidden=false;}
  finally{setTimeout(poll,1800);}
 }
@@ -88,7 +88,7 @@ async function settleEdit(p){
  else{$('#editor').value=pending.content;revision=pending.revision;dirty=true;message('Your edits are kept in the editor. Resolve the error, then save again. Reload first if the file changed elsewhere.',true);}
  }catch(error){if(selected===id){pendingEdits.delete(id);dirty=true;loaded=true;lastOp=p.operation.id;message('Your edits are kept here. '+error.message,true);}}finally{loading=false;controls();}
 }
-window.addEventListener('reef-projects-changed',async event=>{try{projects=await(await request('/api/state')).json();render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));if(event.detail.id)await selectProject(event.detail.id);}catch(error){message(error.message,true);}});
+window.addEventListener('reef-projects-changed',async event=>{try{projects=await(await request('/api/state')).json();window.reefProjects=projects;render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));if(event.detail.id)await selectProject(event.detail.id);}catch(error){message(error.message,true);}});
 window.addEventListener('keydown',event=>{if(!document.querySelector('dialog[open]')&&(event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='s'&&!$('#project-detail').hidden&&!$('#projects-view').hidden){event.preventDefault();if(!$('#save').disabled)runAction('save');}});
 window.addEventListener('beforeunload',event=>{if(dirty||[...pendingEdits.values()].some(p=>p.dirty)){event.preventDefault();event.returnValue='';}});
 poll();

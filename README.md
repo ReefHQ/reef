@@ -42,6 +42,13 @@ For a NAS or a generic Linux installation, adapt the explicit examples below; th
 
 ## Containers and Projects
 
+Reloading the same browser tab restores the Containers/Projects view, open
+managed project, Docker host, filters and page scroll position. Navigation is
+stored in sessionStorage for that tab; unavailable projects return to the
+overview and revoked/missing hosts fall back to Local. If browser storage is
+blocked, navigation still works without persistence. Editor drafts, open dialogs,
+log output and console connections are not restored by this preference.
+
 **Containers** is the default view. It lists running, stopped, created, paused and other Docker container states, supports combined text, state, Compose project and access filters, and refreshes every five seconds. Counts always describe the full snapshot; the result line describes the filtered subset. If Docker becomes unavailable, Reef shows a clear error and keeps the last successful snapshot marked as disconnected.
 
 **Projects** combines discovered Compose groups with managed projects that currently have no containers, and distinguishes **View only** from **Managed**. Search and the Access filter narrow this list; counts include managed projects with no containers. Choose **Open project** to enter its editor, or use **All projects** to return to the overview. No Compose file is loaded merely by opening the overview. Only projects explicitly authorized in configuration or confirmed through **Manage this project** have an editor or Compose operations. Seeing a container never grants management access. Reef reads only the Compose working-directory/config-file labels as untrusted form suggestions; opening the form does not follow those paths.
@@ -283,7 +290,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.3.3` in development.
+source of truth for the application version, currently `0.4.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
