@@ -16,7 +16,6 @@ func fixture(t *testing.T) *Launcher {
 	if e != nil {
 		t.Fatal(e)
 	}
-	l.home = "/Users/test"
 	l.getenv = func(string) string { return "" }
 	l.out = io.Discard
 	return l
@@ -134,5 +133,95 @@ func TestPasswordCanBeReadWithoutDocker(t *testing.T) {
 	l.run = func(...string) ([]byte, error) { t.Fatal("password action contacted Docker"); return nil, nil }
 	if e := l.Run("password"); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestLocalLinuxEngineDoesNotRequireDockerDesktop(t *testing.T) {
+	for _, tc := range []struct {
+		name, platform, endpoint, osType, daemonName, daemonOS string
+		accept                                                 bool
+	}{
+		{"Linux Engine", "linux", "unix:///var/run/docker.sock", "linux", "ubuntu-server", "Ubuntu 24.04", true},
+		{"Linux rootless", "linux", "unix:///run/user/1000/docker.sock", "linux", "server", "Debian GNU/Linux", true},
+		{"Linux custom socket", "linux", "unix:///srv/docker/engine.sock", "linux", "server", "Linux", true},
+		{"macOS Desktop", "darwin", "unix:///Users/test/.docker/run/docker.sock", "linux", "docker-desktop", "Docker Desktop", true},
+		{"macOS Colima", "darwin", "unix:///Users/test/.colima/default/docker.sock", "linux", "colima", "Ubuntu", true},
+		{"macOS OrbStack", "darwin", "unix:///Users/test/.orbstack/run/docker.sock", "linux", "orbstack", "Linux", true},
+		{"Windows containers", "linux", "unix:///var/run/docker.sock", "windows", "server", "Windows Server", false},
+		{"TCP endpoint", "linux", "tcp://localhost:2375", "linux", "server", "Linux", false},
+		{"SSH endpoint", "darwin", "ssh://server", "linux", "server", "Linux", false},
+		{"URL authority", "linux", "unix://server/var/run/docker.sock", "linux", "server", "Linux", false},
+		{"Noncanonical path", "linux", "unix:///run/../var/run/docker.sock", "linux", "server", "Linux", false},
+		{"Query string", "linux", "unix:///var/run/docker.sock?host=remote", "linux", "server", "Linux", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			l := fixture(t)
+			l.platform = tc.platform
+			l.run = func(args ...string) ([]byte, error) {
+				switch args[0] {
+				case "context":
+					if args[1] == "show" {
+						return []byte("local\n"), nil
+					}
+					return json.Marshal([]any{map[string]any{"Endpoints": map[string]any{"docker": map[string]string{"Host": tc.endpoint}}}})
+				default:
+					return json.Marshal(map[string]string{"ID": "engine-id", "Name": tc.daemonName, "OperatingSystem": tc.daemonOS, "OSType": tc.osType})
+				}
+			}
+			current, err := l.localEngine()
+			if (err == nil) != tc.accept {
+				t.Fatal(current, err)
+			}
+		})
+	}
+}
+func TestSelectedSocketIsMountedForNativeAndVMEngines(t *testing.T) {
+	for _, tc := range []struct {
+		name, platform, endpoint, want string
+		vm                             bool
+	}{
+		{"Linux rootless", "linux", "unix:///run/user/1000/docker.sock", "/run/user/1000/docker.sock", false},
+		{"Linux custom", "linux", "unix:///srv/engine.sock", "/srv/engine.sock", false},
+		{"macOS VM", "darwin", "unix:///Users/test/.colima/default/docker.sock", "/var/run/docker.sock", true},
+		{"Linux Desktop VM", "linux", "unix:///home/test/.docker/desktop/docker.sock", "/var/run/docker.sock", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			l := fixture(t)
+			l.platform = tc.platform
+			l.daemonVM = tc.vm
+			if _, err := l.initialize(engine{Context: "local", Endpoint: tc.endpoint, ID: "engine"}); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(filepath.Join(l.runtime(), "compose.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var compose struct {
+				Services map[string]struct {
+					Volumes []struct{ Source, Target string }
+				}
+			}
+			if json.Unmarshal(raw, &compose) != nil {
+				t.Fatal("invalid Compose")
+			}
+			found := false
+			for _, mount := range compose.Services["reef"].Volumes {
+				if mount.Target == "/var/run/docker.sock" {
+					found = mount.Source == tc.want
+				}
+			}
+			if !found {
+				t.Fatal("wrong engine socket mount", string(raw))
+			}
+		})
+	}
+}
+
+func TestContextAndEndpointChangesRemainRejected(t *testing.T) {
+	meta := metadata{Prefix: "reef-local-test", Image: "reef:reef-local-test", Port: 8099, Context: "desktop-linux", Endpoint: "unix:///var/run/docker.sock", EngineID: "engine"}
+	for _, current := range []engine{{"colima", meta.Endpoint, meta.EngineID}, {meta.Context, "unix:///another.sock", meta.EngineID}} {
+		if err := validEngine(meta, current); err == nil {
+			t.Fatal("installation changed engine binding", current)
+		}
 	}
 }

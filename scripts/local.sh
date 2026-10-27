@@ -15,12 +15,21 @@ tools="$root/.reef-local/tools"
 checksum=$(cat go.mod cmd/reef-local/main.go internal/local/*.go | cksum)
 tool="$tools/reef-local-$target_os-$target_arch"
 if [ ! -x "$tool" ] || [ ! -f "$tools/source.cksum" ] || [ "$(cat "$tools/source.cksum")" != "$checksum" ]; then
-  if [ -n "${DOCKER_HOST:-}" ] || [ -n "${DOCKER_CONTEXT:-}" ]; then printf '%s\n' 'Unset DOCKER_HOST and DOCKER_CONTEXT; select local Docker Desktop.' >&2; exit 1; fi
+  if [ -n "${DOCKER_HOST:-}" ] || [ -n "${DOCKER_CONTEXT:-}" ]; then printf '%s\n' 'Unset DOCKER_HOST and DOCKER_CONTEXT; select a local Docker context.' >&2; exit 1; fi
   context=$(docker context show)
   endpoint=$(docker context inspect "$context" --format '{{.Endpoints.docker.Host}}')
-  case "$endpoint" in unix:///var/run/docker.sock|"unix://$HOME/.docker/run/docker.sock") ;; *) printf '%s\n' 'Refusing a non-local Docker endpoint.' >&2; exit 1 ;; esac
-  identity=$(docker --context "$context" info --format '{{.Name}}|{{.OperatingSystem}}')
-  [ "$identity" = 'docker-desktop|Docker Desktop' ] || { printf '%s\n' 'Local Docker Desktop is required.' >&2; exit 1; }
+  case "$endpoint" in
+    unix:///*) ;;
+    *) printf '%s\n' 'Refusing a non-local Docker endpoint. Select a local Unix-socket context.' >&2; exit 1 ;;
+  esac
+  socket_path=${endpoint#unix://}
+  case "$socket_path" in
+    /|//*|*/../*|*/./*|*/..|*/.|*'?'*|*'#'*) printf '%s\n' 'Invalid local Docker socket path.' >&2; exit 1 ;;
+  esac
+  identity=$(docker --context "$context" info --format '{{.OSType}}|{{.ID}}')
+  engine_type=${identity%%|*}
+  engine_id=${identity#*|}
+  [ "$engine_type" = linux ] && [ -n "$engine_id" ] || { printf '%s\n' 'A reachable Linux Docker engine with a stable ID is required.' >&2; exit 1; }
   mkdir -p "$tools"
   docker --context "$context" run --rm --network none --label io.reef.tooling=launcher \
     -e CGO_ENABLED=0 -e GOOS="$target_os" -e GOARCH="$target_arch" \
