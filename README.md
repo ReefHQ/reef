@@ -81,7 +81,8 @@ Search tags, IDs and digests, filter used/unused images, and open an image for
 its full ID, tags, registry digests, creation date, platform, size and containers.
 Usage includes stopped containers. Cumulative sizes include shared layers and
 are not an estimate of recoverable disk space. Refresh updates the inventory;
-background refresh runs every ten seconds while this view is visible.
+background refresh runs every ten seconds while the browser tab is visible.
+The main navigation shows the host’s total image count, independent of filters.
 
 Pull downloads an image reference using the selected host's Docker credentials.
 It can move an existing tag but does not restart containers or apply a project.
@@ -145,8 +146,9 @@ Image, volume and Reef Compose mutations are mutually exclusive per host.
 Volume workers continue after closing the page/disconnecting and have a
 five-minute deadline. The latest result is in memory, so reconcile inventory
 after a process restart before retrying. Inventory reads have a ten-second limit,
-with at most 2000 volumes and 10000 containers. Visible views refresh every ten
-seconds; page/filters/scroll are restored per tab on reload.
+with at most 2000 volumes and 10000 containers. Inventories refresh every ten seconds while the browser tab is visible;
+the navigation shows total volume counts independently of filters.
+Page/filters/scroll are restored per tab on reload.
 
 The same backend runs locally and on agents advertising volumes-v1. Upgrade
 central first, then agents to v0.8.0 while preserving identity volumes, CA and

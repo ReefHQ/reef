@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),view=find('images-view');
- let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,operation='',timer,hostsReady=false;
+ let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,operation='',timer,hostsReady=false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('images-v1');
  const bytes=value=>{if(value<1024)return value+' B';const units=['KiB','MiB','GiB','TiB'];let n=value/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toFixed(1)+' '+units[i];};
  const name=row=>row.tags?.join(', ')||'<untagged>';
@@ -22,6 +22,7 @@
   controls();
  }
  function render(){
+  find('image-nav-count').textContent=hasSnapshot?rows.length:'—';
   const query=find('images-search').value.toLowerCase().trim(),usage=find('images-usage').value;
   const filtered=rows.filter(row=>(!query||`${row.id} ${name(row)} ${(row.digests||[]).join(' ')}`.toLowerCase().includes(query))&&(!usage||(usage==='used'?row.containers.length:!row.containers.length)));
   find('images-summary').textContent=loaded?`${rows.length} images · ${rows.filter(r=>!r.containers.length).length} unused · ${bytes(rows.reduce((n,r)=>n+r.size,0))} cumulative size (layers may be shared)`:'';
@@ -38,11 +39,11 @@
   controls();
  }
  async function refresh(){
-  if(!hostsReady||view.hidden||loading)return;
+  if(!hostsReady||loading||document.hidden)return;
   if(!available()){notice('Upgrade this host’s agent to manage images.',true);controls();window.reefImagesReady=true;window.dispatchEvent(new CustomEvent('reef-images-ready'));return;}
   const current=epoch;loading=true;controls();
   try{const data=await(await request('/api/images',undefined,host)).json();if(current!==epoch)return;
-   const prior=new Map(rows.map(row=>[row.id,row.fingerprint]));rows=data.images;loaded=true;
+   const prior=new Map(rows.map(row=>[row.id,row.fingerprint]));rows=data.images;loaded=true;hasSnapshot=true;
    selected=new Set([...selected].filter(id=>rows.some(row=>row.id===id&&!row.containers.length&&row.fingerprint===prior.get(id))));
    notice('');status(data.operation);render();
   }catch(error){if(current===epoch){notice(`${error.message}${loaded?' Showing the last successful inventory; refresh before acting.':''}`,true);loaded=false;controls();}}
@@ -50,7 +51,7 @@
  }
  async function poll(){
   clearTimeout(timer);const current=epoch;
-  try{if(available()&&!view.hidden&&!document.hidden){if(busy){const op=await(await request('/api/images/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
+  try{if(available()&&!document.hidden){if(busy){const op=await(await request('/api/images/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=busy;status(op);render();if(wasBusy&&!busy)await refresh();}else await refresh();}}
   catch(error){if(current===epoch)notice(`Operation status unavailable. ${error.message} Refresh before retrying.`,true);}
   finally{if(current===epoch)timer=setTimeout(poll,busy?1500:10000);}
  }
@@ -86,7 +87,7 @@
  // Batch deletion uses the exact reviewed IDs/fingerprints; never Docker's global prune.
  find('images-cleanup').addEventListener('click',()=>remove(rows.filter(row=>!row.containers.length&&(find('images-cleanup-mode').value==='all'||!row.tags?.length)),'cleanup'));
  window.addEventListener('reef-view-changed',()=>{if(!view.hidden){refresh();clearTimeout(timer);timer=setTimeout(poll,1500);}});
- window.addEventListener('reef-host-changed',()=>{epoch++;window.reefImagesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;operation='';for(const id of ['image-details','image-tag-dialog'])if(find(id).open)find(id).close();find('images-search').value='';find('images-usage').value='';find('images-operation').hidden=true;notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!view.hidden)refresh();});
+ window.addEventListener('reef-host-changed',()=>{epoch++;window.reefImagesReady=false;host=window.reefHost||'local';rows=[];selected.clear();busy=false;loading=false;loaded=false;hasSnapshot=false;operation='';for(const id of ['image-details','image-tag-dialog'])if(find(id).open)find(id).close();find('images-search').value='';find('images-usage').value='';find('images-operation').hidden=true;notice('');render();clearTimeout(timer);timer=setTimeout(poll,100);});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  render();(window.reefHostsReady||Promise.resolve()).then(()=>{hostsReady=true;refresh();clearTimeout(timer);timer=setTimeout(poll,1500);});
 })();

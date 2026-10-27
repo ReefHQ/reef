@@ -12,7 +12,7 @@
 <main class="layout">
  <nav aria-label="Main navigation">
   <div class="host-picker"><label for="host-select">Docker host</label><select id="host-select"><option value="local">Local</option></select><button type="button" id="open-hosts" class="quiet">Manage hosts</button></div>
-  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images</button><button type="button" data-view="volumes">Volumes</button></div>
+  <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images <span id="image-nav-count">—</span></button><button type="button" data-view="volumes">Volumes <span id="volume-nav-count">—</span></button></div>
   <div id="managed-navigation" hidden><div class="nav-heading">MANAGED <span id="project-count">0</span></div><div id="projects"></div><div class="mobile-managed-navigation"><label for="managed-project-select">Managed project</label><select id="managed-project-select"><option value="">Choose a project</option></select></div></div>
   <p class="nav-note" id="host-note">Visible containers stay read-only until you connect their project.</p>
  </nav>
