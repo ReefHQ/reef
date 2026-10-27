@@ -19,6 +19,7 @@ const maxConsoleOutput = 16 << 20
 
 type consoleSession struct {
 	owner      string
+	host       string
 	terminal   docker.Console
 	cancel     context.CancelFunc
 	lastActive time.Time // Protected by Server.mu.
@@ -31,7 +32,11 @@ func (s *Server) consoleContainer(r *http.Request) (docker.Container, error) {
 	if !docker.ValidContainerID(id) {
 		return docker.Container{}, fmt.Errorf("Invalid container ID.")
 	}
-	rows, e := s.discovery.List(r.Context())
+	discovery, e := s.discoveryFor(r)
+	if e != nil {
+		return docker.Container{}, e
+	}
+	rows, e := discovery.List(r.Context())
 	if e != nil {
 		return docker.Container{}, fmt.Errorf("Docker inventory is unavailable.")
 	}
@@ -67,7 +72,13 @@ func (s *Server) consolePage(w http.ResponseWriter, r *http.Request, sess sessio
 	if !embedded {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 	}
-	s.render(w, "console.html", map[string]any{"Name": appName, "CSRF": sess.CSRF, "Container": container, "Embedded": embedded, "Channel": channel})
+	hostName := "Local"
+	if id := r.URL.Query().Get("host"); id != "" && id != "local" {
+		if view, _, ok := s.agents.Inventory(id); ok {
+			hostName = view.Name
+		}
+	}
+	s.render(w, "console.html", map[string]any{"HostName": hostName, "Name": appName, "CSRF": sess.CSRF, "Container": container, "Embedded": embedded, "Channel": channel, "HostID": r.URL.Query().Get("host")})
 }
 
 func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess session) {
@@ -87,7 +98,12 @@ func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess sessio
 		http.Error(w, e.Error(), 409)
 		return
 	}
-	opener, ok := s.discovery.(docker.ConsoleOpener)
+	discovery, discoveryErr := s.discoveryFor(r)
+	if discoveryErr != nil {
+		http.Error(w, discoveryErr.Error(), 503)
+		return
+	}
+	opener, ok := discovery.(docker.ConsoleOpener)
 	if !ok {
 		http.Error(w, "Console access is unavailable.", 503)
 		return
@@ -123,7 +139,11 @@ func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess sessio
 	stopOpening := context.AfterFunc(r.Context(), cancel)
 	defer stopOpening()
 	id := randomID()
-	entry := &consoleSession{owner: sess.CSRF, cancel: cancel, lastActive: time.Now(), transport: transportID, client: clientID}
+	host := r.URL.Query().Get("host")
+	if host == "" {
+		host = "local"
+	}
+	entry := &consoleSession{host: host, owner: sess.CSRF, cancel: cancel, lastActive: time.Now(), transport: transportID, client: clientID}
 	s.mu.Lock()
 	if s.consoles == nil {
 		s.consoles = map[string]*consoleSession{}
@@ -295,6 +315,17 @@ func (s *Server) consoleAction(w http.ResponseWriter, r *http.Request, sess sess
 				entry = c
 				break
 			}
+		}
+	}
+	if entry != nil && r.URL.Query().Get("host") != "" {
+		target := entry.host
+		if target == "" {
+			target = "local"
+		}
+		if target != r.URL.Query().Get("host") {
+			s.mu.Unlock()
+			http.Error(w, "Console session not found on this host.", 404)
+			return
 		}
 	}
 	if entry == nil || entry.owner != sess.CSRF || (entry.terminal == nil && r.URL.Path != "/api/console/close") {

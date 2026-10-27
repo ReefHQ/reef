@@ -13,7 +13,7 @@ COPY web ./web
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w -X reef/internal/buildinfo.Version=$(cat VERSION) -X reef/internal/buildinfo.Revision=${APP_REVISION}" -o /reef ./cmd/reef && \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w -X reef/internal/buildinfo.Version=$(cat VERSION) -X reef/internal/buildinfo.Revision=${APP_REVISION}" -o /reef-agent ./cmd/reef-agent
 
-# Inventory-only agent: no incoming port; persists only its private identity.
+# Outbound agent: no incoming port; persists identity and managed project state.
 FROM ${DOCKER_IMAGE} AS agent
 COPY --from=build /reef-agent /usr/local/bin/reef-agent
 ENTRYPOINT ["/usr/local/bin/reef-agent"]

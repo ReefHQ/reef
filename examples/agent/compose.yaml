@@ -1,0 +1,46 @@
+services:
+  reef-agent:
+    image: ${REEF_AGENT_IMAGE:?Set a published Reef agent image}
+    restart: unless-stopped
+    stop_grace_period: 46m
+    command:
+      - -server
+      - ${REEF_SERVER:?Set the central HTTPS origin}
+      - -state-dir
+      - /var/lib/reef-agent/state
+      - -ca-file
+      - /etc/reef-ca/ca.crt
+    environment:
+      REEF_INSTALLATION_DIR: ${REEF_AGENT_INSTALLATION_DIR:?Run prepare-agent.sh}
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+      - agent-state:/var/lib/reef-agent
+      - type: bind
+        source: ./ca/ca.crt
+        target: /etc/reef-ca/ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${REEF_AGENT_PROJECT_ROOT:?Run prepare-agent.sh}
+        target: ${REEF_AGENT_PROJECT_ROOT}
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${REEF_AGENT_DOCKER_CONFIG_DIR:?Set the host Docker login folder}
+        target: /root/.docker
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ['no-new-privileges:true']
+    labels:
+      traefik.enable: 'false'
+      io.reef.instance: 'true'
+volumes:
+  agent-state:

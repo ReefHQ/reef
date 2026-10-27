@@ -2,13 +2,13 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const {imageUpdateSummary}=require('../web/model.js');
 const source=fs.readFileSync(path.join(__dirname,'../web/image-updates.js'),'utf8');
-function page({host='local',report={},busy=false,fail=false}={}){
+function page({host='local',capabilities=[],report={},busy=false,fail=false}={}){
  const nodes=new Map(),events={},requests=[];let resolve;
  const pending=new Promise(r=>resolve=r);
  function node(){return {textContent:'',className:'',disabled:false,children:[],listeners:{},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},addEventListener(type,fn){this.listeners[type]=fn;}};}
  const find=selector=>{if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);};
  const project={id:'project-1',busy,image_updates:report};
- const window={reefHost:host,addEventListener(type,fn){events[type]=fn;}};
+ const window={reefHost:host,reefCapabilities:capabilities,addEventListener(type,fn){events[type]=fn;}};
  const context={window,document:{querySelector:find,createElement:node},current:()=>project,projects:[project],csrf:'fixture-csrf',ReefUI:{imageUpdateSummary},URLSearchParams,request:async(url,options)=>{requests.push({url,options});await pending;if(fail)throw Error('Registry request rejected');},message:text=>find('#message').textContent=text};
  vm.runInNewContext(source,context);
  return {project,nodes,requests,window,events,resolve,check:()=>window.ReefImageUpdates.check(project.id)};
@@ -38,4 +38,8 @@ test('service metadata renders as text and failed manual requests restore contro
  const p=page({fail:true,report:{services:[{service:'<img>',image:'<script>',status:'available',message:'<b>note</b>'}]}});
  const items=p.nodes.get('#image-update-services').children;assert.equal(items[0].children[0].textContent,'<img>');assert.equal(items[0].children[2].textContent,'<script>');
  const request=p.check();p.resolve();await request;assert.equal(p.nodes.get('#check-image-updates').disabled,false);assert.equal(p.nodes.get('#message').textContent,'Registry request rejected');
+});
+
+test('upgraded remote hosts can run manual image checks',async()=>{
+ const p=page({host:'remote',capabilities:['control-v1']});const pending=p.check();assert.equal(p.requests.length,1);p.resolve();await pending;assert.equal(p.project.image_updates.checking,true);
 });

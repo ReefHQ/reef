@@ -34,7 +34,8 @@ type Project struct {
 
 var identifier = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
-func loadConfig(path string) (Config, error) {
+func loadConfig(path string) (Config, error) { return loadConfigState(path, "") }
+func loadConfigState(path, stateOverride string) (Config, error) {
 	var c Config
 	b, e := os.ReadFile(path)
 	if e != nil {
@@ -43,6 +44,12 @@ func loadConfig(path string) (Config, error) {
 	if e = json.Unmarshal(b, &c); e != nil {
 		return c, e
 	}
+	if stateOverride != "" {
+		c.StateDir = stateOverride
+	}
+	return finishConfig(c)
+}
+func finishConfig(c Config) (Config, error) {
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8099"
 	}

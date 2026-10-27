@@ -28,15 +28,20 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Agent authentication rejected", 403)
 		return
 	}
+	if r.URL.Path == "/agent/v1/commands" || r.URL.Path == "/agent/v1/results" {
+		s.agentCommands(w, r)
+		return
+	}
 	limit := int64(4096)
 	if r.URL.Path == "/agent/v1/inventory" {
 		limit = agents.MaxPayload
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	var input struct {
-		Token    string `json:"token"`
-		Protocol int    `json:"protocol"`
-		Version  string `json:"version"`
+		Token        string   `json:"token"`
+		Protocol     int      `json:"protocol"`
+		Version      string   `json:"version"`
+		Capabilities []string `json:"capabilities,omitempty"`
 	}
 	// Decode fields explicitly: Update's protocol is used for snapshot requests.
 	if r.URL.Path == "/agent/v1/inventory" {
@@ -70,6 +75,15 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), 403)
 			return
 		}
+		enabled := false
+		for _, capability := range input.Capabilities {
+			if capability == agents.ControlCapability {
+				enabled = true
+			}
+		}
+		host := r.Header.Get("X-Reef-Host")
+		_ = s.agents.Control(host, generation, enabled)
+		s.relay.Connect(host, generation)
 		writeJSON(w, map[string]string{"generation": generation})
 	default:
 		http.NotFound(w, r)
@@ -121,8 +135,42 @@ func (s *Server) hosts(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), 409)
 			return
 		}
+		if r.Form.Get("action") == "revoke" {
+			s.relay.Disconnect(r.Form.Get("id"))
+		}
 		w.WriteHeader(204)
 	default:
 		http.Error(w, "Unknown host action", 400)
 	}
+}
+
+func (s *Server) agentCommands(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var input struct {
+		Generation string         `json:"generation"`
+		Frames     []agents.Frame `json:"frames,omitempty"`
+	}
+	if decodeAgent(r, &input) != nil {
+		http.Error(w, "Invalid agent command payload", 400)
+		return
+	}
+	host := r.Header.Get("X-Reef-Host")
+	if !s.agents.CanControl(host, input.Generation) {
+		http.Error(w, "Inactive agent generation", 403)
+		return
+	}
+	if r.URL.Path == "/agent/v1/results" {
+		if err := s.relay.Results(host, input.Generation, input.Frames); err != nil {
+			http.Error(w, "Agent response rejected", 409)
+			return
+		}
+		w.WriteHeader(204)
+		return
+	}
+	result, err := s.relay.Poll(r.Context(), host, input.Generation)
+	if err != nil {
+		http.Error(w, "Command poll rejected", 409)
+		return
+	}
+	writeJSON(w, result)
 }

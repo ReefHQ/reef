@@ -1,4 +1,4 @@
-// Package agents implements the inventory-only, outbound agent protocol.
+// Package agents implements authenticated outbound inventory and control.
 package agents
 
 import (
@@ -39,6 +39,7 @@ type disk struct {
 	Tokens  map[string]enrollment
 }
 type snapshot struct {
+	Control    bool
 	Notice     string
 	Bytes      int
 	Generation string
@@ -50,15 +51,16 @@ type snapshot struct {
 	Version    string
 }
 type View struct {
-	Notice      string    `json:"notice,omitempty"`
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Status      string    `json:"status"`
-	LastContact time.Time `json:"last_contact"`
-	CheckedAt   time.Time `json:"checked_at"`
-	Version     string    `json:"version"`
-	Stale       bool      `json:"stale"`
-	Error       string    `json:"error,omitempty"`
+	Capabilities []string  `json:"capabilities"`
+	Notice       string    `json:"notice,omitempty"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Status       string    `json:"status"`
+	LastContact  time.Time `json:"last_contact"`
+	CheckedAt    time.Time `json:"checked_at"`
+	Version      string    `json:"version"`
+	Stale        bool      `json:"stale"`
+	Error        string    `json:"error,omitempty"`
 }
 type Update struct {
 	Protocol   int                `json:"protocol"`
@@ -252,6 +254,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 		v.Notice = "Connection replaced; check that this identity is used on only one host."
 	}
 	v.Generation = secret()
+	v.Control = false
 	v.Sequence = 0
 	v.Contact = time.Now()
 	v.Version = version
@@ -350,7 +353,11 @@ func (r *Registry) view(h Host) View {
 	if h.Revoked {
 		status = "revoked"
 	}
-	return View{Notice: v.Notice, ID: h.ID, Name: h.Name, Status: status, LastContact: v.Contact, CheckedAt: v.Checked, Version: v.Version, Stale: status != "connected" || v.Error != "" || time.Since(v.Checked) > 15*time.Second, Error: v.Error}
+	capabilities := []string{}
+	if v.Control {
+		capabilities = append(capabilities, ControlCapability)
+	}
+	return View{Capabilities: capabilities, Notice: v.Notice, ID: h.ID, Name: h.Name, Status: status, LastContact: v.Contact, CheckedAt: v.Checked, Version: v.Version, Stale: status != "connected" || v.Error != "" || time.Since(v.Checked) > 15*time.Second, Error: v.Error}
 }
 func (r *Registry) Views() []View {
 	r.mu.Lock()
@@ -376,4 +383,25 @@ func (r *Registry) Inventory(id string) (View, []docker.Container, bool) {
 	}
 	v := r.live[id]
 	return r.view(h), append([]docker.Container{}, v.Containers...), true
+}
+
+// Capabilities are negotiated per connection, never inferred from SemVer.
+func (r *Registry) Control(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	h := r.data.Hosts[id]
+	if !ok || h.Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.Control = enabled
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanControl(id, generation string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && time.Since(v.Contact) < 45*time.Second && (generation == "" || generation == v.Generation)
 }

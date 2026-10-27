@@ -29,7 +29,12 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	rows, e := s.discovery.List(ctx)
+	discovery, e := s.discoveryFor(r)
+	if e != nil {
+		http.Error(w, e.Error(), 503)
+		return
+	}
+	rows, e := discovery.List(ctx)
 	if e != nil {
 		http.Error(w, "Docker inventory is unavailable. Cannot read container logs.", 503)
 		return
@@ -45,7 +50,7 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Container not found. Refresh the container list.", 404)
 		return
 	}
-	reader, ok := s.discovery.(docker.LogReader)
+	reader, ok := discovery.(docker.LogReader)
 	if !ok {
 		http.Error(w, "Container logs are unavailable.", 503)
 		return

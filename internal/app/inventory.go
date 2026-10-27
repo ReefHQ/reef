@@ -10,6 +10,11 @@ import (
 func (s *Server) containers(w http.ResponseWriter, r *http.Request) {
 	host := r.URL.Query().Get("host")
 	if host != "" && host != "local" {
+		if s.remoteReady(host) {
+			sess, _ := s.getSession(r)
+			s.remoteHTTP(w, r, sess, host)
+			return
+		}
 		if s.agents == nil {
 			http.NotFound(w, r)
 			return
