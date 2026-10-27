@@ -8,11 +8,11 @@ No external URL is required. Reef is developed and checked separately, locally;
 no server connection or production deployment has been performed by this work.
 The original QNAP/Container Station compatibility questions remain unverified.
 
-## Quick start — real Docker Desktop
+## Quick start — local Docker
 
 The reference source folder is `/path/to/reef`. Real Docker validation has passed on this Mac.
 
-Prerequisites: Docker Desktop running with its local context selected, Docker Compose, and the standard shell utilities included with the OS. Python is not required. Go is not required on the host: the shell bootstrap compiles the small Go launcher in a temporary, network-isolated Go container and caches only its executable under `.reef-local/tools/`. No Docker socket or private runtime data is mounted into that compiler container. Node.js is only used for optional frontend development tests.
+Prerequisites: a running local Linux Docker engine with its context selected, Docker CLI with Compose v2 and Buildx for source builds, and standard shell utilities. Linux Docker Engine and local macOS Docker runtimes are accepted; Docker Desktop is optional. Python is not required. Go is not required on the host: the shell bootstrap compiles the small Go launcher in a temporary, network-isolated Go container and caches only its executable under `.reef-local/tools/`. No Docker socket or private runtime data is mounted into that compiler container. Node.js is only used for optional frontend development tests.
 
 ```sh
 cd /path/to/reef
@@ -36,9 +36,9 @@ not change the policy. The manual installation example uses the same policy.
 
 `stop` stops only the Reef UI; it does not stop projects managed through Reef. Use the UI's Stop action for the playground. The authenticated Reef UI and its own network are left running for exploration. Preexisting containers are listed read-only; they have not been restarted or adopted. Published images/build layers remain cached; no global cleanup or prune was run.
 
-Before contacting an engine the launcher checks the selected context's endpoint, accepts only local Docker Desktop socket locations, verifies Docker Desktop identity and records the engine ID. It refuses remote contexts, `DOCKER_HOST`/`DOCKER_CONTEXT` overrides and a different engine on later runs. It does not change your selected Docker context. The server inside Reef uses the mounted local socket at `/var/run/docker.sock`.
+The launcher checks that the selected context uses a local Unix socket and reaches a Linux Docker engine with a stable ID. It does not require any engine name or vendor. It refuses SSH/TCP contexts, `DOCKER_HOST`/`DOCKER_CONTEXT` overrides and a different engine on later runs; select the context with `docker context use` first. It never switches contexts automatically. Native Linux engines mount their selected socket (including rootless sockets) into Reef at `/var/run/docker.sock`. macOS VM runtimes use the engine's internal `/var/run/docker.sock`; their filesystem sharing must include the checkout and authorized project paths. Keep separate checkouts/private runtimes for different engines.
 
-For a NAS or a generic Linux installation, adapt the explicit examples below; the convenience launcher intentionally supports Docker Desktop only. The production QNAP has not been contacted.
+The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopback. For a server deployment with LAN access and CI updates, use the production Compose setup below. Runtime acceptance is tested with Linux Engine/rootless and macOS Desktop/Colima/OrbStack context fixtures; the real local engine validation used Docker Desktop.
 
 ## Containers and Projects
 
@@ -322,7 +322,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.6.0` in development.
+source of truth for the application version, currently `0.6.1` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
@@ -347,7 +347,7 @@ cmd/reef/         Application entry point
 cmd/reef-local/   Local launcher entry point
 internal/app/     HTTP/auth, configuration, Compose operations and their tests
 internal/docker/  Read-only Docker inventory client and tests
-internal/local/   Docker Desktop setup/guardrails and tests, in Go
+internal/local/   Local Docker setup/guardrails and tests, in Go
 web/             Embedded HTML/CSS/JavaScript and themes
 scripts/         Minimal shell bootstrap; reef-local.sh is the root convenience entry
 tests/           Frontend theme, filtering and progress view-model tests
@@ -379,6 +379,8 @@ node --check web/theme.js
 The optional `QCU_TEST_DOCKER_CONFIG=1 go test -race ./...` parses temporary fixtures with an installed Compose CLI and a nonexistent socket. Tests cover Compose ordering/preservation, auth/CSRF, all-container inventory including stopped containers, label whitelisting, daemon errors, explicit registration/auth/root checks, concurrent conflicts and persistent reload, non-adoption of merely discovered projects, local engine guardrails and theme preferences. Keep developer reports, screenshots and executables outside the source tree; local bootstrap tooling is isolated under `.reef-local/tools/` and excluded from the image build.
 
 Real Docker Desktop validation on 22 October 2026 covered image build/execution, updates between published images, file and named-volume preservation, and validation/pull failures without stopping the running service. On 23 October, the inventory view, Go launcher and UI registration workflow were tested on the local engine with disposable fixtures under Reef; only Reef itself was redeployed among preexisting containers. QNAP compatibility is still unverified. No production deployment or security certification is implied.
+
+Local runtime references: [Docker contexts](https://docs.docker.com/engine/manage-resources/contexts/), [Colima contexts and sockets](https://colima.run/docs/faq/), [OrbStack Docker context](https://docs.orbstack.dev/docker/).
 
 Official references: [Compose options and paths](https://docs.docker.com/reference/cli/docker/compose/), [interpolation and `.env`](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [include rules](https://docs.docker.com/reference/compose-file/include/), [official Docker client image with Compose](https://github.com/docker-library/docker/blob/master/29/cli/Dockerfile).
 

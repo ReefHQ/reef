@@ -185,4 +185,5 @@ cp "$work/agent-parent/reef-agent/.env" "$work/agent-env-before"
 (cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.6.0) > "$work/agent-preparation-again"
 cmp "$work/agent-env-before" "$work/agent-parent/reef-agent/.env"
 
+sh "$root/tests/local-launcher.test.sh"
 echo 'PASS: idempotent private server/agent preparation, release immutability, multiarch build, token/version/revision checks, serialized deployment, preservation after pull/health failures, and exact live build verification.'

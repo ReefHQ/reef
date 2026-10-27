@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.6.0 — Unreleased
+## 0.6.1 — Unreleased
+
+- Remove Docker Desktop as a launcher requirement on Linux/macOS. Accept local
+  Unix-socket Docker contexts and mount the selected native Linux engine socket,
+  including rootless Docker, while retaining installation engine identity checks.
+
+## 0.6.0 — 2026-10-27
 
 - Extend outbound agents with remote logs, consoles, project registration, Compose
   editing/actions, image checks and targeted cleanup using the shared Reef engine.
