@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1 — Unreleased
+
+- Keep the Webhooks button above the managed-project navigation so switching to
+  Projects does not move it down the sidebar.
+
 ## 0.11.0 — Unreleased
 
 - Send action starts/results to Discord or a generic JSON webhook, with private
