@@ -20,12 +20,13 @@ import (
 
 type command func(...string) ([]byte, error)
 type Launcher struct {
-	root     string
-	run      command
-	getenv   func(string) string
-	platform string
-	daemonVM bool
-	out      io.Writer
+	addresses func() ([]net.IP, error)
+	root      string
+	run       command
+	getenv    func(string) string
+	platform  string
+	daemonVM  bool
+	out       io.Writer
 }
 type metadata struct {
 	Prefix   string `json:"prefix"`
@@ -46,7 +47,7 @@ func New(root string) (*Launcher, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Launcher{root: root, platform: runtime.GOOS, getenv: os.Getenv, out: os.Stdout, run: func(args ...string) ([]byte, error) {
+	return &Launcher{addresses: hostAddresses, root: root, platform: runtime.GOOS, getenv: os.Getenv, out: os.Stdout, run: func(args ...string) ([]byte, error) {
 		cmd := exec.Command("docker", args...)
 		cmd.Env = append(os.Environ(), "LANG=C", "LC_ALL=C", "LANGUAGE=en")
 		b, e := cmd.CombinedOutput()
@@ -140,7 +141,7 @@ func writeJSON(path string, value any) error {
 	}
 	return writeNew(path, append(b, '\n'))
 }
-func (l *Launcher) initialize(current engine) (metadata, error) {
+func (l *Launcher) initialize(current engine, modes ...string) (metadata, error) {
 	var meta metadata
 	if filepath.Dir(l.root) == string(filepath.Separator) {
 		return meta, errors.New("Reef's installation parent cannot be the filesystem root")
@@ -163,9 +164,13 @@ func (l *Launcher) initialize(current engine) (metadata, error) {
 		return meta, e
 	}
 	prefix := "reef-local-" + hex.EncodeToString(b[:5])
-	listener, e := net.Listen("tcp", "127.0.0.1:8099")
+	address := "127.0.0.1"
+	if len(modes) > 0 && modes[0] == "lan" {
+		address = "0.0.0.0"
+	}
+	listener, e := net.Listen("tcp", net.JoinHostPort(address, "8099"))
 	if e != nil {
-		listener, e = net.Listen("tcp", "127.0.0.1:0")
+		listener, e = net.Listen("tcp", net.JoinHostPort(address, "0"))
 	}
 	if e != nil {
 		return meta, e
@@ -191,7 +196,7 @@ func (l *Launcher) initialize(current engine) (metadata, error) {
 	}
 	install := map[string]any{"services": map[string]any{"reef": map[string]any{
 		"image": meta.Image, "build": map[string]string{"context": l.root}, "labels": map[string]string{"io.reef.local": meta.Prefix},
-		"ports": []string{fmt.Sprintf("127.0.0.1:%d:8099", meta.Port)}, "environment": map[string]string{"QCU_PASSWORD_FILE": "/run/secrets/reef_password", "REEF_INSTALLATION_DIR": l.root}, "secrets": []string{"reef_password"}, "stop_grace_period": "46m", "restart": "unless-stopped",
+		"ports": []string{fmt.Sprintf("%s:%d:8099", address, meta.Port)}, "environment": map[string]string{"QCU_PASSWORD_FILE": "/run/secrets/reef_password", "REEF_INSTALLATION_DIR": l.root}, "secrets": []string{"reef_password"}, "stop_grace_period": "46m", "restart": "unless-stopped",
 		"volumes":   []any{bind(filepath.Dir(l.root), filepath.Dir(l.root), false), bind(filepath.Join(dir, "state"), "/var/lib/reef", false), bind(filepath.Join(dir, "config.json"), "/etc/reef/config.json", true), bind(l.socketSource(current), "/var/run/docker.sock", false)},
 		"read_only": true, "tmpfs": []string{"/tmp"}, "security_opt": []string{"no-new-privileges:true"},
 	}}, "secrets": map[string]any{"reef_password": map[string]string{"file": filepath.Join(dir, "password.txt")}}}
@@ -203,11 +208,15 @@ func (l *Launcher) initialize(current engine) (metadata, error) {
 	}
 	return meta, nil
 }
-func (l *Launcher) Run(action string) error {
+func (l *Launcher) Run(action string, options ...string) error {
+	mode, err := networkMode(action, options)
+	if err != nil {
+		return err
+	}
 	switch action {
 	case "up", "stop", "status", "password":
 	default:
-		return errors.New("Usage: ./reef-local.sh [up|stop|status|password]")
+		return errors.New(launcherUsage)
 	}
 	if action == "password" {
 		b, e := os.ReadFile(filepath.Join(l.runtime(), "password.txt"))
@@ -228,7 +237,7 @@ func (l *Launcher) Run(action string) error {
 			return e
 		}
 	} else if os.IsNotExist(e) && action == "up" {
-		meta, e = l.initialize(current)
+		meta, e = l.initialize(current, mode)
 		if e != nil {
 			return e
 		}
@@ -255,6 +264,9 @@ func (l *Launcher) Run(action string) error {
 		if e = l.ensureRestartPolicy(); e != nil {
 			return e
 		}
+		if e = l.ensureNetworkMode(mode); e != nil {
+			return e
+		}
 		if e = invoke("config", "--quiet"); e == nil {
 			e = invoke("up", "-d", "--build")
 		}
@@ -269,7 +281,7 @@ func (l *Launcher) Run(action string) error {
 	if action == "stop" {
 		fmt.Fprintln(l.out, "Reef stopped. Managed projects are not stopped by this command.")
 	} else {
-		fmt.Fprintf(l.out, "Reef: http://127.0.0.1:%d\nPassword: ./reef-local.sh password\n", meta.Port)
+		l.printAccess(compose)
 	}
 	return nil
 }
