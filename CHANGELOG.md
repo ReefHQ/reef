@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.3 — Unreleased
+
+- Highlight a managed project only while its detail is displayed, keeping editor drafts when returning to Projects.
+
 ## 0.12.2 — Unreleased
 
 - Remember dismissed cleanup results across page reloads, scoped by host and panel.
