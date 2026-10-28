@@ -57,6 +57,7 @@ type ImageService struct {
 	catalogMu sync.Mutex
 	catalogOp CatalogOperation
 	volumeOp  CatalogOperation
+	cacheOp   CatalogOperation
 	Exec      Executor
 	mu        sync.Mutex
 	cache     map[string]manifestCache

@@ -23,3 +23,7 @@ test('operation progress distinguishes a pull failure before downtime from faile
 test('save progress does not imply that services were restarted',()=>{
  const rows=operationSteps({id:'save',action:'save',phase:'completed',log:'> docker compose config --quiet\nFile saved;'});assert.deepEqual(rows.map(r=>r.label),['Validate','Save file']);assert.ok(rows.every(r=>r.state==='done'));
 });
+
+test('build progress never claims a container start phase',()=>{
+ const steps=operationSteps({id:'build',action:'build',running:true,phase:'build --builder default',log:'> docker compose config --quiet\n> docker compose build --builder default -- web\n'});assert.deepEqual(steps.map(s=>s.label),['Validate saved files','Build images']);assert.equal(steps[1].state,'active');
+});

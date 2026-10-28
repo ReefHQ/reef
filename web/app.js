@@ -59,7 +59,7 @@ function render(){
  $('#phase').textContent=status;$('#phase').className='tag'+(['Failed','Interrupted'].includes(status)?' failed':'');
  $('#operation-result').textContent=op.result||(op.running?'Running on the server. You can close this tab.':'No operations yet.');
  const steps=ReefUI.operationSteps(op);$('#steps').replaceChildren(...steps.map(step=>{const item=textNode('li',step.label,step.state);item.setAttribute('aria-label',`${step.label}: ${step.state}`);if(step.state==='active')item.setAttribute('aria-current','step');return item;}));
- $('#operation-time').textContent=op.id?`${op.action==='apply'?'Update':op.action==='save'?'Save':op.action==='start'?'Start':'Stop'} · ${new Date(op.started).toLocaleString('en-GB')}${op.running?' · continues on the server':''}`:'';
+ $('#operation-time').textContent=op.id?`${op.action==='apply'?'Update':op.action==='save'?'Save':op.action==='start'?'Start':op.action==='build'?'Build':'Stop'} · ${new Date(op.started).toLocaleString('en-GB')}${op.running?' · continues on the server':''}`:'';
  $('#needs-start').hidden=!op.needs_start;$('#operation-next').hidden=!['failed','interrupted'].includes(op.phase)||op.needs_start;$('#operation-next').textContent='Review the error and command log, then retry. Reload the file first if it changed outside Reef.';
  const log=op.log||'Operation logs will appear here.';if($('#logs').textContent!==log){const pre=$('#logs'),follow=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30;pre.textContent=log;if(follow)pre.scrollTop=pre.scrollHeight;}
  if(['failed','interrupted'].includes(op.phase)&&openedLog!==op.id){$('#operation-log').open=true;openedLog=op.id;}else if(op.id&&openedLog!==op.id){$('#operation-log').open=false;openedLog=op.id;}

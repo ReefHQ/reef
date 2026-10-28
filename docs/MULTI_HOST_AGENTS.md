@@ -1,6 +1,6 @@
 # Multi-host Reef through agents
 
-Status: full host functionality implemented for development version 0.8.0.
+Status: full host functionality implemented for development version 0.9.0.
 See [agent setup](AGENT_SETUP.md) for operator configuration and upgrade order.
 Existing inventory agents remain compatible with the central service.
 
@@ -38,6 +38,12 @@ and reset by reconnect. An old agent's version string never enables commands.
 Upgrade central first, then the agent image/configuration without replacing its
 volume, URL or enrollment identity. Revocation prevents further commands and
 closes relayed sessions; already accepted Compose operations are not undone.
+
+Builds and cache operations require `builds-v1` from v0.9.0. The shared manager
+executes saved Compose builds on the agent, with local revision checks, env
+redaction, operation locks and persistent summary/log files. Cache reads combine
+raw engine metadata with the default Buildx builder's eligibility; confirmed
+cleanup sends exact cache IDs, never arbitrary filters or shell commands.
 
 ## Outbound command transport
 

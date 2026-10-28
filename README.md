@@ -48,7 +48,7 @@ Previously loaded rows remain visible. A reserved status area avoids shifting
 filters/tables on refresh, and reduced-motion preferences disable the animation.
 An unavailable inventory ends the loading state and reports the error.
 
-Reloading the same browser tab restores the Containers/Projects/Images/Volumes view, open
+Reloading the same browser tab restores the Containers/Projects/Images/Volumes/Builds view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
 overview and revoked/missing hosts fall back to Local. If browser storage is
@@ -168,6 +168,58 @@ The same backend runs locally and on agents advertising volumes-v1. Upgrade
 central first, then agents to v0.8.0 while preserving identity volumes, CA and
 configuration. Older agents keep their existing capabilities and show an upgrade
 message for Volumes.
+
+## Builds and builder cache
+
+**Builds** constructs images from a managed project's saved Compose files, ordered
+config/env files and current file revision. Choose all buildable services or one
+service; optional Without cache and Refresh base images map to Compose build
+options. Build definitions/contexts must be accessible on the selected host.
+Unsaved editor changes are excluded. A build may update image tags but never
+runs Compose up/down, pushes images or restarts containers. Apply an update
+separately when you intend to deploy it. Build contexts and Dockerfile commands
+execute with the authority of the selected Docker engine, as in ordinary Compose.
+
+Builds use the explicit default builder, retain the 45-minute operation deadline
+and drain on graceful shutdown. They exclude other Reef project/storage/cache
+mutations on that host. Build service discovery is limited to 100 services and
+has a ten-second UI timeout; changing saved files invalidates the submitted
+revision. Missing contexts/Buildx/authentication are reported as build failures.
+Existing engine credentials apply; no shell snippets/build args or arbitrary
+Dockerfile paths are submitted by the browser.
+
+The page shows the latest 50 builds per selected project, across subsequent
+project operations and process restarts. Summary metadata is stored separately
+from the bounded operation logs in the private state directory, with no automatic
+retention deletion. Reading history is capped at 10000 directory entries; archive
+old history if that limit is reached. Build logs refresh independently of the
+form and preserve the reading position. Known project env/password values are
+masked, but arbitrary Dockerfile output can still contain application secrets.
+A restart marks an interrupted build unknown without claiming containers stopped;
+no build command is replayed. No-cache builds leave existing cache intact.
+
+Refresh cache inspects only the selected host's default engine builder; it does
+not initialize or switch custom builders. Numeric byte sizes and stable timestamps
+come from the Engine API build-cache query; Buildx supplies mutable/reclaimable
+states. Descriptions/Dockerfile commands are omitted from the browser response.
+Cumulative/shared sizes do not predict recoverable disk space. The cache read is
+bounded to ten seconds, 10000 records and limited response sizes.
+
+Select records, or review reclaimable cache, then confirm exact IDs and host.
+Reef rechecks metadata/fingerprints and retains changed, mutable or in-use records.
+Each prune targets exactly one ID after these checks, using Docker's
+non-interactive confirmation flag only after the UI confirmation. There is no
+unfiltered system/image/volume prune. Shared storage needed by images remains
+owned by Docker; clearing cache can slow future builds. External Docker clients
+can race eligibility, so cleanup reports retained/unknown outcomes for review.
+The cleanup is a detached, serialized 45-minute operation with per-record progress;
+its latest report is in memory and must be reconciled after restart.
+
+The same features run on Local and agents negotiating builds-v1. Upgrade central
+then agents to v0.9.0, preserving identity volume, CA and configuration. Older
+agents keep their previous features and require an upgrade for Builds.
+See Docker's [cache inspection](https://docs.docker.com/reference/cli/docker/buildx/du/)
+and [targeted cache pruning](https://docs.docker.com/reference/cli/docker/buildx/prune/).
 
 ## Container and application logs
 
@@ -417,7 +469,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.8.2` in development.
+source of truth for the application version, currently `0.9.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

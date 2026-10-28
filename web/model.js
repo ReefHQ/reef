@@ -13,7 +13,7 @@
  }
  function operationSteps(op) {
   if(!op.id)return [];
-  const labels=op.action==='apply'?['Validate & save','Pull images','Check files','Stop','Start']:op.action==='save'?['Validate','Save file']:['Validate',op.action==='stop'?'Stop':'Start'];
+  const labels=op.action==='apply'?['Validate & save','Pull images','Check files','Stop','Start']:op.action==='save'?['Validate','Save file']:op.action==='build'?['Validate saved files','Build images']:['Validate',op.action==='stop'?'Stop':'Start'];
   const commands=[...(op.log||'').matchAll(/^> docker compose (.+)$/gm)].map(x=>x[1]);
   const last=commands.at(-1)||'';let active=0;
   if(op.action==='apply'){
@@ -22,6 +22,7 @@
    if(commands.includes('down'))active=3;
    if(commands.some(c=>c.startsWith('up ')))active=4;
   }else if(op.action==='save')active=(op.log||'').includes('File saved;')?1:0;
+  else if(op.action==='build'){if(commands.some(c=>c.startsWith('build ')))active=1;}
   else if(commands.some(c=>c==='down'||c.startsWith('up ')))active=1;
   const success=op.phase==='completed'&&!op.running;
   const failed=['failed','interrupted'].includes(op.phase);

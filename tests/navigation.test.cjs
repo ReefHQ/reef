@@ -82,3 +82,7 @@ test('Volumes restoration waits for volume inventory and restores its filters an
  p.window.reefVolumesReady=true;p.window.dispatchEvent({type:'reef-volumes-ready'});p.flushFrames();
  assert.equal(p.window.scrollY,280);assert.equal(p.nodes.get('#volumes-search').value,'database');assert.equal(p.reloadState().view,'volumes');
 });
+
+test('Builds view restoration waits for its host state without opening the project editor',async()=>{
+ const p=page({view:'builds',host:'local',scroll:180});await p.start();assert.equal(p.nodes.get('#builds-view').hidden,false);assert.equal(p.documentLoads,0);p.window.reefBuildsReady=true;p.window.dispatchEvent({type:'reef-builds-ready'});p.flushFrames();assert.equal(p.window.scrollY,180);assert.equal(p.reloadState().view,'builds');
+});

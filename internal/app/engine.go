@@ -45,15 +45,16 @@ func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr
 }
 
 type Operation struct {
-	ID         string    `json:"id"`
-	Action     string    `json:"action"`
-	Phase      string    `json:"phase"`
-	Running    bool      `json:"running"`
-	Result     string    `json:"result"`
-	Log        string    `json:"log"`
-	Started    time.Time `json:"started"`
-	Finished   time.Time `json:"finished,omitempty"`
-	NeedsStart bool      `json:"needs_start"`
+	Build      BuildOptions `json:"build,omitempty"`
+	ID         string       `json:"id"`
+	Action     string       `json:"action"`
+	Phase      string       `json:"phase"`
+	Running    bool         `json:"running"`
+	Result     string       `json:"result"`
+	Log        string       `json:"log"`
+	Started    time.Time    `json:"started"`
+	Finished   time.Time    `json:"finished,omitempty"`
+	NeedsStart bool         `json:"needs_start"`
 }
 type Managed struct {
 	Project      Project
@@ -107,10 +108,23 @@ func newManager(c Config, x Executor) (*Manager, error) {
 				mp.Op.Running = false
 				mp.Op.Result = "Interrupted by a server restart: Docker state is unknown. Check the project, then start it if needed."
 				mp.Op.Phase = "interrupted"
-				mp.Op.NeedsStart = true
+				if mp.Op.Action != "build" {
+					mp.Op.NeedsStart = true
+				} else {
+					mp.Op.Result = "Build interrupted by a server restart: image state is unknown. Review it before retrying."
+				}
 				mp.Op.Finished = time.Now()
 				if e = m.persist(mp); e != nil {
 					return nil, e
+				}
+				if mp.Op.Action == "build" {
+					raw, _ := json.Marshal(mp.Op)
+					if e = atomicWrite(filepath.Join(m.StateDir, p.ID+"-"+mp.Op.ID+".history.json"), raw, 0600); e != nil {
+						return nil, e
+					}
+					if e = m.writeBuildSummary(p.ID, mp.Op); e != nil {
+						return nil, e
+					}
 				}
 			}
 		} else if !os.IsNotExist(e) {
@@ -182,8 +196,11 @@ func (m *Manager) update(p *Managed, fn func(*Operation)) error {
 	return e
 }
 func (m *Manager) begin(id, action, rev, content string) error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	return m.beginOptions(id, action, rev, content, BuildOptions{})
+}
+func (m *Manager) beginOptions(id, action, rev, content string, opts BuildOptions) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.storageBusy {
 		return errors.New("an image or volume operation is already running")
 	}
@@ -192,9 +209,19 @@ func (m *Manager) begin(id, action, rev, content string) error {
 		return errors.New("unknown project")
 	}
 	switch action {
-	case "save", "apply", "start", "stop":
+	case "save", "apply", "start", "stop", "build":
 	default:
 		return errors.New("action not allowed")
+	}
+	if action == "build" {
+		for _, other := range m.Projects {
+			other.mu.Lock()
+			busy := other.busy || other.ImageUpdates.Checking
+			other.mu.Unlock()
+			if busy {
+				return errors.New("Wait for project operations and image checks before building")
+			}
+		}
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -216,12 +243,15 @@ func (m *Manager) begin(id, action, rev, content string) error {
 	previousOp := p.Op
 	p.persistError = ""
 	prior := p.Op.NeedsStart
-	p.Op = Operation{ID: randomID(), Action: action, Phase: "queued", Running: true, Started: time.Now(), NeedsStart: prior}
+	p.Op = Operation{Build: opts, ID: randomID(), Action: action, Phase: "queued", Running: true, Started: time.Now(), NeedsStart: prior}
 	if e = m.persist(p); e != nil {
 		p.Op = previousOp
 		return e
 	}
 	p.busy = true
+	if action == "build" {
+		m.storageBusy = true
+	}
 	p.ImageUpdates = ImageUpdates{Services: []ImageUpdate{}}
 	m.wg.Add(1)
 	go func() { defer m.wg.Done(); m.work(p, action, rev, content) }()
@@ -356,6 +386,9 @@ func sameRevision(p Project, expected string) error {
 	return nil
 }
 func (m *Manager) work(p *Managed, action, rev, content string) {
+	if action == "build" {
+		defer func() { m.mu.Lock(); m.storageBusy = false; m.mu.Unlock() }()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
 	defer cancel()
 	w := &logWriter{m: m, p: p, secrets: secrets(p.Project)}
@@ -413,6 +446,9 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 		}
 		if e = m.run(ctx, p, w, "", "config", "--quiet"); e != nil {
 			return e
+		}
+		if action == "build" {
+			return m.runBuild(ctx, p, w, rev)
 		}
 		if action == "apply" {
 			if m.Images != nil {
@@ -505,6 +541,11 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 		path := filepath.Join(m.StateDir, p.Project.ID+"-"+p.Op.ID+".history.json")
 		if he := atomicWrite(path, b, 0600); he != nil {
 			p.persistError = "Operation history could not be persisted : " + he.Error()
+		}
+		if action == "build" {
+			if he := m.writeBuildSummary(p.Project.ID, p.Op); he != nil {
+				p.persistError = "Build history could not be persisted: " + he.Error()
+			}
 		}
 	}
 }
