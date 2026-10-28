@@ -114,6 +114,11 @@ On this development Mac, the installation is `/path/to/reef`, so the applied def
 
 In the project editor, **More actions → Stop managing** removes a UI registration after confirmation, without stopping containers, running Compose, deleting project files or deleting operation history. An active operation blocks removal. Entries originally configured in `config.json` cannot be removed by this button. Reef's own Compose project cannot be registered.
 
+Image, volume and build-cache operation panels close automatically after a fully
+successful result. Partial, failed or incomplete results remain readable until
+**Dismiss** is selected. Dismissed results stay hidden during later polls on that
+host; a new operation can show its own progress again.
+
 ## Images
 
 **Images** lists the selected host's Docker images, including untagged images.
@@ -503,7 +508,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.12.0` in development.
+source of truth for the application version, currently `0.12.1` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

@@ -2,6 +2,7 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('builds-view');
  let host=window.reefHost||'local',epoch=0,projects=[],selected='',detail=null,history=[],cache=[],cacheSelection=new Set(),cacheBusy=false,cacheLoading=false,cacheLoaded=false,stateLoading=false,stateLoaded=false,stateFailed=false,detailLoading=false,submitting=false,logID='',logProject='',timer,hostsReady=false;
+ const dismissedOperations=new Map();
  const available=()=>host==='local'||window.reefCapabilities?.includes('builds-v1');
  const active=()=>projects.find(p=>p.id===selected);
  const bytes=n=>{const units=['B','KiB','MiB','GiB','TiB'];let i=0;while(n>=1024&&i<4){n/=1024;i++;}return `${n.toFixed(i?1:0)} ${units[i]}`;};
@@ -38,7 +39,7 @@
   catch(error){if(current===epoch&&op===logID)find('build-log-state').textContent=error.message;}
  }
  async function showLog(op){logID=op;logProject=selected;find('build-log-output').textContent='Loading build log…';find('build-log-dialog').showModal();await logRefresh();}
- function cacheStatus(op){cacheBusy=!!op?.running;const panel=find('build-cache-operation');panel.hidden=!op?.id;if(op?.id){panel.replaceChildren(textNode('strong',`${op.action}: ${op.running?'running':op.skipped?'stopped':'finished'} · ${op.completed||0} / ${op.total||0} reviewed`));for(const result of op.results||[])panel.append(textNode('p',`${result.id}: ${result.message}`,result.ok?'small':'small error-text'));}controls();}
+ function cacheStatus(op){cacheBusy=!!op?.running;const panel=find('build-cache-operation'),issues=!!op?.skipped||(op?.results||[]).some(result=>!result.ok||result.unprocessed)||(!cacheBusy&&op?.total>0&&(op.results||[]).length<op.total);panel.hidden=!op?.id||(!cacheBusy&&(!issues||dismissedOperations.get(host)===op.id));if(panel.hidden)panel.replaceChildren();if(!panel.hidden){panel.replaceChildren(textNode('strong',`${op.action}: ${op.running?'running':op.skipped?'stopped':'finished'} · ${op.completed||0} / ${op.total||0} reviewed`));for(const result of op.results||[])panel.append(textNode('p',`${result.id}: ${result.message}`,result.ok?'small':'small error-text'));}if(!cacheBusy&&!panel.hidden){const operationHost=host,id=op.id,close=textNode('button','Dismiss','quiet');close.type='button';close.setAttribute('aria-label','Dismiss completed operation result');close.addEventListener('click',()=>{dismissedOperations.set(operationHost,id);panel.hidden=true;panel.replaceChildren();});panel.append(close);}controls();}
  function renderCache(){
   const query=find('build-cache-search').value.toLowerCase().trim(),rows=cache.filter(row=>`${row.id} ${row.type}`.toLowerCase().includes(query));
   find('build-cache-summary').textContent=cacheLoaded?`${cache.length} cache records · ${bytes(cache.reduce((n,r)=>n+r.size,0))} cumulative size; shared layers are not an estimate of freed space.`:'';

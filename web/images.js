@@ -2,6 +2,7 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('images-view');
  let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,operation='',timer,hostsReady=false;
+ const dismissedOperations=new Map();
  const available=()=>host==='local'||window.reefCapabilities?.includes('images-v1');
  const bytes=value=>{if(value<1024)return value+' B';const units=['KiB','MiB','GiB','TiB'];let n=value/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toFixed(1)+' '+units[i];};
  const name=row=>row.tags?.join(', ')||'<untagged>';
@@ -23,8 +24,10 @@
  }
  function status(op){
   busy=!!op?.running;operation=op?.id||'';
-  const node=find('images-operation');node.hidden=!operation;
-  if(operation){node.replaceChildren(textNode('strong',`${op.action}: ${busy?'in progress…':op.skipped?'stopped':'finished'}${op.total?` · ${op.completed||0} / ${op.total} images processed`:''}${op.skipped?` · ${op.skipped} not processed`:''}${busy&&op.batches>1?` · batch ${op.batch||1} / ${op.batches}`:''}`));for(const result of op.results||[]){node.append(textNode('p',`${result.id.slice(0,28)}: ${result.message}`,result.ok?'small':'small error-text'));}}
+  const node=find('images-operation'),issues=!!op?.skipped||(op?.results||[]).some(result=>!result.ok||result.unprocessed)||(!busy&&op?.total>0&&(op.results||[]).length<op.total);node.hidden=!operation||(!busy&&(!issues||dismissedOperations.get(host)===operation));
+  if(node.hidden)node.replaceChildren();
+  if(!node.hidden){node.replaceChildren(textNode('strong',`${op.action}: ${busy?'in progress…':op.skipped?'stopped':'finished'}${op.total?` · ${op.completed||0} / ${op.total} images processed`:''}${op.skipped?` · ${op.skipped} not processed`:''}${busy&&op.batches>1?` · batch ${op.batch||1} / ${op.batches}`:''}`));for(const result of op.results||[]){node.append(textNode('p',`${result.id.slice(0,28)}: ${result.message}`,result.ok?'small':'small error-text'));}}
+  if(!busy&&!node.hidden){const operationHost=host,id=op.id,close=textNode('button','Dismiss','quiet');close.type='button';close.setAttribute('aria-label','Dismiss completed operation result');close.addEventListener('click',()=>{dismissedOperations.set(operationHost,id);node.hidden=true;node.replaceChildren();});node.append(close);}
   controls();
  }
  function render(){

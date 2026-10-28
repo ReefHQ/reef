@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../web/volumes.js'),'utf8');
 const volume=(name='app-data',overrides={})=>({name,driver:'local',scope:'local',project:'app',created:'2026-10-27',mountpoint:'/docker/volumes/'+name+'/_data',fingerprint:'a'.repeat(64),containers:[],removable:true,...overrides});
-function page({host='local',capabilities=[],rows=[volume()],defer=false,confirm=async()=>true}={}){
+function page({host='local',capabilities=[],rows=[volume()],defer=false,report={},confirm=async()=>true}={}){
  const nodes=new Map(),events={},requests=[],timers=[],pending=[];
  class Node{
   constructor(tag='div'){this.tagName=tag;this.value='';this.hidden=false;this.disabled=false;this.dataset={};this.children=[];this.listeners={};this.checked=false;this.textContent='';}
@@ -11,7 +11,7 @@ function page({host='local',capabilities=[],rows=[volume()],defer=false,confirm=
  }
  const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};
  const window={reefHost:host,reefHostName:host,reefCapabilities:capabilities,addEventListener(type,fn){(events[type]??=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);}};
- const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/volumes')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/volumes'?{volumes:rows,operation:{}}:{id:'worker',action:'create',running:true,results:[]}};}};
+ const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/volumes')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/volumes'?{volumes:rows,operation:report}:url==='/api/volumes/operation'?report:{id:'worker',action:'create',running:true,results:[]}};}};
  vm.runInNewContext(source,context);
  return {nodes,window,requests,find,pending,timers,async settle(){for(let i=0;i<20;i++)await Promise.resolve();},async host(host,capabilities=[]){window.reefHost=host;window.reefCapabilities=capabilities;window.dispatchEvent({type:'reef-host-changed'});await this.settle();}};
 }
@@ -41,4 +41,12 @@ test('batch selection excludes referenced volumes and cancellation never sends d
 test('volume creation uses a browser-compatible pattern accepting Docker volume names',()=>{
  const html=fs.readFileSync(require('node:path').join(__dirname,'../web/index.html'),'utf8');const input=html.match(/<input id="volumes-name"[^>]+>/)[0];const pattern=input.match(/pattern="([^"]+)"/)[1],valid=new RegExp('^(?:'+pattern+')$','v');
  assert.ok(valid.test('application-data'));assert.ok(valid.test('Project_data.1'));assert.equal(valid.test('../data'),false);assert.equal(valid.test('--help'),false);
+});
+
+test('successful volume cleanup hides its completed panel on every refresh',async()=>{
+ const report={id:'volume-cleanup',action:'cleanup',running:true,total:1,results:[]},p=page({report});await p.settle();assert.equal(p.find('volumes-operation').hidden,false);
+ report.running=false;report.results=[{id:'old-data',ok:true,message:'Removed'}];await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
+});
+test('volume cleanup errors remain readable until dismissed, without returning on a poll',async()=>{
+ const report={id:'volume-cleanup',action:'cleanup',running:false,total:1,results:[{id:'old-data',ok:false,message:'Volume retained'}]},p=page({report});await p.settle();assert.equal(p.find('volumes-operation').hidden,false);await p.find('volumes-operation').children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
 });
