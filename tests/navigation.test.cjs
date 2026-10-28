@@ -14,7 +14,7 @@ function page(saved,{blocked=false,hosts=['local'],containers=[],projects=[],ear
   replaceChildren(...children){this.children=children;if(this.tagName==='SELECT')this.options=children;}
   append(){} setAttribute(){} removeAttribute(){} contains(){return false;} focus(){} close(){this.open=false;}
  }
- const selects=['host-select','container-state','container-project','container-access','project-access'];
+ const selects=['host-select','container-state','container-project','container-access','project-access','stats-state'];
  const find=selector=>{if(!nodes.has(selector))nodes.set(selector,new Element(selects.includes(selector.slice(1))?'SELECT':'DIV'));return nodes.get(selector);};
  for(const id of ['container-access','project-access'])find('#'+id).options=[{value:''},{value:'managed'},{value:'view-only'}];
  const nav=['containers','projects'].map(view=>{const el=new Element();el.dataset.view=view;return el;});
@@ -89,4 +89,12 @@ test('Builds view restoration waits for its host state without opening the proje
 
  test('Networks restoration waits for inventory and restores filters and scroll',async()=>{
  const p=page({view:'networks',host:'local',filters:{'networks-search':'app'},scroll:280});await p.start();assert.equal(p.nodes.get('#networks-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefNetworksReady=true;p.window.dispatchEvent({type:'reef-networks-ready'});p.flushFrames();assert.equal(p.window.scrollY,280);assert.equal(p.nodes.get('#networks-search').value,'app');assert.equal(p.reloadState().view,'networks');
+ });
+
+test('Statistics restoration opens the lazy view first then waits for its first sample before restoring scroll',async()=>{
+ const p=page({view:'stats',host:'local',filters:{'stats-search':'web'},scroll:320});await p.start();assert.equal(p.nodes.get('#stats-view').hidden,false);assert.equal(p.nodes.get('#stats-search').value,'web');assert.equal(p.window.scrollY,0);p.window.reefStatsReady=true;p.window.dispatchEvent({type:'reef-stats-ready'});p.flushFrames();assert.equal(p.window.scrollY,320);assert.equal(p.nodes.get('#stats-search').value,'web');assert.equal(p.reloadState().view,'stats');
+});
+
+ test('explicit Statistics interactions override pending saved restoration and persist its current page',async()=>{
+ const p=page({view:'stats',host:'local',statsOffset:32,filters:{'stats-search':'old'},scroll:320});await p.start();p.nodes.get('#stats-search').value='new';p.window.reefStatsOffset=64;p.window.dispatchEvent({type:'reef-stats-interaction'});p.window.reefStatsReady=true;p.window.dispatchEvent({type:'reef-stats-ready'});p.flushFrames();assert.equal(p.nodes.get('#stats-search').value,'new');assert.equal(p.reloadState().statsOffset,64);assert.equal(p.window.scrollY,0);
  });

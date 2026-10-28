@@ -45,6 +45,7 @@ type snapshot struct {
 	ImageBatch bool
 	Volumes    bool
 	Networks   bool
+	Stats      bool
 	Images     bool
 	Control    bool
 	Notice     string
@@ -267,6 +268,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.Control = false
 	v.Volumes = false
 	v.Networks = false
+	v.Stats = false
 	v.ImageBatch = false
 	v.Images = false
 	v.Sequence = 0
@@ -380,6 +382,9 @@ func (r *Registry) view(h Host) View {
 	if v.ImageBatch && v.Images {
 		capabilities = append(capabilities, ImageBatchCapability)
 	}
+	if v.Stats {
+		capabilities = append(capabilities, StatsCapability)
+	}
 	if v.Networks {
 		capabilities = append(capabilities, NetworksCapability)
 	}
@@ -436,6 +441,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 		v.Builds = false
 		v.Volumes = false
 		v.Networks = false
+		v.Stats = false
 		v.ImageBatch = false
 		v.Images = false
 	}
@@ -581,4 +587,23 @@ func (r *Registry) CanNetworks(id string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && v.Networks && time.Since(v.Contact) < 45*time.Second
+}
+
+func (r *Registry) Stats(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.Stats = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanStats(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.Stats && time.Since(v.Contact) < 45*time.Second
 }

@@ -88,6 +88,9 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 		if capability == agents.ImageBatchCapability {
 			central.agents.ImageBatch(id, gen, true)
 		}
+		if capability == agents.StatsCapability {
+			central.agents.Stats(id, gen, true)
+		}
 		if capability == agents.NetworksCapability {
 			central.agents.Networks(id, gen, true)
 		}
