@@ -116,8 +116,11 @@ In the project editor, **More actions → Stop managing** removes a UI registrat
 
 Image, volume and build-cache operation panels close automatically after a fully
 successful result. Partial, failed or incomplete results remain readable until
-**Dismiss** is selected. Dismissed results stay hidden during later polls on that
-host; a new operation can show its own progress again.
+**Dismiss** is selected. Dismissed results stay hidden during later polls and page reloads in the same
+browser, scoped to their host and operation. Dismiss stays in the panel’s sticky
+heading, accessible while scrolling long results. A new operation shows its own
+progress normally. If browser storage is blocked, dismissal still works until
+the page is reloaded.
 
 ## Images
 
@@ -508,7 +511,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.12.1` in development.
+source of truth for the application version, currently `0.12.2` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

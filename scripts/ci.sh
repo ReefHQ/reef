@@ -18,7 +18,7 @@ case "${1:-}" in
   frontend)
     image=node:24-bookworm-slim
     checks='node scripts/check-version.cjs && node --test tests/*.test.cjs &&
-      node --check web/model.js && node --check web/app.js &&
+      node --check web/operation-panels.js && node --check web/model.js && node --check web/app.js &&
       node --check web/builds.js && node --check web/volumes.js && node --check web/images.js && node --check web/image-updates.js && node --check web/navigation.js && node --check web/inventory.js && node --check web/theme.js && node --check web/logs.js && node --check web/console.js && node --check web/console-picker.js && node --check web/container-details.js && node --check web/console-dock.js && node --check web/console-frame.js && node --check web/webhooks.js && node --check web/hosts.js'
     ;;
   *) echo 'Usage: sh scripts/ci.sh go|frontend' >&2; exit 2 ;;

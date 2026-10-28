@@ -12,6 +12,7 @@ function page({host='local',capabilities=[],rows=[volume()],defer=false,report={
  const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};
  const window={reefHost:host,reefHostName:host,reefCapabilities:capabilities,addEventListener(type,fn){(events[type]??=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);}};
  const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/volumes')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/volumes'?{volumes:rows,operation:report}:url==='/api/volumes/operation'?report:{id:'worker',action:'create',running:true,results:[]}};}};
+ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../web/operation-panels.js'),'utf8'),context);
  vm.runInNewContext(source,context);
  return {nodes,window,requests,find,pending,timers,async settle(){for(let i=0;i<20;i++)await Promise.resolve();},async host(host,capabilities=[]){window.reefHost=host;window.reefCapabilities=capabilities;window.dispatchEvent({type:'reef-host-changed'});await this.settle();}};
 }
@@ -48,5 +49,5 @@ test('successful volume cleanup hides its completed panel on every refresh',asyn
  report.running=false;report.results=[{id:'old-data',ok:true,message:'Removed'}];await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
 });
 test('volume cleanup errors remain readable until dismissed, without returning on a poll',async()=>{
- const report={id:'volume-cleanup',action:'cleanup',running:false,total:1,results:[{id:'old-data',ok:false,message:'Volume retained'}]},p=page({report});await p.settle();assert.equal(p.find('volumes-operation').hidden,false);await p.find('volumes-operation').children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
+ const report={id:'volume-cleanup',action:'cleanup',running:false,total:1,results:[{id:'old-data',ok:false,message:'Volume retained'}]},p=page({report});await p.settle();assert.equal(p.find('volumes-operation').hidden,false);await p.find('volumes-operation').children[0].children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
 });

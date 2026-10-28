@@ -216,3 +216,5 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 @media(max-width:600px){.build-form>div{flex-basis:100%}.build-form>button{width:100%}}
 
 #webhook-dialog{width:680px}#webhook-dialog input[type=password],#webhook-dialog select{width:100%}.webhook-toggle{display:flex;align-items:center;gap:8px;margin:16px 0}.webhook-toggle input{width:18px;height:18px;min-height:18px;margin:0}#webhook-status{overflow-wrap:anywhere}#open-webhook{margin-top:12px}
+
+.catalog-operation-heading{position:sticky;top:-13px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--warning);margin:-13px -15px 10px;padding:10px 15px;border-bottom:1px solid var(--warning-border)}.catalog-operation-heading strong{min-width:0;overflow-wrap:anywhere}.notice .catalog-operation-heading button{flex:none;margin:0}

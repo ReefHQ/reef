@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.2 — Unreleased
+
+- Remember dismissed cleanup results across page reloads, scoped by host and panel.
+- Keep Dismiss in a sticky panel heading instead of below all result rows.
+
 ## 0.12.1 — Unreleased
 
 - Hide image, volume and build-cache operation panels after successful completion.
