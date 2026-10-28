@@ -59,13 +59,13 @@ func (s *Server) webhookSettings(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 400)
 			return
 		}
-		s.webhooks.Emit(notifications.New("webhook", "configure", "completed", "", "Webhook settings"))
+		s.recordEvent(notifications.New("webhook", "configure", "completed", "", "Webhook settings"))
 	case "test":
 		if !s.webhooks.View().Enabled {
 			http.Error(w, "Save and enable the webhook before sending a test", 409)
 			return
 		}
-		s.webhooks.Emit(notifications.New("webhook", "test", "completed", "", "Test notification"))
+		s.recordEvent(notifications.New("webhook", "test", "completed", "", "Test notification"))
 	default:
 		http.Error(w, "Unknown webhook action", 400)
 		return
@@ -74,8 +74,8 @@ func (s *Server) webhookSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) agentEvents(w http.ResponseWriter, r *http.Request) {
-	if s.webhooks == nil {
-		http.Error(w, "Central notifications unavailable", 503)
+	if !s.canAcceptEvents() {
+		http.Error(w, "Central action event storage unavailable", 503)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 65536)
@@ -97,8 +97,19 @@ func (s *Server) agentEvents(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Agent not found", 403)
 		return
 	}
-	if err := s.webhooks.Accept(host, view.Name, input.Events); err != nil {
-		http.Error(w, "Action events could not be accepted", 503)
+	accepted := true
+	if s.history != nil && s.history.Ready() {
+		if err := s.history.Accept(host, view.Name, input.Events); err != nil {
+			accepted = false
+		}
+	}
+	if s.webhooks != nil && s.webhooks.Ready() {
+		if err := s.webhooks.Accept(host, view.Name, input.Events); err != nil {
+			accepted = false
+		}
+	}
+	if !accepted {
+		http.Error(w, "Action events could not be persisted; metadata will be retried", 503)
 		return
 	}
 	ids := []string{}

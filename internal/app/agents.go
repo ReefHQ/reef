@@ -120,7 +120,7 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.relay.Connect(host, generation)
-		writeJSON(w, map[string]any{"generation": generation, "events": s.webhooks != nil && s.webhooks.Ready()})
+		writeJSON(w, map[string]any{"generation": generation, "events": s.canAcceptEvents()})
 	default:
 		http.NotFound(w, r)
 	}

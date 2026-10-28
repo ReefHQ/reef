@@ -127,3 +127,11 @@ from webhook retries and are never triggered by webhook delivery.
 Network actions (v0.13.0): create, remove, cleanup, connect and disconnect emit
 started/results metadata through the same Local/remote notification pipeline.
 No network driver options, IPAM options or container output enter events.
+
+## Central action history (v0.15.0)
+
+History uses the same typed events independently of webhook configuration. It
+does not relax webhook activation cutoffs or send historical metadata to an
+external receiver. Remote acceptance persists/deduplicates independently in
+history and notifications; a failed ready sink causes metadata retry, not Docker
+action replay. See [history guarantees and limits](ACTION_HISTORY.md).

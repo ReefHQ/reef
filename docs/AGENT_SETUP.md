@@ -46,13 +46,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.14.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.15.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.14.0
+sh prepare-agent.sh v0.15.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -243,3 +243,11 @@ uses its local Docker API and the same eight-call sampler, two-second cache and
 32-container pages as Local. No new port, mount, identity or enrollment is needed.
 Upgrade central before the agents while keeping existing CA/state/configuration.
 Metrics are not streamed in the background, persisted to disk or sent to webhooks.
+
+## Central action history (v0.15.0)
+
+Central History reuses action-events-v1 from agents v0.11.0+. Existing compatible
+agents need no new enrollment, port or mount. Events are bound to the authenticated
+host and deduplicated; disconnected/revoked hosts remain visible in retained
+history. A missing final event is not proof that a job is still running. Existing
+agent outbox limits apply. See [history storage and limits](ACTION_HISTORY.md).

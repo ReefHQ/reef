@@ -19,6 +19,7 @@ import (
 	"reef/internal/agents"
 	"reef/internal/agentupdate"
 	"reef/internal/docker"
+	"reef/internal/history"
 	"reef/internal/notifications"
 	assets "reef/web"
 )
@@ -35,6 +36,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	history        *history.Store
 	stats          *statsSampler
 	webhooks       *notifications.Service
 	agentUpdates   *agentupdate.Store
@@ -116,6 +118,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if r.URL.Path == "/api/history" {
+			s.actionHistory(w, r)
+			return
+		}
 		if r.URL.Path == "/api/agent-update" && host != "" && host != "local" {
 			s.centralAgentUpdate(w, r, sess, host)
 			return
