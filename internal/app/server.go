@@ -110,6 +110,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/builds") && (s.agents == nil || !s.agents.CanBuilds(host)) {
+			http.Error(w, "Remote host disconnected or needs an agent upgrade for Builds", 409)
+			return
+		}
 		if host != "" && host != "local" && r.URL.Path == "/api/images/action" && r.Method == "POST" && (s.agents == nil || !s.agents.CanImageBatch(host)) {
 			var targets []ImageTarget
 			if json.Unmarshal([]byte(r.Form.Get("targets")), &targets) == nil && len(targets) > imageCleanupBatchSize {
@@ -143,6 +147,8 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		switch r.URL.Path {
+		case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/action", "/api/builds/cache", "/api/builds/cache/action", "/api/builds/cache/operation":
+			s.builds(w, r)
 		case "/api/volumes", "/api/volumes/operation", "/api/volumes/action":
 			s.volumeCatalog(w, r)
 		case "/api/images", "/api/images/operation", "/api/images/action":
@@ -246,6 +252,10 @@ func (s *Server) Handler() http.Handler {
 		case "/api/action":
 			if r.Method != "POST" {
 				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			if r.Form.Get("action") == "build" {
+				http.Error(w, "Use the confirmed Builds action", 400)
 				return
 			}
 			e := s.m.begin(r.Form.Get("id"), r.Form.Get("action"), r.Form.Get("revision"), r.Form.Get("content"))

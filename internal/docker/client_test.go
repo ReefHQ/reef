@@ -74,3 +74,20 @@ func TestEmptyInventoryReturnsArray(t *testing.T) {
 		t.Fatal(rows, e)
 	}
 }
+
+func TestBuildCacheUsesTypedQueryAndWhitelistedRawMetadata(t *testing.T) {
+	c := &Client{http: &http.Client{Transport: transport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path != "/system/df" || r.URL.Query().Get("type") != "build-cache" {
+			t.Fatal(r.URL)
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"BuildCache":[{"ID":"cachefixture001","Size":1234567,"UsageCount":2,"CreatedAt":"2026-10-27T12:00:00Z","LastUsedAt":"2026-10-27T12:05:00Z","InUse":false,"Shared":true,"Description":"private-dockerfile-command"}],"Containers":[{"Command":"private-container"}]}`))}, nil
+	})}}
+	rows, err := c.BuildCache(context.Background())
+	if err != nil || len(rows) != 1 || rows[0].Size != 1234567 || rows[0].LastUsedAt != "2026-10-27T12:05:00Z" {
+		t.Fatal(rows, err)
+	}
+	raw, _ := json.Marshal(rows)
+	if strings.Contains(string(raw), "private-") {
+		t.Fatal("unselected fields leaked")
+	}
+}

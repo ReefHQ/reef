@@ -294,3 +294,38 @@ func TestImageBatchCapabilityBelongsToCurrentConnection(t *testing.T) {
 		t.Fatal("revoked host retained capability")
 	}
 }
+
+func TestBuildCapabilityBelongsToCurrentConnection(t *testing.T) {
+	r, _ := Open(t.TempDir())
+	id, key := enrolled(t, r, "volumes")
+	gen, _ := r.Begin(id, key, "test", Protocol)
+	if err := r.Builds(id, gen, true); err != nil || r.CanBuilds(id) {
+		t.Fatal("volumes requires control", err)
+	}
+	r.Control(id, gen, true)
+	r.Builds(id, gen, true)
+	if !r.CanBuilds(id) {
+		t.Fatal("missing volume capability")
+	}
+	views := r.Views()
+	found := false
+	for _, cap := range views[0].Capabilities {
+		found = found || cap == BuildsCapability
+	}
+	if !found {
+		t.Fatal(views)
+	}
+	next, _ := r.Begin(id, key, "test", Protocol)
+	r.Control(id, next, true)
+	if r.CanBuilds(id) {
+		t.Fatal("capability survived reconnect")
+	}
+	if err := r.Builds(id, gen, true); err == nil {
+		t.Fatal("stale generation accepted")
+	}
+	r.Builds(id, next, true)
+	r.Change(id, "", true)
+	if r.CanBuilds(id) {
+		t.Fatal("revoked host retained capability")
+	}
+}

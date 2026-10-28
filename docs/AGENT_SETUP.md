@@ -20,13 +20,21 @@ UI continues using a private HTTP listener. `secure_cookie: true` is needed when
 the browser UI itself uses HTTPS. Keep central machine endpoints separate from
 browser credentials; never send the Reef UI password to an agent.
 
-Upgrade central Reef before agents. Image selections above 100 require v0.8.2
-and `images-batch-v1`; smaller operations remain compatible with older image agents. Volume management requires v0.8.0 and
-`volumes-v1`; preserve the existing agent identity volume during upgrades. Image management requires v0.7.0 agents
-with the negotiated `images-v1` capability; older control agents keep their
-existing features. The transport negotiates `control-v1` per
-connection rather than inferring support from application version. Older agents
-continue to publish inventory, with management controls unavailable until upgraded.
+Upgrade central Reef before agents, preserving the identity volume, CA and
+configuration. No new enrollment is required. Project/context mounts and Docker
+registry credentials remain on each agent. Features are negotiated per connection,
+never enabled from the version string alone.
+
+| Capability | Agent version | Feature |
+| --- | --- | --- |
+| control-v1 | 0.6.0 | Projects, logs and consoles |
+| images-v1 | 0.7.0 | Image inventory and operations |
+| volumes-v1 | 0.8.0 | Volume management |
+| images-batch-v1 | 0.8.2 | Image selections above 100 |
+| builds-v1 | 0.9.0 | Project builds and default-builder cache |
+
+Older agents keep their supported features and show an upgrade message for new
+ones. The commands below install the version with all capabilities listed here.
 
 ## Upgrade the existing agent
 
@@ -34,13 +42,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.8.2` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.9.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.8.2
+sh prepare-agent.sh v0.9.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent

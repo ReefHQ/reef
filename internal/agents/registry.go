@@ -39,6 +39,7 @@ type disk struct {
 	Tokens  map[string]enrollment
 }
 type snapshot struct {
+	Builds     bool
 	ImageBatch bool
 	Volumes    bool
 	Images     bool
@@ -257,6 +258,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 		v.Notice = "Connection replaced; check that this identity is used on only one host."
 	}
 	v.Generation = secret()
+	v.Builds = false
 	v.Control = false
 	v.Volumes = false
 	v.ImageBatch = false
@@ -360,6 +362,9 @@ func (r *Registry) view(h Host) View {
 		status = "revoked"
 	}
 	capabilities := []string{}
+	if v.Builds {
+		capabilities = append(capabilities, BuildsCapability)
+	}
 	if v.ImageBatch && v.Images {
 		capabilities = append(capabilities, ImageBatchCapability)
 	}
@@ -411,6 +416,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 	}
 	v.Control = enabled
 	if !enabled {
+		v.Builds = false
 		v.Volumes = false
 		v.ImageBatch = false
 		v.Images = false
@@ -481,4 +487,23 @@ func (r *Registry) CanImageBatch(id string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && v.Images && v.ImageBatch && time.Since(v.Contact) < 45*time.Second
+}
+
+func (r *Registry) Builds(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.Builds = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanBuilds(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.Builds && time.Since(v.Contact) < 45*time.Second
 }

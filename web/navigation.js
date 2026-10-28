@@ -7,7 +7,7 @@
   const data=value&&typeof value==='object'?value:{};
   const text=value=>typeof value==='string'&&value.length<=512?value:'';
   const filters={};for(const id of filterIds)filters[id]=text(data.filters?.[id]);
-  return {view:['projects','images','volumes'].includes(data.view)?data.view:'containers',host:text(data.host)||'local',project:text(data.project),filters,scroll:Number.isFinite(data.scroll)&&data.scroll>=0?Math.min(data.scroll,10000000):0};
+  return {view:['projects','images','volumes','builds'].includes(data.view)?data.view:'containers',host:text(data.host)||'local',project:text(data.project),filters,scroll:Number.isFinite(data.scroll)&&data.scroll>=0?Math.min(data.scroll,10000000):0};
  }
  function read(){try{return normalize(JSON.parse(sessionStorage.getItem(key)));}catch{return normalize();}}
  function write(value){try{sessionStorage.setItem(key,JSON.stringify(normalize(value)));}catch{/* Navigation still works when storage is blocked. */}}

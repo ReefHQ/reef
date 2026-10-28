@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.8.2 — Unreleased
+## 0.9.0 — Unreleased
+
+- Build saved managed Compose services explicitly, with no-cache/base-image pull
+  options, bounded logs and persistent per-project build history.
+- Inspect default-builder cache and review exact reclaimable records for targeted
+  cleanup, retaining mutable/in-use/changed records and shared storage safeguards.
+- Add a host-scoped Builds page with isolated log refresh and builds-v1 agent
+  negotiation; serialize builds/cache operations with project/storage mutations.
+
+## 0.8.2 — 2026-10-27
 
 - Accept the full image selection in one cleanup request, process it in automatic
   batches and report live per-image progress instead of stopping at 100 images.
