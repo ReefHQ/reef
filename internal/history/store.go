@@ -286,7 +286,7 @@ func (s *Store) Accept(host, name string, events []notifications.Event) error {
 	}
 	bound := make([]notifications.Event, 0, len(events))
 	for _, e := range events {
-		if !e.Valid() || e.Scope == "webhook" {
+		if !e.Valid() || (e.Scope == "webhook" || e.Scope == "monitor") {
 			return errors.New("Invalid action event")
 		}
 		e.HostID = host
@@ -340,3 +340,6 @@ func (s *Store) Run(ctx context.Context) {
 		}
 	}
 }
+
+// AcceptCentral records trusted central metadata without rebinding it to Local.
+func (s *Store) AcceptCentral(e notifications.Event) error { return s.append([]notifications.Event{e}) }

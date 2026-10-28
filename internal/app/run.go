@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reef/internal/agents"
 	"reef/internal/history"
+	"reef/internal/monitoring"
 	"reef/internal/notifications"
 	"strings"
 	"syscall"
@@ -67,6 +68,11 @@ func Run() {
 		log.Print("Action history unavailable; inspect private history state")
 		s.history = history.Unavailable()
 	}
+	s.monitor, e = monitoring.Open(c.StateDir)
+	if e != nil {
+		log.Print("Monitoring unavailable; inspect private monitoring state")
+		s.monitor = monitoring.Unavailable()
+	}
 	m.Notify = s.recordEvent
 	webhookContext, stopWebhooks := context.WithCancel(context.Background())
 	webhookStopped := make(chan struct{})
@@ -79,6 +85,9 @@ func Run() {
 	if e != nil {
 		log.Fatal(e)
 	}
+	monitoringStopped := make(chan struct{})
+	defer func() { stopChecks(); <-monitoringStopped }()
+	go func() { defer close(monitoringStopped); s.runMonitoring(checksContext) }()
 	if e = s.restoreSessions(); e != nil {
 		log.Fatal(e)
 	}

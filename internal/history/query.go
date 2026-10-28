@@ -14,7 +14,7 @@ import (
 
 const PageSize = 50
 
-var scopes = map[string]bool{"project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true}
+var scopes = map[string]bool{"project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true, "monitor": true}
 var statuses = map[string]bool{"started": true, "completed": true, "failed": true, "partial": true, "closed": true, "unknown": true}
 
 type Query struct {
@@ -119,6 +119,13 @@ func (s *Store) Query(q Query) (Page, error) {
 			if item.Recovered {
 				status = "unknown"
 				note = "Central restarted before a final result was recorded; inspect the host before retrying"
+			}
+		}
+		if e.Scope == "monitor" {
+			if e.Status == "failed" {
+				note = "Monitoring incident opened"
+			} else if e.Status == "completed" {
+				note = "Monitoring recovery observed"
 			}
 		}
 		if e.Scope == "webhook" && e.Action == "test" {

@@ -151,6 +151,10 @@ func (s *Server) centralAgentUpdate(w http.ResponseWriter, r *http.Request, sess
 			http.Error(w, "Agent is already current or newer than central Reef", 409)
 			return
 		}
+		if s.monitor != nil && s.monitor.Enabled() {
+			// Monitoring storage failure must not block the requested agent update.
+			_ = s.monitor.Hold(host, view.Name, time.Now().Add(10*time.Minute))
+		}
 		r.PostForm = url.Values{"confirmed": {"yes"}, "version": {buildinfo.Version}, "revision": {buildinfo.Revision}}
 	}
 	s.remoteHTTP(w, r, sess, host)

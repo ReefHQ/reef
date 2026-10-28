@@ -135,3 +135,21 @@ does not relax webhook activation cutoffs or send historical metadata to an
 external receiver. Remote acceptance persists/deduplicates independently in
 history and notifications; a failed ready sink causes metadata retry, not Docker
 action replay. See [history guarantees and limits](ACTION_HISTORY.md).
+
+
+## Monitoring transitions (v0.16.0)
+
+When enabled in Alerts, central monitoring emits scope `monitor`, action
+`disconnected`, `unhealthy` or `restart_loop`. `failed` means an incident opened;
+`completed` means stable recovery was observed. Both share an `operation_id`
+(the incident ID), while their event IDs differ. Discord labels these explicitly
+as incident opening/recovery. JSON retains the `reef.action.v1` envelope with
+these new enum values. Consumers should tolerate new action/scope values.
+Host IDs/names remain those of the observed host, including remote hosts.
+
+Monitoring transitions have a bounded durable outbox and are accepted idempotently
+by central History and notification storage before that outbox acknowledges them.
+External delivery still follows the existing retry/expiry rules. Policy changes,
+revocation, removal and stopping retire incidents without emitting recovery.
+Previously accepted webhook deliveries cannot be withdrawn by a later policy
+change. Disabled webhooks do not receive a backfill when enabled later.

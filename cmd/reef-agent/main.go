@@ -206,7 +206,7 @@ func run() error {
 		return e
 	}
 	defer backend.Close()
-	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.NetworksCapability, agents.StatsCapability, agents.ImageBatchCapability}
+	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.NetworksCapability, agents.StatsCapability, agents.MonitoringCapability, agents.ImageBatchCapability}
 	if backend.HasActionEvents() {
 		capabilities = append(capabilities, agents.EventsCapability)
 	}
@@ -224,6 +224,7 @@ func run() error {
 		var connected struct {
 			Generation string `json:"generation"`
 			Events     bool   `json:"events"`
+			Monitoring bool   `json:"monitoring"`
 		}
 		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": capabilities}, &connected)
 		if e == nil {
@@ -236,6 +237,7 @@ func run() error {
 			connection, stopConnection := context.WithCancel(ctx)
 			controlDone := make(chan error, 1)
 			go func() { controlDone <- c.control(connection, backend, connected.Generation); stopConnection() }()
+			collector := newMonitorCollector(connection, backend.MonitoringSnapshot)
 			sequence := uint64(0)
 			for connection.Err() == nil {
 				rows, err := dockerClient.List(connection)
@@ -249,7 +251,19 @@ func run() error {
 					update.Containers = nil
 					update.Error = "Local Docker inventory exceeds protocol limits"
 				}
-				e = c.post(connection, "inventory", update, nil)
+				if connected.Monitoring {
+					update.Monitor = collector.sample()
+					update.Maintenance = backend.MonitoringBusy()
+					var policy struct {
+						Enabled bool `json:"monitoring_enabled"`
+					}
+					e = c.post(connection, "inventory", update, &policy)
+					if e == nil {
+						collector.set(policy.Enabled)
+					}
+				} else {
+					e = c.post(connection, "inventory", update, nil)
+				}
 				if e != nil {
 					break
 				}
