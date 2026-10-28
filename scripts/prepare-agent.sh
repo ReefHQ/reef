@@ -1,6 +1,8 @@
 #!/bin/sh
 # Run on the agent host in its existing dedicated reef-agent installation.
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 installation=$(pwd -P)
 [ "$(basename "$installation")" = reef-agent ] || { echo 'Run from the dedicated reef-agent folder.' >&2;exit 1; }
 parent=$(dirname "$installation")

@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 TOKEN=${1:-}
 VERSION=${2:-}
 REVISION=${3:-}

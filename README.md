@@ -40,6 +40,12 @@ The launcher checks that the selected context uses a local Unix socket and reach
 
 The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopback. For a server deployment with LAN access and CI updates, use the production Compose setup below. Runtime acceptance is tested with Linux Engine/rootless and macOS Desktop/Colima/OrbStack context fixtures; the real local engine validation used Docker Desktop.
 
+Reef scripts and Docker commands launched by Reef use an English diagnostic
+locale (`LANG=C`, `LC_ALL=C`, `LANGUAGE=en`), independently of the host language.
+This applies to local startup, preparation, deployment and CI tooling. Container
+console sessions, application logs and managed service environments keep their
+existing language settings.
+
 ## Containers and Projects
 
 Containers, Projects, Images and Volumes display an animated loading indicator

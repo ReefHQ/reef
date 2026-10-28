@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 : "${CI_REGISTRY:?}"
 : "${CI_REGISTRY_IMAGE:?}"
 : "${CI_JOB_TOKEN:?}"

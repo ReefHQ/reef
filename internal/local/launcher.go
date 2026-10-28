@@ -47,7 +47,9 @@ func New(root string) (*Launcher, error) {
 		return nil, e
 	}
 	return &Launcher{root: root, platform: runtime.GOOS, getenv: os.Getenv, out: os.Stdout, run: func(args ...string) ([]byte, error) {
-		b, e := exec.Command("docker", args...).CombinedOutput()
+		cmd := exec.Command("docker", args...)
+		cmd.Env = append(os.Environ(), "LANG=C", "LC_ALL=C", "LANGUAGE=en")
+		b, e := cmd.CombinedOutput()
 		if e != nil {
 			return nil, fmt.Errorf("Docker command failed: %w\n%s", e, b)
 		}

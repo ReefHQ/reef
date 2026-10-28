@@ -1,6 +1,8 @@
 #!/bin/sh
 # Initialize private files on the selected server; never starts Docker/services.
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 source_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 installation=$(CDPATH= cd -- "${1:-.}" && pwd -P)
 parent=$(dirname "$installation")

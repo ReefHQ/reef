@@ -1,6 +1,8 @@
 #!/bin/sh
 # Supply the CLI plugin in this job's temporary Docker config, not on the runner.
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 : "${DOCKER_CONFIG:?Use an isolated job Docker configuration}"
 if docker buildx version >/dev/null 2>&1; then exit 0;fi
 case "$(uname -m)" in

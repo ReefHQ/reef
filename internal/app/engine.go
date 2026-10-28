@@ -38,7 +38,7 @@ func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = p.Directory
 	// Do not leak the UI password or inherit Compose/Docker overrides from the server.
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix://" + socket, "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain"}
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix://" + socket, "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain", "LANG=C", "LC_ALL=C", "LANGUAGE=en"}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()
