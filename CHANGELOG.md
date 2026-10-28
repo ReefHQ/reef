@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — Unreleased
+
+- Add explicit local launcher --lan and --local modes, preserve existing private
+  runtime/host ports, and explain local/network access in CLI output.
+
+- Print actual Docker-published access URLs after local startup/status, including
+  server network addresses for wildcard bindings and IPv6/custom-port support.
+
 ## 0.11.1 — Unreleased
 
 - Keep the Webhooks button above the managed-project navigation so switching to

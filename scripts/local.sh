@@ -12,7 +12,7 @@ case "$(uname -s)/$(uname -m)" in
   Linux/x86_64) target_os=linux; target_arch=amd64 ;;
   *) printf '%s\n' 'Unsupported local launcher platform.' >&2; exit 1 ;;
 esac
-if [ "${1:-up}" = password ] && [ -f "$root/.reef-local/password.txt" ]; then cat "$root/.reef-local/password.txt"; exit 0; fi
+if [ "${1:-up}" = password ] && [ "$#" -eq 1 ] && [ -f "$root/.reef-local/password.txt" ]; then cat "$root/.reef-local/password.txt"; exit 0; fi
 tools="$root/.reef-local/tools"
 checksum=$(cat go.mod cmd/reef-local/main.go internal/local/*.go | cksum)
 tool="$tools/reef-local-$target_os-$target_arch"

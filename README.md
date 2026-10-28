@@ -38,7 +38,35 @@ not change the policy. The manual installation example uses the same policy.
 
 The launcher checks that the selected context uses a local Unix socket and reaches a Linux Docker engine with a stable ID. It does not require any engine name or vendor. It refuses SSH/TCP contexts, `DOCKER_HOST`/`DOCKER_CONTEXT` overrides and a different engine on later runs; select the context with `docker context use` first. It never switches contexts automatically. Native Linux engines mount their selected socket (including rootless sockets) into Reef at `/var/run/docker.sock`. macOS VM runtimes use the engine's internal `/var/run/docker.sock`; their filesystem sharing must include the checkout and authorized project paths. Keep separate checkouts/private runtimes for different engines.
 
-The launcher supports Linux and macOS on amd64/arm64 and binds the UI to loopback. For a server deployment with LAN access and CI updates, use the production Compose setup below. Runtime acceptance is tested with Linux Engine/rootless and macOS Desktop/Colima/OrbStack context fixtures; the real local engine validation used Docker Desktop.
+To allow access from another computer, choose LAN access explicitly:
+
+```sh
+./reef-local.sh up --lan
+```
+
+This publishes Reef on all IPv4 interfaces (`0.0.0.0`) and prints the server's
+network URLs. Open the server IP shown, rather than `0.0.0.0`, on the other
+computer. The existing port, password, configuration and managed state are kept.
+The choice is saved in `.reef-local/compose.json`: later `up` calls without an
+option reuse it. To return to access from this machine only:
+
+```sh
+./reef-local.sh up --local
+```
+
+Both options apply only to `up`. Short and long Compose TCP publications with one
+explicit host port for Reef's port 8099 are supported. Ambiguous/multiple or
+random-port custom mappings require manual review. First launches without a flag
+stay local; CLI output explains the current access mode and the command to change
+it. Changing access recreates only Reef; wait for current operations to finish.
+
+The launcher supports Linux and macOS on amd64/arm64 and defaults to loopback.
+After `up` and `status`, it reads the actual published port from Docker. If an
+existing `.reef-local/compose.json` publishes on `0.0.0.0` or `::`, the printed
+URLs use the server's available network-interface IPs and include loopback access.
+Explicit bindings are printed as configured, including their actual host port.
+The launcher does not broaden network exposure automatically. Network access
+still depends on host routing and firewall settings. For a server deployment with LAN access and CI updates, use the production Compose setup below. Runtime acceptance is tested with Linux Engine/rootless and macOS Desktop/Colima/OrbStack context fixtures; the real local engine validation used Docker Desktop.
 
 Reef scripts and Docker commands launched by Reef use an English diagnostic
 locale (`LANG=C`, `LC_ALL=C`, `LANGUAGE=en`), independently of the host language.
@@ -475,7 +503,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.11.1` in development.
+source of truth for the application version, currently `0.12.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
