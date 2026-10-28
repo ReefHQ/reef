@@ -29,6 +29,7 @@ never enabled from the version string alone.
 | --- | --- | --- |
 | control-v1 | 0.6.0 | Projects, logs and consoles |
 | images-v1 | 0.7.0 | Image inventory and operations |
+| stats-v1 | 0.14.0 | Live CPU, memory, network and block I/O statistics |
 | networks-v1 | 0.13.0 | Network inventory, creation, cleanup and container connections |
 | volumes-v1 | 0.8.0 | Volume management |
 | images-batch-v1 | 0.8.2 | Image selections above 100 |
@@ -45,13 +46,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.13.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.14.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.13.0
+sh prepare-agent.sh v0.14.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -233,3 +234,12 @@ container connect/disconnect operations as Local. Built-in/unsupported networks,
 Reef administration containers/networks and stopped-container references are
 protected. Upgrade central before agents, preserving identity, CA and mounts.
 Network action events use the existing action-events-v1 outbox and webhook relay.
+
+## Statistics (v0.14.0)
+
+Agents advertise stats-v1 per connection. Central gates /api/stats on that
+capability and relays bounded, read-only snapshots to the selected host. The agent
+uses its local Docker API and the same eight-call sampler, two-second cache and
+32-container pages as Local. No new port, mount, identity or enrollment is needed.
+Upgrade central before the agents while keeping existing CA/state/configuration.
+Metrics are not streamed in the background, persisted to disk or sent to webhooks.

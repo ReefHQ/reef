@@ -161,3 +161,12 @@ container connect/disconnect operations as Local. Built-in/unsupported networks,
 Reef administration containers/networks and stopped-container references are
 protected. Upgrade central before agents, preserving identity, CA and mounts.
 Network action events use the existing action-events-v1 outbox and webhook relay.
+
+## Container statistics (v0.14.0)
+
+stats-v1 gates GET /api/stats, resets on connection replacement/control disablement
+and never falls back to central Local. The agent performs selected-host inventory
+and bounded non-streaming Docker stats reads with local cache/concurrency limits.
+The browser aborts reads on view/visibility/host changes; relay cancellation uses
+the existing command lifecycle. Rate baselines stay in browser memory for at most
+one 32-container page. There is no persistent or unsolicited telemetry collection.

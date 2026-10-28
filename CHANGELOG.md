@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0 — Unreleased
+
+- Add Statistics for Local and upgraded agents: CPU, memory, network and block I/O with explicit counters/rates, search, state filters and 32-container pages.
+- Collect bounded non-streaming snapshots only while visible, with pause/resume, cancellation, a short shared cache and per-host concurrency limits.
+- Restore statistics filters, page and scroll after reload; distinguish stopped/unavailable metrics from measured zero values.
+
 ## 0.13.0 — Unreleased
 
 - Add Networks for Local and upgraded remote agents: inventory, addressing details, bridge creation, targeted unused-network removal and cleanup.

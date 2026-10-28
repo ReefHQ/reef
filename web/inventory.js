@@ -8,11 +8,12 @@
  function remember(){
   if(restoring)return;
   const filters={};for(const id of ReefNavigation.filterIds)filters[id]=find('#'+id).value;
-  ReefNavigation.write({view:currentView,host,project:currentView==='projects'&&document.body.dataset.detail==='true'?current()?.id||'':'',filters,scroll:window.scrollY});
+  ReefNavigation.write({view:currentView,host,statsOffset:currentView==='stats'?window.reefStatsOffset||0:0,project:currentView==='projects'&&document.body.dataset.detail==='true'?current()?.id||'':'',filters,scroll:window.scrollY});
  }
  function userNavigation(){restoring=false;}
  async function restore(){
-  if(!restoring||restoreInFlight||(saved.view==='images'&&!window.reefImagesReady)||(saved.view==='volumes'&&!window.reefVolumesReady)||(saved.view==='networks'&&!window.reefNetworksReady)||(saved.view==='builds'&&!window.reefBuildsReady)||!hostsReady||!hasSnapshot||(management()&&!managedReady))return;
+  if(restoring&&!restoreInFlight&&hostsReady&&saved.view==='stats'&&!window.reefStatsReady){if(saved.host===host)for(const id of ['stats-search','stats-state']){const field=find('#'+id),value=saved.filters[id];if(field.tagName!=='SELECT'||[...field.options].some(o=>o.value===value))field.value=value;}if(currentView!=='stats')setView('stats');return;}
+  if(!restoring||restoreInFlight||(saved.view==='stats'&&!window.reefStatsReady)||(saved.view==='images'&&!window.reefImagesReady)||(saved.view==='volumes'&&!window.reefVolumesReady)||(saved.view==='networks'&&!window.reefNetworksReady)||(saved.view==='builds'&&!window.reefBuildsReady)||!hostsReady||!hasSnapshot||(management()&&!managedReady))return;
   restoreInFlight=true;let scheduled=false;
   try{
    setView(saved.view);
@@ -28,15 +29,17 @@
    scheduled=true;requestAnimationFrame(()=>{restoreInFlight=false;if(!restoring)return;window.scrollTo(0,saved.host===host?saved.scroll:0);restoring=false;remember();});
   }finally{restoringProject=false;if(!scheduled)restoreInFlight=false;}
  }
+ window.addEventListener('reef-stats-location',remember);
+ window.addEventListener('reef-stats-interaction',()=>{userNavigation();remember();});
  window.addEventListener('pagehide',remember);
- window.addEventListener('reef-images-ready',restore);window.addEventListener('reef-volumes-ready',restore);window.addEventListener('reef-networks-ready',restore);window.addEventListener('reef-builds-ready',restore);
- for(const id of ['images-search','images-usage','volumes-search','volumes-usage','networks-search','networks-usage'])find('#'+id).addEventListener('input',remember);
+ window.addEventListener('reef-stats-ready',restore);window.addEventListener('reef-images-ready',restore);window.addEventListener('reef-volumes-ready',restore);window.addEventListener('reef-networks-ready',restore);window.addEventListener('reef-builds-ready',restore);
+ for(const id of ['images-search','images-usage','volumes-search','volumes-usage','networks-search','networks-usage','stats-search','stats-state'])find('#'+id).addEventListener('input',remember);
  window.addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(remember,150);},{passive:true});
  let host=window.reefHost||'local',hostName=window.reefHostName||'Local',hostEpoch=0;const management=()=>host==='local'||window.reefCapabilities?.includes('control-v1');const visibleManaged=()=>management()?managed:[];const hostViews=new Map();
  function updateProjectConsole(){const p=current();find('#project-console-open').disabled=!p||!hasSnapshot||!snapshot.some(c=>c.compose_project===p.project_name&&c.state==='running');}
  function revealNav(button){const parent=button.parentElement;if(!parent||parent.scrollWidth<=parent.clientWidth)return;const item=button.getBoundingClientRect(),frame=parent.getBoundingClientRect();if(item.left<frame.left)parent.scrollLeft-=frame.left-item.left;else if(item.right>frame.right)parent.scrollLeft+=item.right-frame.right;}
  window.addEventListener('resize',()=>document.querySelectorAll('[data-view]').forEach(button=>{if(button.dataset.view===currentView)revealNav(button);}));
- function setView(view,detail=false){currentView=view;find('#containers-view').hidden=view!=='containers';find('#projects-view').hidden=view!=='projects';find('#images-view').hidden=view!=='images';find('#volumes-view').hidden=view!=='volumes';find('#networks-view').hidden=view!=='networks';find('#builds-view').hidden=view!=='builds';find('#project-overview').hidden=detail;find('#project-detail').hidden=!detail;find('#managed-navigation').hidden=view!=='projects'||!visibleManaged().length;document.body.dataset.detail=String(detail);document.querySelectorAll('[data-view]').forEach(button=>{if(button.dataset.view===view){button.setAttribute('aria-current','page');revealNav(button);}else button.removeAttribute('aria-current');});window.dispatchEvent(new CustomEvent('reef-view-changed',{detail:{view}}));}
+ function setView(view,detail=false){currentView=view;find('#containers-view').hidden=view!=='containers';find('#stats-view').hidden=view!=='stats';find('#projects-view').hidden=view!=='projects';find('#images-view').hidden=view!=='images';find('#volumes-view').hidden=view!=='volumes';find('#networks-view').hidden=view!=='networks';find('#builds-view').hidden=view!=='builds';find('#project-overview').hidden=detail;find('#project-detail').hidden=!detail;find('#managed-navigation').hidden=view!=='projects'||!visibleManaged().length;document.body.dataset.detail=String(detail);document.querySelectorAll('[data-view]').forEach(button=>{if(button.dataset.view===view){button.setAttribute('aria-current','page');revealNav(button);}else button.removeAttribute('aria-current');});window.dispatchEvent(new CustomEvent('reef-view-changed',{detail:{view}}));}
  document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{userNavigation();setView(button.dataset.view);remember();}));
  find('#back-projects').addEventListener('click',()=>{userNavigation();setView('projects');find('#projects-title').focus({preventScroll:true});window.scrollTo(0,0);remember();});
  window.addEventListener('reef-open-project',()=>{if(!restoringProject)userNavigation();setView('projects',true);updateProjectConsole();renderProjectContainers();find('#project-name').focus({preventScroll:true});window.scrollTo(0,0);remember();});

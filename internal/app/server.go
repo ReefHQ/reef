@@ -35,6 +35,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	stats          *statsSampler
 	webhooks       *notifications.Service
 	agentUpdates   *agentupdate.Store
 	agentUpdating  bool // Protected by mu; excludes new consoles.
@@ -52,7 +53,7 @@ type Server struct {
 }
 
 func newServer(m *Manager, c Config, password string) *Server {
-	return &Server{relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+	return &Server{stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	u, e := url.Parse(r.Header.Get("Origin"))
@@ -131,6 +132,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 
+		if host != "" && host != "local" && r.URL.Path == "/api/stats" && (s.agents == nil || !s.agents.CanStats(host)) {
+			http.Error(w, "Remote host disconnected or needs an agent upgrade for Statistics", 409)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/networks") && (s.agents == nil || !s.agents.CanNetworks(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage networks", 409)
 			return
@@ -166,6 +171,8 @@ func (s *Server) Handler() http.Handler {
 			s.agentUpdate(w, r)
 		case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/action", "/api/builds/cache", "/api/builds/cache/action", "/api/builds/cache/operation":
 			s.builds(w, r)
+		case "/api/stats":
+			s.containerStats(w, r)
 		case "/api/networks", "/api/networks/operation", "/api/networks/action":
 			s.networkCatalog(w, r)
 		case "/api/volumes", "/api/volumes/operation", "/api/volumes/action":

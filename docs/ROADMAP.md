@@ -4,12 +4,12 @@ The user approved implementing these features in this order. Each feature is
 prepared on a dedicated branch, with a SemVer bump and Local/remote parity.
 The user signs commits and pushes; do not mix later features into a pending branch.
 
-1. [#22](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/22) — **Network management — implemented, awaiting review/release (0.13.0).**
+1. [#22](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/22) — **Network management — merged and published (0.13.0).**
    Inventory/details, local bridge creation, targeted unused-network deletion,
    batch cleanup and live container connections, with host isolation and protections.
-2. [#23](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/23) — **Live container statistics — next.** CPU, memory, network and block I/O on
-   Local and agents; define refresh/history retention and sensible limits.
-3. [#24](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/24) — **Action history in Reef.** Consult operations/results in the UI, complementing
+2. [#23](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/23) — **Live container statistics — implemented, awaiting review/release (0.14.0).** CPU, memory, network and block I/O on
+   Local and agents; visible-page polling, bounded sampling and no disk history.
+3. [#24](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/24) — **Action history in Reef — next.** Consult operations/results in the UI, complementing
    external webhooks; keep secrets, terminal content and application logs excluded.
 4. [#25](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/25) — **Monitoring alerts.** Agent disconnection, unhealthy containers and restart
    loops, with recovery notifications, deduplication and configurable thresholds.
@@ -23,4 +23,4 @@ The user signs commits and pushes; do not mix later features into a pending bran
    communication errors without exposing credentials or private transport data.
 
 The source remains authoritative for which features are actually available.
-Items 2–8 are approved future work, not implemented or enabled by this document.
+Items 3–8 are approved future work, not implemented or enabled by this document.

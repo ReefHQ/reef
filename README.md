@@ -82,7 +82,7 @@ Previously loaded rows remain visible. A reserved status area avoids shifting
 filters/tables on refresh, and reduced-motion preferences disable the animation.
 An unavailable inventory ends the loading state and reports the error.
 
-Reloading the same browser tab restores the Containers/Projects/Images/Volumes/Networks/Builds view, open
+Reloading the same browser tab restores the Containers/Statistics/Projects/Images/Volumes/Networks/Builds view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
 overview and revoked/missing hosts fall back to Local. If browser storage is
@@ -169,6 +169,43 @@ agents keep small operations available and show a clear upgrade message for a
 large selection. Upgrade central before agents and preserve identity/CA/config.
 
 The approved feature sequence is tracked in [the roadmap](docs/ROADMAP.md).
+
+## Statistics
+
+**Statistics** shows CPU, memory, network RX/TX and block read/write metrics for
+the selected Docker host. Search by container, image, Compose project or ID and
+filter running/not-running containers. Pages contain at most 32 containers;
+page, filters and scroll position are restored when reloading the same tab.
+
+Snapshots refresh five seconds after the previous collection finishes, only
+while the page/tab is visible. Pause stops automatic collection; Refresh can
+collect one snapshot while paused. Leaving the page, hiding the tab or changing
+hosts cancels pending requests and discards late responses. Stopped containers
+are listed without reading live stats. Unsupported metrics and missing samples
+show **—**, rather than a false zero. Failed requests keep previous samples with
+an explicit stale-data message; per-container failures remain visible per row.
+
+CPU uses Docker's current/previous sample deltas: one fully used CPU core is
+100%, so multicore usage can exceed 100%. Memory excludes inactive file cache
+when reported (cgroup v1/v2 with a legacy cache fallback); the displayed limit is
+Docker's reported memory limit and may be the host/VM limit. Network and block
+I/O Σ values are cumulative counters. Rates are differences between two displayed
+samples divided by their actual sample timestamps; they remain unavailable on
+the first sample, after counter reset or after changing page/filter/host.
+See [Docker statistics semantics](https://docs.docker.com/reference/cli/docker/container/stats/).
+
+The backend uses stream=false reads (two sampling cycles for CPU), not an open
+subscription or background monitor. A host-wide sampler shares identical pending
+reads, caches successes/failures for two seconds, retains at most 256 entries and
+allows eight simultaneous Docker stats calls. Each inventory/page request has a
+ten-second deadline; inventory is limited to 10000 containers and each Docker
+stats response to 1 MiB. No metrics history is written to disk; the browser keeps
+only the current page's previous samples to calculate rates. Reads do not run
+exec commands or alter containers. Statistics do not generate action webhooks.
+
+Remote agents require the negotiated **stats-v1** capability (v0.14.0). Upgrade
+central before agents, keeping identity, CA and mounts. Older agents keep their
+existing features and display an upgrade message for Statistics; no Local fallback.
 
 ## Networks
 
@@ -549,7 +586,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.13.0` in development.
+source of truth for the application version, currently `0.14.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

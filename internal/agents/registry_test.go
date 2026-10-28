@@ -397,3 +397,38 @@ func TestNetworkCapabilityBelongsToCurrentConnection(t *testing.T) {
 		t.Fatal("revoked host retained capability")
 	}
 }
+
+func TestStatsCapabilityBelongsToCurrentConnection(t *testing.T) {
+	r, _ := Open(t.TempDir())
+	id, key := enrolled(t, r, "statistics")
+	gen, _ := r.Begin(id, key, "test", Protocol)
+	if err := r.Stats(id, gen, true); err != nil || r.CanStats(id) {
+		t.Fatal("statistics requires control", err)
+	}
+	r.Control(id, gen, true)
+	r.Stats(id, gen, true)
+	if !r.CanStats(id) {
+		t.Fatal("missing statistics capability")
+	}
+	views := r.Views()
+	found := false
+	for _, cap := range views[0].Capabilities {
+		found = found || cap == StatsCapability
+	}
+	if !found {
+		t.Fatal(views)
+	}
+	next, _ := r.Begin(id, key, "test", Protocol)
+	r.Control(id, next, true)
+	if r.CanStats(id) {
+		t.Fatal("capability survived reconnect")
+	}
+	if err := r.Stats(id, gen, true); err == nil {
+		t.Fatal("stale generation accepted")
+	}
+	r.Stats(id, next, true)
+	r.Change(id, "", true)
+	if r.CanStats(id) {
+		t.Fatal("revoked host retained capability")
+	}
+}
