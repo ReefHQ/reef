@@ -1,6 +1,8 @@
 #!/bin/sh
 # Shell runners use disposable containers, like the other local GitLab projects.
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 
 cd "$(dirname "$0")/.."
 case "${1:-}" in

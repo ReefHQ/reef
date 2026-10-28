@@ -225,3 +225,30 @@ func TestContextAndEndpointChangesRemainRejected(t *testing.T) {
 		}
 	}
 }
+
+func TestDockerDiagnosticsUseEnglishLocale(t *testing.T) {
+	dir := t.TempDir()
+	docker := filepath.Join(dir, "docker")
+	if err := os.WriteFile(docker, []byte("#!/bin/sh\nprintf '%s|%s|%s|%s' \"$LANG\" \"$LC_ALL\" \"$LANGUAGE\" \"$DOCKER_CONFIG\"\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("LANG", "fr_FR.UTF-8")
+	t.Setenv("LC_ALL", "fr_FR.UTF-8")
+	t.Setenv("LANGUAGE", "fr")
+	t.Setenv("DOCKER_CONFIG", "/fixture/docker-config")
+	l, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := l.run("version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(output) != "C|C|en|/fixture/docker-config" {
+		t.Fatalf("unexpected command environment: %s", output)
+	}
+	if os.Getenv("LANGUAGE") != "fr" {
+		t.Fatal("caller locale changed")
+	}
+}

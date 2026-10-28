@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 : "${CI_JOB_TOKEN:?Release tagging runs only in GitLab CI}"
 : "${CI_API_V4_URL:?}"
 : "${CI_PROJECT_ID:?}"

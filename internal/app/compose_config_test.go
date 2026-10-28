@@ -14,7 +14,7 @@ import (
 // Never addresses a real daemon: DOCKER_HOST points to a nonexistent test socket.
 func TestRealComposeConfigWithoutEngine(t *testing.T) {
 	if os.Getenv("QCU_TEST_DOCKER_CONFIG") != "1" {
-		t.Skip("optionnel : QCU_TEST_DOCKER_CONFIG=1, validation config uniquement")
+		t.Skip("optional: QCU_TEST_DOCKER_CONFIG=1, configuration validation only")
 	}
 	docker, e := exec.LookPath("docker")
 	if e != nil {
@@ -54,7 +54,7 @@ func TestRealComposeConfigWithoutEngine(t *testing.T) {
 		out, e := cmd.Output()
 		if e != nil {
 			if ee, ok := e.(*exec.ExitError); ok {
-				t.Fatalf("config sans moteur : %s : %s", e, ee.Stderr)
+				t.Fatalf("configuration without engine: %s: %s", e, ee.Stderr)
 			}
 			t.Fatal(e)
 		}
@@ -68,33 +68,33 @@ func TestRealComposeConfigWithoutEngine(t *testing.T) {
 	proposed := parse(candidate)
 	for _, obj := range []map[string]any{original, proposed} {
 		if obj["name"] != "existing-fixture" {
-			t.Fatal("identité perdue")
+			t.Fatal("project identity lost")
 		}
 		web := obj["services"].(map[string]any)["web"].(map[string]any)
 		if web["image"] != "nginx:alpine" {
-			t.Fatal(".env non résolu", web["image"])
+			t.Fatal(".env not resolved", web["image"])
 		}
 		env := web["environment"].(map[string]any)
 		if env["APP_MODE"] != "fixture" || env["EXTRA"] != "override-ok" {
-			t.Fatal("env_file ou override perdu", env)
+			t.Fatal("env_file or override lost", env)
 		}
 		build := web["build"].(map[string]any)
 		if build["context"] != filepath.Join(root, "build") {
-			t.Fatal("contexte déplacé", build)
+			t.Fatal("build context moved", build)
 		}
 		volume := web["volumes"].([]any)[0].(map[string]any)
 		if volume["source"] != filepath.Join(root, "data") {
-			t.Fatal("bind déplacé", volume)
+			t.Fatal("bind mount moved", volume)
 		}
 	}
 	// Compose records source filenames in some metadata; compare actual service definitions.
 	a, _ := json.Marshal(original["services"])
 	b, _ = json.Marshal(proposed["services"])
 	if string(a) != string(b) {
-		t.Fatal("le candidat change le modèle de service")
+		t.Fatal("candidate changes the service model")
 	}
 	data, _ := os.ReadFile(filepath.Join(root, "data/keep"))
 	if string(data) != "precious" {
-		t.Fatal("données altérées")
+		t.Fatal("data modified")
 	}
 }

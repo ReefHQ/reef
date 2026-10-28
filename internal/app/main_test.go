@@ -103,19 +103,19 @@ func TestAuthCSRFAndDocumentLock(t *testing.T) {
 	mp.mu.Unlock()
 	w = call(h, "GET", "/", "", "", cookie)
 	if strings.Contains(w.Body.String(), "<script>alert") || !strings.Contains(w.Body.String(), "Reef") {
-		t.Fatal("HTML incorrect")
+		t.Fatal("incorrect HTML")
 	}
 	if w.Header().Get("Referrer-Policy") != "same-origin" {
 		t.Fatal("native same-origin forms require the same-origin referrer policy")
 	}
 	if !strings.Contains(w.Header().Get("Content-Security-Policy"), "script-src 'self'") {
-		t.Fatal("CSP absente")
+		t.Fatal("missing CSP")
 	}
 	if w = call(h, "POST", "/logout", url.Values{"csrf": {sess.CSRF}}.Encode(), "http://reef.test", cookie); w.Code != 303 {
 		t.Fatal(w.Code)
 	}
 	if w = call(h, "GET", "/api/state", "", "", cookie); w.Code != 401 {
-		t.Fatal("session persistante après logout")
+		t.Fatal("session persisted after logout")
 	}
 }
 func TestLoginRateLimit(t *testing.T) {
@@ -139,7 +139,7 @@ func TestConfigRejectsUnsafeAndDuplicate(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "config.json")
 		os.WriteFile(path, b, 0600)
 		if _, e := loadConfig(path); e == nil {
-			t.Fatal("config dangereuse acceptée")
+			t.Fatal("unsafe configuration accepted")
 		}
 	}
 }

@@ -59,7 +59,7 @@ func (f *fakeExecutor) Run(ctx context.Context, p Project, args []string, w io.W
 		io.WriteString(w, f.output[mid:])
 	}
 	if f.fail == cmd {
-		return errors.New("échec injecté")
+		return errors.New("injected failure")
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func assertFiles(t *testing.T, p Project) {
 	for f, want := range map[string]string{"data/keep.txt": "precious", "config/keep.txt": "unchanged", "override.yaml": "services: {}\n", "custom.env": "KEY=secret-custom\n", ".env": "PASS=secret-value\n"} {
 		b, e := os.ReadFile(filepath.Join(p.Directory, f))
 		if e != nil || string(b) != want {
-			t.Fatalf("fichier altéré %s : %q %v", f, b, e)
+			t.Fatalf("file modified %s: %q %v", f, b, e)
 		}
 	}
 }
@@ -112,7 +112,7 @@ func TestApplyOrderPathsBackupPreservation(t *testing.T) {
 		for i, a := range args {
 			if a == "-f" && strings.Contains(args[i+1], ".qcu-candidate-") {
 				if filepath.Dir(args[i+1]) != p.Directory {
-					t.Error("candidat hors dossier original")
+					t.Error("candidate outside the original directory")
 				}
 			}
 		}
@@ -120,7 +120,7 @@ func TestApplyOrderPathsBackupPreservation(t *testing.T) {
 			t.Error(args)
 		}
 		if !strings.Contains(strings.Join(args, " "), "--env-file "+filepath.Join(p.Directory, "custom.env")) {
-			t.Error("env_file perdu")
+			t.Error("env_file lost")
 		}
 		return nil
 	}
@@ -135,15 +135,15 @@ func TestApplyOrderPathsBackupPreservation(t *testing.T) {
 	}
 	b, _ := os.ReadFile(backups[0])
 	if !strings.Contains(string(b), "image: old") {
-		t.Fatal("sauvegarde incorrecte")
+		t.Fatal("incorrect backup")
 	}
 	info, _ := os.Stat(filepath.Join(p.Directory, "compose.yaml"))
 	if info.Mode().Perm() != 0640 {
-		t.Fatal("permissions perdues")
+		t.Fatal("permissions lost")
 	}
 	b, _ = os.ReadFile(filepath.Join(p.Directory, "compose.yaml"))
 	if !strings.Contains(string(b), "image: new") {
-		t.Fatal("non enregistré")
+		t.Fatal("file not saved")
 	}
 	if m.Projects[p.ID].Op.NeedsStart || m.Projects[p.ID].Op.Phase != "completed" {
 		t.Fatal(m.Projects[p.ID].Op)
@@ -161,13 +161,13 @@ func TestFailureBeforeDown(t *testing.T) {
 				}
 			}
 			if m.Projects[p.ID].Op.Phase != "failed" {
-				t.Fatal("échec absent")
+				t.Fatal("missing failure state")
 			}
 			assertFiles(t, p)
 			if fail == "config --quiet" {
 				b, _ := os.ReadFile(filepath.Join(p.Directory, "compose.yaml"))
 				if strings.Contains(string(b), "image: new") {
-					t.Fatal("enregistrement avant validation")
+					t.Fatal("file saved before validation")
 				}
 			}
 		})
@@ -198,7 +198,7 @@ func TestLockObsoleteAndExternalChange(t *testing.T) {
 	<-f.entered
 	for _, action := range []string{"save", "start", "stop", "apply"} {
 		if e := m.begin(p.ID, action, rev, "services: {}\n"); e == nil {
-			t.Fatal("concurrence acceptée")
+			t.Fatal("concurrent operation accepted")
 		}
 	}
 	if e := os.WriteFile(filepath.Join(p.Directory, ".env"), []byte("CHANGED=yes"), 0600); e != nil {
@@ -210,7 +210,7 @@ func TestLockObsoleteAndExternalChange(t *testing.T) {
 		t.Fatal(f.calls)
 	}
 	if e := m.begin(p.ID, "save", rev, "services: {}\n"); e == nil {
-		t.Fatal("édition obsolète acceptée")
+		t.Fatal("stale edit accepted")
 	}
 }
 func TestSaveOnlyAndLogRedaction(t *testing.T) {
@@ -221,7 +221,7 @@ func TestSaveOnlyAndLogRedaction(t *testing.T) {
 		t.Fatal(f.calls)
 	}
 	if strings.Contains(m.Projects[p.ID].Op.Log, "secret-value") || strings.Contains(m.Projects[p.ID].Op.Log, "secret-custom") {
-		t.Fatal("secret divulgué")
+		t.Fatal("secret disclosed")
 	}
 	assertFiles(t, p)
 }
@@ -254,7 +254,7 @@ func TestPullExternalChangeAbortsBeforeDown(t *testing.T) {
 	launch(t, m, p, rev, "apply")
 	for _, c := range f.calls {
 		if c == "down" {
-			t.Fatal("arrêt malgré changement externe")
+			t.Fatal("project stopped despite external changes")
 		}
 	}
 }
@@ -268,7 +268,7 @@ func TestStopNoVolumeFlag(t *testing.T) {
 	for _, args := range f.args {
 		for _, a := range args {
 			if a == "-v" || a == "prune" {
-				t.Fatal("commande interdite")
+				t.Fatal("forbidden command")
 			}
 		}
 	}
@@ -297,7 +297,7 @@ func TestRequestDisconnectDoesNotCancelOperation(t *testing.T) {
 	close(f.gate)
 	m.wg.Wait()
 	if m.Projects[p.ID].Op.Phase != "completed" {
-		t.Fatal("fermeture du client a interrompu le worker", m.Projects[p.ID].Op)
+		t.Fatal("client disconnect interrupted the worker", m.Projects[p.ID].Op)
 	}
 	if f.calls[len(f.calls)-1] != "up -d" {
 		t.Fatal(f.calls)

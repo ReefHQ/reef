@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+# Keep Reef command diagnostics independent of the host language.
+export LANG=C LC_ALL=C LANGUAGE=en
 : "${DEPLOY_WEBHOOK_URL:?}"
 : "${DEPLOY_WEBHOOK_TOKEN:?}"
 : "${HEALTHCHECK_URL:?}"

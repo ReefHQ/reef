@@ -12,6 +12,7 @@ MOCK
 cat > "$work/bin/docker" <<'MOCK'
 #!/bin/sh
 set -eu
+[ "${LANG:-}" = C ] && [ "${LC_ALL:-}" = C ] && [ "${LANGUAGE:-}" = en ] || { echo 'Docker did not receive the English locale' >&2;exit 1; }
 printf '%s\n' "$*" >> "$TEST_DOCKER_LOG"
 case "$*" in
  'context show') printf 'fixture-context\n';;
@@ -45,7 +46,7 @@ scenario(){
 }
 for platform in Linux Darwin; do
  scenario "$platform-local" "$platform" unix:///var/run/docker.sock 'linux|fixture-engine'
- sh "$fixture/scripts/local.sh" status
+ LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8 LANGUAGE=fr sh "$fixture/scripts/local.sh" status
  grep -Fq -- "-root $fixture status" "$TEST_LAUNCHER_ARGS"
  grep -Fq ' run --rm --network none' "$TEST_DOCKER_LOG"
 done
