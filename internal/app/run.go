@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reef/internal/agents"
+	"reef/internal/notifications"
 	"strings"
 	"syscall"
 	"time"
@@ -54,8 +55,18 @@ func Run() {
 	checksContext, stopChecks := context.WithCancel(context.Background())
 	defer stopChecks()
 	m.Images = &ImageService{Exec: m.Exec}
-	m.startImageChecks(checksContext)
 	s := newServer(m, c, password)
+	s.webhooks, e = notifications.Open(c.StateDir, false)
+	if e != nil {
+		log.Print("Action notifications unavailable; inspect private notification state")
+		s.webhooks = notifications.Unavailable(false)
+	}
+	m.Notify = s.webhooks.Emit
+	webhookContext, stopWebhooks := context.WithCancel(context.Background())
+	webhookStopped := make(chan struct{})
+	defer func() { stopWebhooks(); <-webhookStopped }()
+	go func() { defer close(webhookStopped); s.webhooks.Run(webhookContext) }()
+	m.startImageChecks(checksContext)
 	s.agents, e = agents.Open(c.StateDir)
 	if e != nil {
 		log.Fatal(e)

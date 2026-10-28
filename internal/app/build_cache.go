@@ -190,6 +190,7 @@ func (m *Manager) beginCacheCleanup(targets []CacheTarget) (CatalogOperation, er
 	defer s.catalogMu.Unlock()
 	op := CatalogOperation{ID: randomID(), Action: "cache cleanup", Running: true, Total: len(targets), Started: time.Now(), Results: []ImageResult{}}
 	s.cacheOp = op
+	m.catalogEvent("build", "cache_cleanup", "started", op.ID, "Default builder cache", op.Total, nil)
 	m.storageBusy = true
 	m.wg.Add(1)
 	go func() {
@@ -219,6 +220,7 @@ func (m *Manager) beginCacheCleanup(targets []CacheTarget) (CatalogOperation, er
 		}
 		m.mu.Lock()
 		s.catalogMu.Lock()
+		m.catalogEvent("build", "cache_cleanup", "completed", op.ID, "Default builder cache", op.Total, s.cacheOp.Results)
 		s.cacheOp.Running = false
 		s.cacheOp.Finished = time.Now()
 		m.storageBusy = false

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reef/internal/notifications"
 	"regexp"
 	"sort"
 	"strings"
@@ -380,6 +381,8 @@ func (m *Manager) checkImages(id string, automatic bool) error {
 	if !p.ImageUpdates.CheckedAt.IsZero() && time.Since(p.ImageUpdates.CheckedAt) < interval {
 		return nil
 	}
+	checkID := randomID()
+	m.emit(notifications.New("image", "check", "started", checkID, p.Project.ProjectName))
 	p.ImageUpdates.Checking = true
 	m.wg.Add(1)
 	go func() {
@@ -403,6 +406,11 @@ func (m *Manager) checkImages(id string, automatic bool) error {
 		} else {
 			report.Revision = rev
 		}
+		status := "completed"
+		if report.Error != "" {
+			status = "failed"
+		}
+		m.emit(notifications.New("image", "check", status, checkID, p.Project.ProjectName))
 		report.CheckedAt = time.Now()
 		p.mu.Lock()
 		p.ImageUpdates = report

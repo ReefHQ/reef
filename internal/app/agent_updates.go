@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"reef/internal/agentupdate"
 	"reef/internal/buildinfo"
+	"reef/internal/notifications"
 	"time"
 )
 
@@ -49,6 +50,13 @@ func (s *Server) syncAgentUpdate() error {
 		s.m.storageBusy = true
 		s.agentUpdating = true
 	} else if !o.Running() && s.m.agentUpdating {
+		status := "completed"
+		if o.Phase == "failed" {
+			status = "failed"
+		} else if o.Phase != "completed" {
+			status = "unknown"
+		}
+		s.m.emit(notifications.New("agent", "update", status, o.ID, o.Version))
 		s.m.agentUpdating = false
 		s.m.storageBusy = false
 		s.agentUpdating = false
@@ -120,6 +128,7 @@ func (s *Server) beginAgentUpdate(version, revision string) error {
 	if err = s.agentUpdates.Write("operation.json", o); err != nil {
 		return errors.New("Cannot persist agent update request")
 	}
+	s.m.emit(notifications.New("agent", "update", "started", o.ID, version))
 	s.m.agentUpdating = true
 	s.m.storageBusy = true
 	s.agentUpdating = true

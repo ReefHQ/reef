@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 — Unreleased
+
+- Send action starts/results to Discord or a generic JSON webhook, with private
+  destination settings, an explicit test action and visible delivery status.
+- Persist bounded queues, sanitize metadata and retry transient delivery failures
+  with rate-limit handling; keep webhook failures separate from Docker operations.
+- Relay remote action events through authenticated HTTPS with generation-scoped
+  capability negotiation, durable acknowledgements and host-bound deduplication.
+
 ## 0.10.0 — Unreleased
 
 - Update prepared remote agents from Manage hosts to central Reef's exact stable

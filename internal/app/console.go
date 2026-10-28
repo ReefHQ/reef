@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"reef/internal/docker"
+	"reef/internal/notifications"
 )
 
 const consoleLifetime = 30 * time.Minute
@@ -172,14 +173,30 @@ func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess sessio
 	}
 	s.consoles[id] = entry
 	s.mu.Unlock()
-	release := func() { s.mu.Lock(); delete(s.consoles, id); s.mu.Unlock(); cancel() }
+	opened := false
+	release := func() {
+		s.mu.Lock()
+		delete(s.consoles, id)
+		s.mu.Unlock()
+		cancel()
+		if opened {
+			s.m.emit(notifications.New("console", "session", "closed", id, container.Name))
+		}
+	}
 	defer func() {
 		if !detached {
 			release()
 		}
 	}()
+	_, remoteConsole := opener.(*remoteDocker)
+	if !remoteConsole {
+		s.m.emit(notifications.New("console", "session", "started", id, container.Name))
+	}
 	terminal, e := opener.OpenConsole(ctx, container.ID, shell, cols, rows)
 	if e != nil {
+		if !remoteConsole {
+			s.m.emit(notifications.New("console", "session", "failed", id, container.Name))
+		}
 		http.Error(w, e.Error(), 503)
 		return
 	}
@@ -189,8 +206,12 @@ func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess sessio
 		}
 	}()
 	if ctx.Err() != nil {
+		if !remoteConsole {
+			s.m.emit(notifications.New("console", "session", "unknown", id, container.Name))
+		}
 		return
 	}
+	opened = !remoteConsole
 	s.mu.Lock()
 	entry.terminal = terminal
 	s.mu.Unlock()

@@ -135,3 +135,19 @@ and identity volume, checks configuration again after pull, preserves private
 .env values except the agent image, and recreates that service alone. Completion
 requires its exact image and an authenticated central reconnection marker from
 the replacement agent. The worker image is managed independently by the operator.
+
+
+## Action event transport
+
+Agents v0.11.0 negotiate action-events-v1 and post bounded metadata batches to
+/agent/v1/events on their existing authenticated outbound connection. Credentials,
+current generation/control/event capabilities and revocation are checked before
+central acceptance. Central replaces host fields with registry values and queues
+only selected event fields. The webhook URL is central-only, never a relay form.
+
+Private agent outboxes retain events until central durably ACKs them; central
+retains a bounded deduplication window of host/event keys. No Docker operation is
+replayed for notification delivery. Old agents/centrals retain previous behavior;
+a central connect response advertises event ingestion separately so an upgraded
+agent does not call an older central's unsupported endpoint. See WEBHOOKS.md for
+best-effort semantics, activation cutoff, queue/retry limits and excluded data.

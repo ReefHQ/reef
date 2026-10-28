@@ -272,6 +272,12 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 	default:
 		return fail("Unsupported image action")
 	}
+	eventTarget := ref
+	if action == "tag" || action == "untag" {
+		eventTarget = tag
+	} else if len(targets) == 1 {
+		eventTarget = targets[0].ID
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := m.Images
@@ -295,6 +301,7 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 	}
 	op.Batches = (op.Total + imageCleanupBatchSize - 1) / imageCleanupBatchSize
 	s.catalogOp = op
+	m.catalogEvent("image", action, "started", op.ID, eventTarget, op.Total, nil)
 	m.storageBusy = true
 	m.wg.Add(1)
 	go func() {
@@ -319,6 +326,7 @@ func (m *Manager) beginCatalog(action, ref, tag, raw string) (CatalogOperation, 
 		m.mu.Lock()
 		s.catalogMu.Lock()
 		s.catalogOp.Results = results
+		m.catalogEvent("image", action, "completed", op.ID, eventTarget, op.Total, s.catalogOp.Results)
 		s.catalogOp.Running = false
 		s.catalogOp.Finished = time.Now()
 		m.storageBusy = false
