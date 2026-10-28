@@ -222,3 +222,7 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 #stats-view .filter-bar{margin-bottom:14px}.stats-table{min-width:1040px}.stats-table td:first-child{min-width:150px;max-width:250px;overflow-wrap:anywhere}.stats-table td{font-variant-numeric:tabular-nums}.stats-table td small{display:block;margin-top:5px}
 
 #history-view .filter-bar{margin-bottom:14px}.history-table{min-width:1000px}.history-table td{max-width:260px;overflow-wrap:anywhere}.history-table td small{display:block;margin-top:5px}
+
+/* Monitoring policy shares the standard input/select heights and spacing. */
+.alerts-policy-form{display:grid;gap:14px;margin-top:14px}.alerts-policy-form .filter-bar{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.alerts-policy-form>button{justify-self:start}.alerts-table{min-width:760px}.alerts-table td small{display:block;margin-top:5px;max-width:520px;overflow-wrap:anywhere}#alerts-host-rows td{overflow-wrap:anywhere}
+#alerts-policy{padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px}#alerts-status{margin:14px 0}#alerts-view>.filter-bar{grid-template-columns:minmax(180px,2fr) minmax(140px,1fr) minmax(140px,1fr);margin-top:16px}#alerts-view>h2{margin:24px 0 10px}#alerts-host-rows td small{display:block;margin-top:5px}@media(max-width:760px){#alerts-view>.filter-bar{grid-template-columns:1fr 1fr}#alerts-view>.filter-bar>.search-field{grid-column:1/-1}}

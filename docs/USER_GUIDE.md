@@ -486,4 +486,15 @@ Simple `.env` values and the access password are masked in captured output; `con
 
 File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Reef does not back up application data. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
 
-A successful Compose command does not by itself prove application health. Apply update checks running/healthcheck state before eligible old-image cleanup, but application-level checks remain your responsibility. Reef has no individual user accounts, automatic rollback or unattended recovery. Live Statistics is available; monitoring alerts remain on the roadmap.
+A successful Compose command does not by itself prove application health. Apply update checks running/healthcheck state before eligible old-image cleanup, but application-level checks remain your responsibility. Reef has no individual user accounts, automatic rollback or unattended recovery. Live Statistics is available; [monitoring alerts](MONITORING.md) can be enabled in Alerts.
+
+
+## Monitoring alerts
+
+Open **Alerts** to enable the instance-wide monitoring policy and set disconnect,
+unhealthy, restart-count/window and stable-recovery thresholds. Monitoring runs
+without an open browser. Filter incidents by host, condition/target text and state;
+check Collection coverage before treating the absence of alerts as good health.
+Notifications use the configured Webhooks destination. Compatible remote agents
+need v0.16.0; connection monitoring also works with older agents.
+See [thresholds, maintenance and persistence](MONITORING.md).

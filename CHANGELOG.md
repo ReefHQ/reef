@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.15.0 — Unreleased
+## 0.16.0 — Unreleased
+
+- Add opt-in monitoring alerts for agent disconnections, unhealthy containers and restart loops, with configurable thresholds and observed-recovery notifications.
+- Collect bounded snapshots in the background on Local and compatible agents without blocking heartbeats; distinguish collection failures, maintenance and unavailable coverage.
+- Persist incidents and a deduplicated transition outbox, integrate Discord/JSON webhooks and History, and add the Alerts view with policy settings and host filters.
+
+## 0.15.0 — 2026-10-28
 
 - Group resource views before Statistics and History in navigation; replace the long README with a friendly quick start and linked usage/setup/development guides.
 

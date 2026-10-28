@@ -249,6 +249,10 @@ func (s *Service) Ack(ids []string) error {
 // Accept binds remote events to the authenticated registry host and deduplicates
 // replayed batches. ACK only follows durable central acceptance.
 func (s *Service) Accept(host, name string, events []Event) error {
+	return s.accept(host, name, events, false)
+}
+func (s *Service) AcceptCentral(e Event) error { return s.accept(e.HostID, e.Host, []Event{e}, true) }
+func (s *Service) accept(host, name string, events []Event, central bool) error {
 	if !s.Ready() {
 		return errors.New("Notification state unavailable")
 	}
@@ -256,7 +260,7 @@ func (s *Service) Accept(host, name string, events []Event) error {
 		return errors.New("Event batch exceeds limit")
 	}
 	for _, e := range events {
-		if !e.Valid() || e.Scope == "webhook" {
+		if !e.Valid() || e.Scope == "webhook" || (e.Scope == "monitor" && !central) {
 			return errors.New("Invalid action event")
 		}
 	}

@@ -29,6 +29,7 @@ never enabled from the version string alone.
 | --- | --- | --- |
 | control-v1 | 0.6.0 | Projects, logs and consoles |
 | images-v1 | 0.7.0 | Image inventory and operations |
+| monitoring-v1 | 0.16.0 | Background health/restart observations controlled by the central monitoring policy |
 | stats-v1 | 0.14.0 | Live CPU, memory, network and block I/O statistics |
 | networks-v1 | 0.13.0 | Network inventory, creation, cleanup and container connections |
 | volumes-v1 | 0.8.0 | Volume management |
@@ -46,13 +47,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.15.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.16.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.15.0
+sh prepare-agent.sh v0.16.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -251,3 +252,14 @@ agents need no new enrollment, port or mount. Events are bound to the authentica
 host and deduplicated; disconnected/revoked hosts remain visible in retained
 history. A missing final event is not proof that a job is still running. Existing
 agent outbox limits apply. See [history storage and limits](ACTION_HISTORY.md).
+
+
+## Monitoring alerts (v0.16.0)
+
+Upgrade central first, then agents to v0.16.0, preserving identity, CA and mounts.
+No additional port, certificate, secret, enrollment or updater-worker upgrade is
+needed. New agents negotiate monitoring-v1 and collect only when central enables
+the monitoring policy. Changing that policy takes effect through ordinary
+inventory replies without reconnecting or restarting the agent. Older agents
+still support connection/disconnection monitoring but need an upgrade for
+container health/restart observations. See [monitoring behavior](MONITORING.md).

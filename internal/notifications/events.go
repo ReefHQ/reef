@@ -15,6 +15,7 @@ const MaxPending = 512
 
 var eventID = regexp.MustCompile(`^[0-9a-f]{48}$`)
 var actions = map[string]string{
+	"monitor": " disconnected unhealthy restart_loop ",
 	"project": " save apply start stop register unmanage ",
 	"image":   " pull tag untag remove cleanup check ",
 	"network": " create remove cleanup connect disconnect ",
@@ -81,6 +82,13 @@ func (e Event) Valid() bool {
 func (e Event) Key() string { return e.HostID + ":" + e.ID }
 func (e Event) Message() string {
 	s := fmt.Sprintf("Reef · %s · %s %s · %s", e.Host, e.Scope, e.Action, e.Status)
+	if e.Scope == "monitor" {
+		if e.Status == "failed" {
+			s += " · incident opened"
+		} else if e.Status == "completed" {
+			s += " · recovery observed"
+		}
+	}
 	if e.Target != "" {
 		s += "\nTarget: " + e.Target
 	}

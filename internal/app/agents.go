@@ -61,7 +61,11 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), 403)
 			return
 		}
-		w.WriteHeader(204)
+		if s.agents.CanMonitoring(r.Header.Get("X-Reef-Host")) {
+			writeJSON(w, map[string]bool{"monitoring_enabled": s.monitor != nil && s.monitor.Enabled()})
+		} else {
+			w.WriteHeader(204)
+		}
 		return
 	}
 	if decodeAgent(r, &input) != nil {
@@ -94,6 +98,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		host := r.Header.Get("X-Reef-Host")
 		_ = s.agents.Control(host, generation, enabled)
 		for _, capability := range input.Capabilities {
+			if capability == agents.MonitoringCapability {
+				_ = s.agents.Monitoring(host, generation, true)
+			}
 			if capability == agents.EventsCapability {
 				_ = s.agents.Events(host, generation, true)
 			}
@@ -120,7 +127,7 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.relay.Connect(host, generation)
-		writeJSON(w, map[string]any{"generation": generation, "events": s.canAcceptEvents()})
+		writeJSON(w, map[string]any{"generation": generation, "events": s.canAcceptEvents(), "monitoring": s.agents.CanMonitoring(host)})
 	default:
 		http.NotFound(w, r)
 	}

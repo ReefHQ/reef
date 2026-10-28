@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.15.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.16.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 ## 🚀 Get your feet wet
 
@@ -59,6 +59,7 @@ Reef itself, so let active operations finish first.
 | **Networks** | Inspect addressing and usage, create bridge networks and connect or disconnect running containers. |
 | **Builds** | Build saved project definitions, read build results and review default-builder cache cleanup. |
 | **Statistics** | Watch CPU, memory, network and disk I/O, with pause/resume and per-container measurements. |
+| **Alerts** | Detect agent disconnections, unhealthy containers and restart loops, with configurable delays and recovery notifications. |
 | **History** | Follow actions and results across hosts, with search, filters and operation details. |
 
 Console sessions live in a bottom panel, so you can keep navigating Reef while
@@ -107,11 +108,15 @@ as central Reef, preserving their identity and configuration.
 results are grouped by operation, with up to **2,000 events or 30 days** retained.
 It’s a best-effort journal; storage failures or queue overflow are reported.
 
+**Alerts** watches hosts in the background once enabled. Configure disconnect,
+health and restart thresholds, then follow incidents and collection coverage.
+Opening and recovery notifications use the existing webhook destination.
+
 **Webhooks** sends action results to Discord or a generic JSON endpoint. Configure
 it once, send a test and check delivery status from Reef. These events contain
 selected metadata, without terminal contents, application logs or credentials.
 
-[Action history](docs/ACTION_HISTORY.md) · [Webhook setup and payloads](docs/WEBHOOKS.md)
+[Monitoring alerts](docs/MONITORING.md) · [Action history](docs/ACTION_HISTORY.md) · [Webhook setup and payloads](docs/WEBHOOKS.md)
 
 ## ⚓ A few things to know
 

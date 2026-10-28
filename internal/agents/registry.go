@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"reef/internal/docker"
+	"reef/internal/monitoring"
 )
 
 const Protocol = 1
@@ -39,24 +40,30 @@ type disk struct {
 	Tokens  map[string]enrollment
 }
 type snapshot struct {
-	Events     bool
-	Updates    bool
-	Builds     bool
-	ImageBatch bool
-	Volumes    bool
-	Networks   bool
-	Stats      bool
-	Images     bool
-	Control    bool
-	Notice     string
-	Bytes      int
-	Generation string
-	Sequence   uint64
-	Contact    time.Time
-	Checked    time.Time
-	Containers []docker.Container
-	Error      string
-	Version    string
+	MonitorEnabled     bool
+	MonitorMaintenance bool
+	Monitor            *monitoring.Sample
+	MonitorSource      uint64
+	MonitorSerial      uint64
+	MonitorReceived    time.Time
+	Events             bool
+	Updates            bool
+	Builds             bool
+	ImageBatch         bool
+	Volumes            bool
+	Networks           bool
+	Stats              bool
+	Images             bool
+	Control            bool
+	Notice             string
+	Bytes              int
+	Generation         string
+	Sequence           uint64
+	Contact            time.Time
+	Checked            time.Time
+	Containers         []docker.Container
+	Error              string
+	Version            string
 }
 type View struct {
 	Capabilities []string  `json:"capabilities"`
@@ -71,11 +78,13 @@ type View struct {
 	Error        string    `json:"error,omitempty"`
 }
 type Update struct {
-	Protocol   int                `json:"protocol"`
-	Generation string             `json:"generation"`
-	Sequence   uint64             `json:"sequence"`
-	Containers []docker.Container `json:"containers"`
-	Error      string             `json:"error"`
+	Protocol    int                `json:"protocol"`
+	Generation  string             `json:"generation"`
+	Sequence    uint64             `json:"sequence"`
+	Containers  []docker.Container `json:"containers"`
+	Error       string             `json:"error"`
+	Monitor     *monitoring.Sample `json:"monitor,omitempty"`
+	Maintenance bool               `json:"maintenance,omitempty"`
 }
 type Registry struct {
 	mu       sync.Mutex
@@ -261,6 +270,11 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	if v.Generation != "" && time.Since(v.Contact) < 45*time.Second {
 		v.Notice = "Connection replaced; check that this identity is used on only one host."
 	}
+	v.MonitorEnabled = false
+	v.MonitorMaintenance = false
+	v.Monitor = nil
+	v.MonitorSource = 0
+	v.MonitorReceived = time.Time{}
 	v.Generation = secret()
 	v.Events = false
 	v.Updates = false
@@ -289,6 +303,9 @@ func (r *Registry) Publish(id, key string, u Update) error {
 		v.Contact = time.Now()
 		r.live[id] = v
 		return errors.New(message)
+	}
+	if u.Monitor != nil && (!v.MonitorEnabled || !u.Monitor.Valid()) {
+		return reject("Invalid monitoring sample")
 	}
 	if len(u.Containers) > 10000 || len(u.Error) > 500 {
 		return reject("Inventory exceeds limits")
@@ -323,6 +340,16 @@ func (r *Registry) Publish(id, key string, u Update) error {
 			return reject("Central inventory cache limit reached")
 		}
 	}
+	if u.Monitor != nil && u.Monitor.Sequence > v.MonitorSource {
+		v.MonitorSource = u.Monitor.Sequence
+		v.MonitorSerial++
+		sample := *u.Monitor
+		sample.Containers = append([]monitoring.Container{}, sample.Containers...)
+		sample.Sequence = v.MonitorSerial
+		v.Monitor = &sample
+		v.MonitorReceived = time.Now()
+	}
+	v.MonitorMaintenance = u.Maintenance
 	v.Contact = time.Now()
 	v.Sequence = u.Sequence
 	v.Error = u.Error
@@ -370,6 +397,9 @@ func (r *Registry) view(h Host) View {
 		status = "revoked"
 	}
 	capabilities := []string{}
+	if v.MonitorEnabled && v.Control {
+		capabilities = append(capabilities, MonitoringCapability)
+	}
 	if v.Events && v.Control {
 		capabilities = append(capabilities, EventsCapability)
 	}
@@ -436,6 +466,8 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 	}
 	v.Control = enabled
 	if !enabled {
+		v.MonitorEnabled = false
+		v.Monitor = nil
 		v.Events = false
 		v.Updates = false
 		v.Builds = false
@@ -606,4 +638,36 @@ func (r *Registry) CanStats(id string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && v.Stats && time.Since(v.Contact) < 45*time.Second
+}
+
+func (r *Registry) Monitoring(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.MonitorEnabled = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanMonitoring(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.MonitorEnabled
+}
+func (r *Registry) MonitorSample(id string) (monitoring.Sample, time.Time, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v := r.live[id]
+	h, ok := r.data.Hosts[id]
+	if !ok || h.Revoked || !v.Control || !v.MonitorEnabled || v.Monitor == nil {
+		return monitoring.Sample{}, time.Time{}, false
+	}
+	sample := *v.Monitor
+	sample.Maintenance = sample.Maintenance || v.MonitorMaintenance
+	sample.Containers = append([]monitoring.Container{}, sample.Containers...)
+	return sample, v.MonitorReceived, true
 }

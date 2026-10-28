@@ -87,3 +87,10 @@ The UI fetches only while its view/tab is visible, aborts outstanding reads when
 leaving/changing hosts, ignores late responses and preserves controls during
 updates. Browser preferences retain only view/filter/page/cursor/scroll, not the
 action contents. No UI endpoint edits or deletes journal data or executes actions.
+
+
+From v0.16.0, central monitoring adds scope `monitor` with incident opening and
+observed recovery, preserving the monitored host identity. History groups them
+by the incident operation ID and adds an explicit monitoring note. These are
+trusted central events; remote event batches cannot submit this scope. The
+Alerts view retains separate firing/resolved/retired incident state.

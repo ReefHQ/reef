@@ -20,6 +20,7 @@ import (
 	"reef/internal/agentupdate"
 	"reef/internal/docker"
 	"reef/internal/history"
+	"reef/internal/monitoring"
 	"reef/internal/notifications"
 	assets "reef/web"
 )
@@ -36,6 +37,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	monitor        *monitoring.Store
 	history        *history.Store
 	stats          *statsSampler
 	webhooks       *notifications.Service
@@ -118,6 +120,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if r.URL.Path == "/api/monitoring" {
+			s.monitoringSettings(w, r)
+			return
+		}
 		if r.URL.Path == "/api/history" {
 			s.actionHistory(w, r)
 			return

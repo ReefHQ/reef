@@ -178,3 +178,11 @@ Notification storage and history are independent sinks with separate durable
 deduplication; a ready sink's failure leaves the metadata batch retryable. The
 central-only /api/history read endpoint never relays to an agent or falls back
 to Local for a remote host filter. See [history architecture](ACTION_HISTORY.md).
+
+
+Monitoring-v1 (v0.16.0) carries bounded selected health/restart snapshots on the
+existing authenticated inventory connection. Collection is separate from the
+five-second heartbeat, enabled by central policy replies, and bound to the
+current connection generation. No monitoring settings or raw Docker inspection
+are accepted from a browser/agent command. Central evaluates incident timing and
+sends transitions to its History/webhook sinks. See [Monitoring](MONITORING.md).

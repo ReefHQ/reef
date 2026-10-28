@@ -102,3 +102,7 @@ test('Statistics restoration opens the lazy view first then waits for its first 
 test('History reload waits for central records before restoring its view, filters, cursor and scroll',async()=>{
  const p=page({view:'history',host:'local',historyOffset:50,historyCursor:'99',filters:{'history-search':'db'},scroll:360});await p.start();assert.equal(p.nodes.get('#history-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefHistoryOffset=50;p.window.reefHistoryCursor='99';p.window.reefHistoryReady=true;p.window.dispatchEvent({type:'reef-history-ready'});p.flushFrames();assert.equal(p.nodes.get('#history-search').value,'db');assert.equal(p.window.scrollY,360);assert.equal(p.reloadState().historyOffset,50);assert.equal(p.reloadState().historyCursor,'99');
 });
+
+test('Alerts reload waits for central monitoring before restoring filters and scroll',async()=>{
+ const p=page({view:'alerts',host:'local',filters:{'alerts-search':'database'},scroll:230});await p.start();assert.equal(p.nodes.get('#alerts-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefAlertsReady=true;p.window.dispatchEvent({type:'reef-alerts-ready'});p.flushFrames();assert.equal(p.nodes.get('#alerts-search').value,'database');assert.equal(p.window.scrollY,230);assert.equal(p.reloadState().view,'alerts');
+});
