@@ -2,7 +2,6 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('volumes-view');
  let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,timer,hostsReady=false;
- const dismissedOperations=new Map();
  const available=()=>host==='local'||window.reefCapabilities?.includes('volumes-v1');
  const candidates=()=>rows.filter(row=>row.removable);
  const target=row=>({name:row.name,fingerprint:row.fingerprint});
@@ -22,10 +21,11 @@
   find('volumes-select-all').disabled=disabled;
  }
  function status(op){
-  busy=!!op?.running;const node=find('volumes-operation'),issues=!!op?.skipped||(op?.results||[]).some(result=>!result.ok||result.unprocessed)||(!busy&&op?.total>0&&(op.results||[]).length<op.total);node.hidden=!op?.id||(!busy&&(!issues||dismissedOperations.get(host)===op.id));
-  if(node.hidden)node.replaceChildren();
-  if(!node.hidden){node.replaceChildren(textNode('strong',`${op.action}: ${busy?'in progress…':'finished'}`));for(const result of op.results||[])node.append(textNode('p',`${result.id}: ${result.message}`,result.ok?'small':'small error-text'));}
-  if(!busy&&!node.hidden){const operationHost=host,id=op.id,close=textNode('button','Dismiss','quiet');close.type='button';close.setAttribute('aria-label','Dismiss completed operation result');close.addEventListener('click',()=>{dismissedOperations.set(operationHost,id);node.hidden=true;node.replaceChildren();});node.append(close);}
+  busy=!!op?.running;
+  window.ReefOperationPanels.render(find('volumes-operation'),op,{
+   kind:'volumes',host,summary:op?.id?`${op.action}: ${busy?'in progress…':'finished'}`:'',
+   result:row=>`${row.id}: ${row.message}`
+  });
   controls();
  }
  function filtered(){const query=find('volumes-search').value.trim().toLowerCase(),usage=find('volumes-usage').value;return rows.filter(row=>(!query||`${row.name} ${row.driver} ${row.project}`.toLowerCase().includes(query))&&(!usage||(usage==='used'?row.containers.length:!row.containers.length)));}

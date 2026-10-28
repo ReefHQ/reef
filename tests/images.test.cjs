@@ -12,6 +12,7 @@ function page({host='local',capabilities=[],rows=[image()],defer=false,report={}
  const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};find('images-cleanup-mode').value='untagged';
  const window={reefHost:host,reefHostName:host,reefCapabilities:capabilities,addEventListener(type,fn){(events[type]??=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);}};
  const context={window,document:{getElementById:find,createElement:tag=>new Node(tag),addEventListener(){}},CustomEvent:function(type){this.type=type;},URLSearchParams,csrf:'fixture-csrf',textNode:(tag,value)=>Object.assign(new Node(tag),{textContent:value}),replaceKeepingFocus:(parent,nodes)=>parent.replaceChildren(...nodes),ask:confirm,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},request:async(url,opts,host)=>{requests.push({url,opts,host});if(defer&&url==='/api/images')return await new Promise(resolve=>pending.push(resolve));return {json:async()=>url==='/api/images'?{images:rows,operation:report}:url==='/api/images/operation'?report:{id:'worker',action:'pull',running:true,results:[]}};}};
+ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../web/operation-panels.js'),'utf8'),context);
  vm.runInNewContext(source,context);
  return {nodes,window,requests,find,pending,timers,async settle(){for(let i=0;i<20;i++)await Promise.resolve();},async host(host,capabilities=[]){window.reefHost=host;window.reefCapabilities=capabilities;window.dispatchEvent({type:'reef-host-changed'});await this.settle();}};
 }
@@ -52,8 +53,8 @@ test('large remote cleanup requires negotiated batch support and pins its host',
 
 test('image operation reports progress without replacing rows on every update',async()=>{
  const report={id:'large-job',action:'cleanup',running:true,total:250,completed:121,batch:2,batches:3,results:[{id:'used-image',ok:false,message:'Image retained: used by a running or stopped container'}]};
- const p=page({report});await p.settle();const lines=p.find('images-operation').children;assert.match(lines[0].textContent,/121 \/ 250 images processed/);assert.match(lines[0].textContent,/batch 2 \/ 3/);assert.match(lines[1].textContent,/Image retained/);assert.equal(p.find('images-cleanup').disabled,true);
- const originalRow=p.find('images-rows').children[0];report.completed=122;await p.timers.at(-1)();assert.equal(p.find('images-rows').children[0],originalRow);assert.match(p.find('images-operation').children[0].textContent,/122 \/ 250 images processed/);report.running=false;report.skipped=128;await p.timers.at(-1)();assert.match(p.find('images-operation').children[0].textContent,/stopped/);assert.match(p.find('images-operation').children[0].textContent,/128 not processed/);
+ const p=page({report});await p.settle();const lines=p.find('images-operation').children;assert.match(lines[0].children[0].textContent,/121 \/ 250 images processed/);assert.match(lines[0].children[0].textContent,/batch 2 \/ 3/);assert.match(lines[1].textContent,/Image retained/);assert.equal(p.find('images-cleanup').disabled,true);
+ const originalRow=p.find('images-rows').children[0];report.completed=122;await p.timers.at(-1)();assert.equal(p.find('images-rows').children[0],originalRow);assert.match(p.find('images-operation').children[0].children[0].textContent,/122 \/ 250 images processed/);report.running=false;report.skipped=128;await p.timers.at(-1)();assert.match(p.find('images-operation').children[0].children[0].textContent,/stopped/);assert.match(p.find('images-operation').children[0].children[0].textContent,/128 not processed/);
 });
 
 test('successful image cleanup hides its progress panel and stays hidden on later polls',async()=>{
@@ -62,7 +63,7 @@ test('successful image cleanup hides its progress panel and stays hidden on late
 });
 test('partial image cleanup can be dismissed without reappearing and dismissal stays scoped to its host and operation',async()=>{
  const report={id:'cleanup-job',action:'cleanup',running:false,total:1,completed:1,results:[{id:'image',ok:false,message:'Image retained'}]},p=page({report});await p.settle();assert.equal(p.find('images-operation').hidden,false);
- await p.find('images-operation').children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
+ await p.find('images-operation').children[0].children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
  await p.host('ego',['images-v1']);await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,false);
  await p.host('local');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
  report.id='new-job';report.running=true;report.results=[];await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,false);assert.equal(p.find('images-operation').children.some(n=>n.textContent==='Dismiss'),false);
