@@ -10,6 +10,7 @@ import (
 	"reef/internal/agents"
 	"reef/internal/agentupdate"
 	"reef/internal/buildinfo"
+	"reef/internal/notifications"
 )
 
 func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
@@ -28,6 +29,10 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Path != "/agent/v1/enroll" && !s.agents.Authenticate(r.Header.Get("X-Reef-Host"), bearer(r)) {
 		http.Error(w, "Agent authentication rejected", 403)
+		return
+	}
+	if r.URL.Path == "/agent/v1/events" {
+		s.agentEvents(w, r)
 		return
 	}
 	if r.URL.Path == "/agent/v1/commands" || r.URL.Path == "/agent/v1/results" {
@@ -70,6 +75,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Enrollment rejected", 403)
 			return
 		}
+		if view, _, ok := s.agents.Inventory(id); ok {
+			s.m.emit(notifications.New("agent", "enroll", "completed", "", view.Name))
+		}
 		writeJSON(w, map[string]string{"id": id, "credential": key})
 	case "/agent/v1/connect":
 		generation, e := s.agents.Begin(r.Header.Get("X-Reef-Host"), bearer(r), input.Version, input.Protocol)
@@ -86,6 +94,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		host := r.Header.Get("X-Reef-Host")
 		_ = s.agents.Control(host, generation, enabled)
 		for _, capability := range input.Capabilities {
+			if capability == agents.EventsCapability {
+				_ = s.agents.Events(host, generation, true)
+			}
 			if capability == agents.UpdatesCapability {
 				_ = s.agents.Updates(host, generation, true)
 			}
@@ -103,7 +114,7 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.relay.Connect(host, generation)
-		writeJSON(w, map[string]string{"generation": generation})
+		writeJSON(w, map[string]any{"generation": generation, "events": s.webhooks != nil && s.webhooks.Ready()})
 	default:
 		http.NotFound(w, r)
 	}
@@ -153,6 +164,9 @@ func (s *Server) hosts(w http.ResponseWriter, r *http.Request) {
 		if e := s.agents.Change(r.Form.Get("id"), r.Form.Get("name"), r.Form.Get("action") == "revoke"); e != nil {
 			http.Error(w, e.Error(), 409)
 			return
+		}
+		if view, _, ok := s.agents.Inventory(r.Form.Get("id")); ok {
+			s.m.emit(notifications.New("agent", r.Form.Get("action"), "completed", "", view.Name))
 		}
 		if r.Form.Get("action") == "revoke" {
 			s.relay.Disconnect(r.Form.Get("id"))

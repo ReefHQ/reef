@@ -19,6 +19,7 @@ import (
 	"reef/internal/agents"
 	"reef/internal/agentupdate"
 	"reef/internal/docker"
+	"reef/internal/notifications"
 	assets "reef/web"
 )
 
@@ -34,6 +35,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	webhooks       *notifications.Service
 	agentUpdates   *agentupdate.Store
 	agentUpdating  bool // Protected by mu; excludes new consoles.
 	agents         *agents.Registry
@@ -154,6 +156,8 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		switch r.URL.Path {
+		case "/api/webhook":
+			s.webhookSettings(w, r)
 		case "/api/agent-update":
 			s.agentUpdate(w, r)
 		case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/action", "/api/builds/cache", "/api/builds/cache/action", "/api/builds/cache/operation":

@@ -33,6 +33,7 @@ never enabled from the version string alone.
 | images-batch-v1 | 0.8.2 | Image selections above 100 |
 | builds-v1 | 0.9.0 | Project builds and default-builder cache |
 | agent-update-v1 | 0.10.0 + optional updater setup | Agent updates from Reef |
+| action-events-v1 | 0.11.0 | Action webhook events via central Reef |
 
 Older agents keep their supported features and show an upgrade message for new
 ones. The commands below install the version with all capabilities listed here.
@@ -43,13 +44,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.10.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.11.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.10.0
+sh prepare-agent.sh v0.11.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -210,3 +211,14 @@ seconds is disconnected; inventory older than 15 seconds or Docker errors is sta
 Reconnection uses capped exponential backoff and jitter. Superseded generations
 and reordered inventory/results are rejected. Central restart drops transient
 inventory/transports; durable agent state and identities are retained.
+
+
+## Action webhook events
+
+With agents v0.11.0 or newer, central Reef can notify a Discord or generic JSON
+webhook about actions/results on each host. Configure the destination only in
+central Reef's Webhooks panel. Agents never receive that URL or token. Their
+private managed state holds a bounded metadata outbox and sends acknowledged
+batches through the same outbound HTTPS connection. No port or new enrollment is
+required. Older agents keep existing capabilities without action notifications.
+See [webhook setup, event fields and delivery limits](WEBHOOKS.md).

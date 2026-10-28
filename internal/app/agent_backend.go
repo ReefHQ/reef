@@ -9,12 +9,14 @@ import (
 	"path/filepath"
 	"reef/internal/agents"
 	"reef/internal/docker"
+	"reef/internal/notifications"
 	"strings"
 	"time"
 )
 
 type agentSessionKey struct{}
 type AgentBackend struct {
+	events  *notifications.Service
 	server  *Server
 	handler http.Handler
 	stop    context.CancelFunc
@@ -57,6 +59,11 @@ func NewAgentBackend(configPath, stateDir, socket string, updateDirs ...string) 
 	if len(updateDirs) > 0 {
 		updateDir = updateDirs[0]
 	}
+	a.events, err = notifications.Open(stateDir, true)
+	if err != nil {
+		a.events = notifications.Unavailable(true)
+	}
+	m.Notify = a.events.Emit
 	if err = a.configureAgentUpdates(ctx, updateDir); err != nil {
 		stop()
 		return nil, err

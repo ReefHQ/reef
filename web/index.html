@@ -4,7 +4,7 @@
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
  <meta name="csrf-token" content="{{.CSRF}}"><title>{{.Name}}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
  <script src="/assets/theme.js"></script><link rel="stylesheet" href="/assets/style.css">
- <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/inventory.js" defer></script><script src="/assets/images.js" defer></script><script src="/assets/volumes.js" defer></script><script src="/assets/builds.js" defer></script>
+ <script src="/assets/model.js" defer></script><script src="/assets/navigation.js" defer></script><script src="/assets/app.js" defer></script><script src="/assets/logs.js" defer></script><script src="/assets/console-dock.js" defer></script><script src="/assets/console-picker.js" defer></script><script src="/assets/container-details.js" defer></script><script src="/assets/image-updates.js" defer></script><script src="/assets/hosts.js" defer></script><script src="/assets/webhooks.js" defer></script><script src="/assets/inventory.js" defer></script><script src="/assets/images.js" defer></script><script src="/assets/volumes.js" defer></script><script src="/assets/builds.js" defer></script>
 </head>
 <body class="app-shell" data-console-session-limit="{{.ConsoleSessionLimit}}">
 <a class="skip-link" href="#workspace-content">Skip to content</a>
@@ -14,6 +14,7 @@
   <div class="host-picker"><label for="host-select">Docker host</label><select id="host-select"><option value="local">Local</option></select><button type="button" id="open-hosts" class="quiet">Manage hosts</button></div>
   <div class="primary-nav"><button type="button" data-view="containers" aria-current="page">Containers <span id="container-nav-count">—</span></button><button type="button" data-view="projects">Projects <span id="compose-nav-count">—</span></button><button type="button" data-view="images">Images <span id="image-nav-count">—</span></button><button type="button" data-view="volumes">Volumes <span id="volume-nav-count">—</span></button><button type="button" data-view="builds">Builds <span id="build-nav-count" title="Managed projects">—</span></button></div>
   <div id="managed-navigation" hidden><div class="nav-heading">MANAGED <span id="project-count">0</span></div><div id="projects"></div><div class="mobile-managed-navigation"><label for="managed-project-select">Managed project</label><select id="managed-project-select"><option value="">Choose a project</option></select></div></div>
+  <button type="button" id="open-webhook" class="quiet">Webhooks</button>
   <p class="nav-note" id="host-note">Visible containers stay read-only until you connect their project.</p>
  </nav>
  <div id="workspace-content" class="workspace-shell" tabindex="-1">
@@ -97,6 +98,19 @@
  <div class="console-dock-toolbar"><div class="console-dock-heading"><strong id="console-dock-active">Console</strong><span id="console-dock-count" class="muted small" role="status"></span></div><div class="console-dock-buttons"><button type="button" id="console-dock-new">New session</button><button type="button" id="console-dock-disconnect">Disconnect all</button><button type="button" id="console-dock-maximize" aria-pressed="false">Maximize</button><button type="button" id="console-dock-minimize" aria-expanded="true">Reduce</button></div></div>
  <div id="console-dock-content"><div id="console-dock-tabs" role="tablist" aria-label="Console sessions"></div><p id="console-dock-error" class="notice error" role="alert" hidden></p><div id="console-dock-panes"></div></div>
 </section>
+<dialog id="webhook-dialog" aria-labelledby="webhook-title">
+ <div class="dialog-heading"><h2 id="webhook-title">Action webhooks</h2><button id="webhook-close" type="button" class="quiet" aria-label="Close webhooks">×</button></div>
+ <p class="muted">Send actions and results for Local and upgraded remote hosts to Discord or a JSON endpoint. Notifications contain host, target, action and outcome metadata.</p>
+ <p class="muted small">Compose files, credentials, application logs and console input/output are excluded. Remote events require agents v0.11.0 or newer.</p>
+ <p id="webhook-error" class="notice error" role="alert" hidden></p>
+ <form id="webhook-form">
+  <label class="webhook-toggle"><input id="webhook-enabled" type="checkbox"> Enable action notifications</label>
+  <div class="form-field"><label for="webhook-format">Format</label><select id="webhook-format"><option value="discord">Discord</option><option value="json">JSON</option></select></div>
+  <div class="form-field"><label for="webhook-url">Webhook URL</label><input id="webhook-url" type="password" maxlength="2048" placeholder="https://…" autocomplete="new-password" spellcheck="false" aria-describedby="webhook-destination"><p id="webhook-destination" class="muted small"></p></div>
+  <div class="dialog-actions"><button id="webhook-remove" type="button" class="danger" disabled>Remove webhook</button><button id="webhook-test" type="button" disabled>Send test</button><button id="webhook-save" type="submit" class="primary">Save settings</button></div>
+ </form>
+ <p id="webhook-status" class="muted small" role="status">Loading webhook settings…</p>
+</dialog>
 <dialog id="hosts-dialog" aria-labelledby="hosts-title">
  <div class="dialog-heading"><h2 id="hosts-title">Docker hosts</h2><button type="button" class="quiet" id="close-hosts" aria-label="Close hosts">×</button></div>
  <p class="muted">Local is this Reef installation. Upgraded agents provide logs, consoles and project management on their own Docker host.</p>

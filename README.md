@@ -475,7 +475,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.10.0` in development.
+source of truth for the application version, currently `0.11.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
@@ -542,6 +542,19 @@ Reef is developed under **ReefLabs**, with the GitHub organization identifier
 Reef is licensed under the [GNU General Public License v3.0](LICENSE)
 (SPDX: `GPL-3.0-only`). Vendored xterm.js and its fit addon retain their MIT
 licenses and attribution under `web/vendor/`.
+
+## Action webhooks
+
+Open **Webhooks** in the navigation to send action metadata/results to Discord or
+a generic JSON endpoint. Settings are instance-wide, the saved URL stays private,
+and a test button and delivery status are available. Notifications cover projects,
+images, volumes, builds, agents and console lifecycle; no Compose contents, logs,
+credentials or console input/output are sent.
+
+Delivery uses a bounded persistent queue and retries without blocking Docker
+operations. Remote events require agents v0.11.0 or newer and travel through their
+existing outbound connection; only central Reef knows the webhook URL. See
+[configuration, payloads and delivery limits](docs/WEBHOOKS.md).
 
 ## Agent updates
 

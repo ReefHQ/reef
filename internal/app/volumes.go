@@ -254,6 +254,10 @@ func (m *Manager) beginVolumes(action, name, raw string) (CatalogOperation, erro
 	default:
 		return fail("Unsupported volume action")
 	}
+	eventTarget := name
+	if eventTarget == "" && len(targets) == 1 {
+		eventTarget = targets[0].Name
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.storageBusy {
@@ -271,7 +275,12 @@ func (m *Manager) beginVolumes(action, name, raw string) (CatalogOperation, erro
 	s.catalogMu.Lock()
 	defer s.catalogMu.Unlock()
 	op := CatalogOperation{ID: randomID(), Action: action, Running: true, Started: time.Now(), Results: []ImageResult{}}
+	op.Total = len(targets)
+	if action == "create" {
+		op.Total = 1
+	}
 	s.volumeOp = op
+	m.catalogEvent("volume", action, "started", op.ID, eventTarget, op.Total, nil)
 	m.storageBusy = true
 	m.wg.Add(1)
 	go func() {
@@ -282,6 +291,7 @@ func (m *Manager) beginVolumes(action, name, raw string) (CatalogOperation, erro
 		m.mu.Lock()
 		s.catalogMu.Lock()
 		s.volumeOp.Results = results
+		m.catalogEvent("volume", action, "completed", op.ID, eventTarget, op.Total, s.volumeOp.Results)
 		s.volumeOp.Running = false
 		s.volumeOp.Finished = time.Now()
 		m.storageBusy = false

@@ -193,6 +193,7 @@ func (m *Manager) registerProject(p Project) (Project, error) {
 	}
 	m.Projects[p.ID] = &Managed{Project: p}
 	m.Order = append(m.Order, p.ID)
+	m.projectEvent(p, "register", "completed", "")
 	return p, nil
 }
 func (m *Manager) unregisterProject(id string) error {
@@ -222,6 +223,7 @@ func (m *Manager) unregisterProject(id string) error {
 	if e := m.saveRegistrations(next); e != nil {
 		return e
 	}
+	m.projectEvent(p.Project, "unmanage", "completed", "")
 	delete(m.Projects, id)
 	m.Order = slices.DeleteFunc(m.Order, func(s string) bool { return s == id })
 	return nil

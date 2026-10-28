@@ -207,6 +207,9 @@ func run() error {
 	}
 	defer backend.Close()
 	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.ImageBatchCapability}
+	if backend.HasActionEvents() {
+		capabilities = append(capabilities, agents.EventsCapability)
+	}
 	var updateStore *agentupdate.Store
 	if *updateDir != "" {
 		updateStore, e = agentupdate.Open(*updateDir)
@@ -220,6 +223,7 @@ func run() error {
 	for ctx.Err() == nil {
 		var connected struct {
 			Generation string `json:"generation"`
+			Events     bool   `json:"events"`
 		}
 		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": capabilities}, &connected)
 		if e == nil {
@@ -248,6 +252,19 @@ func run() error {
 				e = c.post(connection, "inventory", update, nil)
 				if e != nil {
 					break
+				}
+				if connected.Events {
+					events := backend.ActionEvents()
+					if len(events) > 0 {
+						var result struct {
+							Ack []string `json:"ack"`
+						}
+						if err := c.post(connection, "events", map[string]any{"generation": connected.Generation, "events": events}, &result); err == nil {
+							if err = backend.AckActionEvents(result.Ack); err != nil {
+								log.Print("Cannot persist action event acknowledgement")
+							}
+						}
+					}
 				}
 				backoff = time.Second
 				select {

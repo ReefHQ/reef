@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+const EventsCapability = "action-events-v1"
 const UpdatesCapability = "agent-update-v1"
 const BuildsCapability = "builds-v1"
 const ControlCapability = "control-v1"

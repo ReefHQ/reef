@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reef/internal/notifications"
 	"sort"
 	"strings"
 	"sync"
@@ -65,6 +66,7 @@ type Managed struct {
 	ImageUpdates ImageUpdates
 }
 type Manager struct {
+	Notify        func(notifications.Event) // Set once before workers start.
 	mu            sync.RWMutex
 	config        Config
 	registered    []Project
@@ -249,6 +251,7 @@ func (m *Manager) beginOptions(id, action, rev, content string, opts BuildOption
 		p.Op = previousOp
 		return e
 	}
+	m.projectEvent(p.Project, action, "started", p.Op.ID)
 	p.busy = true
 	if action == "build" {
 		m.storageBusy = true
@@ -536,6 +539,7 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 	if e = m.persist(p); e != nil {
 		p.persistError = "Operation log could not be persisted : " + e.Error()
 	}
+	m.projectEvent(p.Project, action, p.Op.Phase, p.Op.ID)
 	// Keep bounded historical operation snapshots; no project data is removed.
 	if e == nil {
 		b, _ := json.MarshalIndent(p.Op, "", "  ")
