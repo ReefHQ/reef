@@ -475,7 +475,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.9.0` in development.
+source of truth for the application version, currently `0.10.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.
@@ -542,6 +542,19 @@ Reef is developed under **ReefLabs**, with the GitHub organization identifier
 Reef is licensed under the [GNU General Public License v3.0](LICENSE)
 (SPDX: `GPL-3.0-only`). Vendored xterm.js and its fit addon retain their MIT
 licenses and attribution under `web/vendor/`.
+
+## Agent updates
+
+**Manage hosts** can update a prepared remote agent to the exact stable version
+and revision of central Reef, after confirmation. Its host must be idle and its
+consoles disconnected. Progress and outcomes persist on that host; success
+requires the replacement agent to reconnect with the expected build. Other
+managed containers keep running. No automatic upgrades or rollbacks are made.
+
+Existing agents need one manual upgrade to v0.10.0 and the optional host-local
+update worker. See [one-time setup and recovery](docs/AGENT_SETUP.md#update-agents-from-reef).
+The worker preserves the agent's identity volume, CA and configuration and stays
+running independently while replacing only the agent service.
 
 ## Multiple Docker hosts
 

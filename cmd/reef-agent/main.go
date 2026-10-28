@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"reef/internal/agents"
+	"reef/internal/agentupdate"
 	"reef/internal/app"
 	"reef/internal/buildinfo"
 	"reef/internal/docker"
@@ -112,7 +113,19 @@ func run() error {
 	socket := flag.String("socket", "/var/run/docker.sock", "Local Docker socket")
 	ca := flag.String("ca-file", "", "Optional trusted private CA bundle")
 	config := flag.String("config", "", "Optional agent project configuration file; roots remain explicitly local")
+	worker := flag.Bool("update-worker", false, "Run the host-local agent update service")
+	updateDir := flag.String("update-dir", os.Getenv("REEF_AGENT_UPDATE_DIR"), "Optional shared agent update state directory")
+	installation := flag.String("update-installation", os.Getenv("REEF_INSTALLATION_DIR"), "Dedicated agent installation for the update service")
 	flag.Parse()
+	if *worker {
+		store, err := agentupdate.Open(*updateDir)
+		if err != nil {
+			return err
+		}
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return (&agentupdate.Worker{Store: store, Installation: *installation, Run: agentupdate.DockerRunner(*socket)}).Serve(ctx)
+	}
 	u, e := url.Parse(*central)
 	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
 		return errors.New("server must be an HTTPS origin")
@@ -188,19 +201,33 @@ func run() error {
 	} else {
 		return e
 	}
-	backend, e := app.NewAgentBackend(*config, filepath.Join(*state, "managed"), *socket)
+	backend, e := app.NewAgentBackend(*config, filepath.Join(*state, "managed"), *socket, *updateDir)
 	if e != nil {
 		return e
 	}
 	defer backend.Close()
+	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.ImageBatchCapability}
+	var updateStore *agentupdate.Store
+	if *updateDir != "" {
+		updateStore, e = agentupdate.Open(*updateDir)
+		if e != nil {
+			return e
+		}
+		capabilities = append(capabilities, agents.UpdatesCapability)
+	}
 	dockerClient := docker.NewClient(*socket)
 	backoff := time.Second
 	for ctx.Err() == nil {
 		var connected struct {
 			Generation string `json:"generation"`
 		}
-		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.ImageBatchCapability}}, &connected)
+		e = c.post(ctx, "connect", map[string]any{"protocol": agents.Protocol, "version": buildinfo.Version, "capabilities": capabilities}, &connected)
 		if e == nil {
+			if updateStore != nil {
+				if e = updateStore.Write("connection.json", agentupdate.Connection{Version: buildinfo.Version, Revision: buildinfo.Revision, At: time.Now()}); e != nil {
+					return e
+				}
+			}
 			log.Print("Agent connected (logs, consoles and project management)")
 			connection, stopConnection := context.WithCancel(ctx)
 			controlDone := make(chan error, 1)

@@ -114,3 +114,24 @@ no redelivery, allowlists and bounds, remote state/actions/logs/consoles, owner
 checks, durable operation behavior and host-separated editor buffers. Same IDs on
 two hosts and delayed responses cannot cross hosts. Validation uses owned local
 fixtures and fake engines; production hosts are upgraded only by the operator.
+
+
+## Agent update transport
+
+agent-update-v1 adds an allowlisted GET/POST /api/agent-update route. Central
+selects its own stable build version and full revision; browser-supplied image,
+revision and arbitrary version choices are not forwarded. Existing login,
+origin/CSRF, revocation and generation controls apply. Capabilities reset on
+connection replacement and control disablement. This route never falls back
+to the local host. Read-only status remains available during maintenance.
+
+The opt-in backend shares only a private update-state volume with an independent
+host-local worker; identity/CA credentials are not mounted into that worker.
+Durable operation admission excludes host mutations, checks and console opens.
+File locks serialize admission/worker ownership, atomic state survives agent
+replacement, and interrupted worker jobs are marked unknown without replay.
+The worker validates the fixed image's release labels, current Compose service
+and identity volume, checks configuration again after pull, preserves private
+.env values except the agent image, and recreates that service alone. Completion
+requires its exact image and an authenticated central reconnection marker from
+the replacement agent. The worker image is managed independently by the operator.

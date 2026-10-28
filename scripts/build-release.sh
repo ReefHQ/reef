@@ -29,7 +29,7 @@ for target in runtime agent; do
  for architecture in amd64 arm64; do
   reference=$image:$CI_COMMIT_SHA-$architecture
   docker buildx build --builder default --platform "linux/$architecture" --target "$target" \
-   --provenance=false --load --build-arg "APP_REVISION=$CI_COMMIT_SHA" --tag "$reference" .
+   --provenance=false --load --build-arg "APP_REVISION=$CI_COMMIT_SHA" --build-arg "APP_VERSION=$version" --tag "$reference" .
   docker push "$reference"
  done
 done

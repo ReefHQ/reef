@@ -15,6 +15,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldfl
 
 # Outbound agent: no incoming port; persists identity and managed project state.
 FROM ${DOCKER_IMAGE} AS agent
+ARG APP_REVISION=unknown
+ARG APP_VERSION=dev
+LABEL org.opencontainers.image.revision="${APP_REVISION}" \
+      org.opencontainers.image.version="${APP_VERSION}"
 COPY --from=build /reef-agent /usr/local/bin/reef-agent
 ENTRYPOINT ["/usr/local/bin/reef-agent"]
 

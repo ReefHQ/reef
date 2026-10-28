@@ -145,6 +145,11 @@ func (s *Server) openConsole(w http.ResponseWriter, r *http.Request, sess sessio
 	}
 	entry := &consoleSession{host: host, owner: sess.CSRF, cancel: cancel, lastActive: time.Now(), transport: transportID, client: clientID}
 	s.mu.Lock()
+	if s.agentUpdating {
+		s.mu.Unlock()
+		http.Error(w, "Wait for the agent update before opening a console", 409)
+		return
+	}
 	if s.consoles == nil {
 		s.consoles = map[string]*consoleSession{}
 	}

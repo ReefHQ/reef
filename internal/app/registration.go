@@ -141,6 +141,9 @@ func (m *Manager) saveRegistrations(next []Project) error {
 func (m *Manager) registerProject(p Project) (Project, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.agentUpdating {
+		return p, errors.New("Wait for the agent update")
+	}
 	if e := authorizedDirectory(m.config, p.Directory); e != nil {
 		return p, &projectFieldError{"directory", e}
 	}
@@ -195,6 +198,9 @@ func (m *Manager) registerProject(p Project) (Project, error) {
 func (m *Manager) unregisterProject(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.agentUpdating {
+		return errors.New("Wait for the agent update")
+	}
 	index := -1
 	for i, p := range m.registered {
 		if p.ID == id {

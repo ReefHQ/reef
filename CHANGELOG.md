@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — Unreleased
+
+- Update prepared remote agents from Manage hosts to central Reef's exact stable
+  version and revision, with explicit confirmation and durable progress/outcomes.
+- Preserve identity and private configuration; reject busy hosts and active
+  consoles, validate downloaded images and require the replacement to reconnect.
+- Add optional one-time host updater setup and agent-update-v1 negotiation;
+  report interrupted/uncertain outcomes without automatic replay or rollback.
+
 ## 0.9.0 — Unreleased
 
 - Build saved managed Compose services explicitly, with no-cache/base-image pull

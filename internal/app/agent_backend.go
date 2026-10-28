@@ -20,7 +20,7 @@ type AgentBackend struct {
 	stop    context.CancelFunc
 }
 
-func NewAgentBackend(configPath, stateDir, socket string) (*AgentBackend, error) {
+func NewAgentBackend(configPath, stateDir, socket string, updateDirs ...string) (*AgentBackend, error) {
 	c := Config{StateDir: stateDir, AllowedProjectRoots: []string{}, Projects: []Project{}}
 	var err error
 	if configPath != "" {
@@ -52,8 +52,17 @@ func NewAgentBackend(configPath, stateDir, socket string) (*AgentBackend, error)
 	s.discovery = docker.NewClient(socket)
 	ctx, stop := context.WithCancel(context.Background())
 	m.Images = &ImageService{Exec: executor}
+	a := &AgentBackend{server: s, handler: s.Handler(), stop: stop}
+	updateDir := os.Getenv("REEF_AGENT_UPDATE_DIR")
+	if len(updateDirs) > 0 {
+		updateDir = updateDirs[0]
+	}
+	if err = a.configureAgentUpdates(ctx, updateDir); err != nil {
+		stop()
+		return nil, err
+	}
 	m.startImageChecks(ctx)
-	return &AgentBackend{server: s, handler: s.Handler(), stop: stop}, nil
+	return a, nil
 }
 func (a *AgentBackend) CloseConsoles() { a.server.closeConsoles() }
 func (a *AgentBackend) Close()         { a.stop(); a.CloseConsoles(); a.server.m.wg.Wait() }

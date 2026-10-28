@@ -358,6 +358,9 @@ func (m *Manager) checkImages(id string, automatic bool) error {
 	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if m.agentUpdating {
+		return errors.New("Wait for the agent update")
+	}
 	p, ok := m.Projects[id]
 	if !ok {
 		return errors.New("unknown project")

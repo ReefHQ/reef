@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"reef/internal/agents"
+	"reef/internal/agentupdate"
+	"reef/internal/buildinfo"
 )
 
 func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +86,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 		host := r.Header.Get("X-Reef-Host")
 		_ = s.agents.Control(host, generation, enabled)
 		for _, capability := range input.Capabilities {
+			if capability == agents.UpdatesCapability {
+				_ = s.agents.Updates(host, generation, true)
+			}
 			if capability == agents.BuildsCapability {
 				_ = s.agents.Builds(host, generation, true)
 			}
@@ -128,7 +133,7 @@ func (s *Server) hosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" {
-		writeJSON(w, map[string]any{"enabled": s.cfg.AgentsEnabled, "hosts": s.agents.Views()})
+		writeJSON(w, map[string]any{"enabled": s.cfg.AgentsEnabled, "hosts": s.agents.Views(), "version": buildinfo.Version, "updates_available": agentupdate.ValidTarget(buildinfo.Version, buildinfo.Revision)})
 		return
 	}
 	switch r.Form.Get("action") {
