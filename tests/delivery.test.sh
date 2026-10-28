@@ -123,6 +123,7 @@ printf '0.3.0\n' > "$work/build-project/VERSION"
 export CI_COMMIT_TAG=v0.3.0 CI_COMMIT_SHA="$EXPECTED_REVISION" CI_COMMIT_REF_PROTECTED=true
 (cd "$work/build-project";sh scripts/build-release.sh)
 test "$(grep -c 'buildx build --builder default --platform linux/' "$TEST_LOG")" -eq 4
+test "$(grep -c -- '--build-arg APP_VERSION=0.3.0' "$TEST_LOG")" -eq 4
 if grep -Eq 'buildx create|--driver docker-container' "$TEST_LOG";then echo 'Nested BuildKit runtime used';exit 1;fi
 test "$(grep -c 'buildx build .*--platform linux/amd64' "$TEST_LOG")" -eq 2
 test "$(grep -c 'buildx build .*--platform linux/arm64' "$TEST_LOG")" -eq 2
@@ -184,6 +185,17 @@ grep -Fxq 'REEF_AGENT_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:v0
 cp "$work/agent-parent/reef-agent/.env" "$work/agent-env-before"
 (cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.6.0) > "$work/agent-preparation-again"
 cmp "$work/agent-env-before" "$work/agent-parent/reef-agent/.env"
+
+
+# Update opt-in keeps the worker image independent and preserves private settings.
+cp "$root/examples/agent/compose.updates.yaml" "$work/agent-parent/reef-agent/compose.updates.yaml"
+(cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.10.0 --enable-updates) > "$work/update-preparation"
+grep -Fxq 'COMPOSE_FILE=compose.yaml:compose.updates.yaml' "$work/agent-parent/reef-agent/.env"
+grep -Fxq 'REEF_AGENT_UPDATER_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.10.0' "$work/agent-parent/reef-agent/.env"
+grep -Fxq 'OTHER=keep' "$work/agent-parent/reef-agent/.env"
+(cd "$work/agent-parent/reef-agent";DOCKER_CONFIG="$work/docker-auth" sh "$root/scripts/prepare-agent.sh" v0.11.0 --enable-updates) > "$work/update-preparation-again"
+grep -Fxq 'REEF_AGENT_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.11.0' "$work/agent-parent/reef-agent/.env"
+grep -Fxq 'REEF_AGENT_UPDATER_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.10.0' "$work/agent-parent/reef-agent/.env"
 
 sh "$root/tests/local-launcher.test.sh"
 echo 'PASS: idempotent private server/agent preparation, release immutability, multiarch build, token/version/revision checks, serialized deployment, preservation after pull/health failures, and exact live build verification.'

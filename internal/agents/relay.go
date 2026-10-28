@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+const UpdatesCapability = "agent-update-v1"
 const BuildsCapability = "builds-v1"
 const ControlCapability = "control-v1"
 const ImagesCapability = "images-v1"
@@ -24,6 +25,9 @@ var ErrRelay = errors.New("Agent disconnected or command outcome unknown; refres
 // Only Reef operations are transported. No arbitrary URL, headers, Docker API,
 // shell command, filesystem path or browser authentication can be dispatched.
 func AllowedCommand(method, path string) bool {
+	if path == "/api/agent-update" {
+		return method == "GET" || method == "POST"
+	}
 	switch path {
 	case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/api/builds/cache/operation", "/api/volumes", "/api/volumes/operation", "/api/images", "/api/images/operation", "/api/state", "/api/document", "/api/containers", "/api/container-logs", "/api/projects/proposal":
 		return method == "GET"

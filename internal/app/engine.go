@@ -74,6 +74,7 @@ type Manager struct {
 	StateDir      string
 	Exec          Executor
 	wg            sync.WaitGroup
+	agentUpdating bool // Protected by mu; host maintenance excludes checks as well.
 	storageBusy   bool // Protected by mu; excludes image/volume mutations and Compose work.
 	Images        *ImageService
 	imageCheckMu  sync.Mutex

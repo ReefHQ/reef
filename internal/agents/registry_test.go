@@ -329,3 +329,36 @@ func TestBuildCapabilityBelongsToCurrentConnection(t *testing.T) {
 		t.Fatal("revoked host retained capability")
 	}
 }
+
+func TestAgentUpdateCapabilityResetsOnReconnectDisableAndRevocation(t *testing.T) {
+	r, _ := Open("")
+	id, key := enrolled(t, r, "updatable")
+	gen, _ := r.Begin(id, key, "0.10.0", Protocol)
+	r.Control(id, gen, true)
+	if r.CanUpdates(id) {
+		t.Fatal("Update capability inferred from version")
+	}
+	r.Updates(id, gen, true)
+	if !r.CanUpdates(id) {
+		t.Fatal("Negotiated update capability missing")
+	}
+	next, _ := r.Begin(id, key, "0.11.0", Protocol)
+	r.Control(id, next, true)
+	if r.CanUpdates(id) {
+		t.Fatal("Update capability survived reconnection")
+	}
+	if err := r.Updates(id, gen, true); err == nil {
+		t.Fatal("Old generation enabled updates")
+	}
+	r.Updates(id, next, true)
+	r.Control(id, next, false)
+	r.Control(id, next, true)
+	if r.CanUpdates(id) {
+		t.Fatal("Update capability survived control disablement")
+	}
+	r.Updates(id, next, true)
+	r.Change(id, "", true)
+	if r.CanUpdates(id) {
+		t.Fatal("Revoked agent can update")
+	}
+}

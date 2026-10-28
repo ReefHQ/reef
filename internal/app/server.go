@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"reef/internal/agents"
+	"reef/internal/agentupdate"
 	"reef/internal/docker"
 	assets "reef/web"
 )
@@ -33,6 +34,8 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	agentUpdates   *agentupdate.Store
+	agentUpdating  bool // Protected by mu; excludes new consoles.
 	agents         *agents.Registry
 	relay          *agents.Relay
 	discovery      docker.Lister
@@ -110,6 +113,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		host := r.URL.Query().Get("host")
+		if r.URL.Path == "/api/agent-update" && host != "" && host != "local" {
+			s.centralAgentUpdate(w, r, sess, host)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/builds") && (s.agents == nil || !s.agents.CanBuilds(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade for Builds", 409)
 			return
@@ -147,6 +154,8 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 		switch r.URL.Path {
+		case "/api/agent-update":
+			s.agentUpdate(w, r)
 		case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/action", "/api/builds/cache", "/api/builds/cache/action", "/api/builds/cache/operation":
 			s.builds(w, r)
 		case "/api/volumes", "/api/volumes/operation", "/api/volumes/action":

@@ -32,6 +32,7 @@ never enabled from the version string alone.
 | volumes-v1 | 0.8.0 | Volume management |
 | images-batch-v1 | 0.8.2 | Image selections above 100 |
 | builds-v1 | 0.9.0 | Project builds and default-builder cache |
+| agent-update-v1 | 0.10.0 + optional updater setup | Agent updates from Reef |
 
 Older agents keep their supported features and show an upgrade message for new
 ones. The commands below install the version with all capabilities listed here.
@@ -42,13 +43,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.9.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.10.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.9.0
+sh prepare-agent.sh v0.10.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -80,6 +81,68 @@ default (including `[]` to disable adoption); bind each root at its identical
 absolute path. Managed state is always stored below the private agent state
 volume, independent from any `state_dir` value in this file. The browser cannot
 broaden these roots or add mounts.
+
+## Update agents from Reef
+
+After one-time preparation on each host, **Manage hosts → Update to VERSION**
+updates that agent to the exact stable version and source revision of central
+Reef. Upgrade central first. Confirmation names the host and old/new versions;
+there is no automatic upgrade, downgrade or arbitrary image/version selector.
+A development central build cannot initiate updates.
+
+For the initial setup, wait for host operations to finish and disconnect its
+consoles. Preserve the current Compose project, private `.env`, CA and named
+`agent-state` volume. Copy the current `compose.yaml`, optional
+`compose.updates.yaml` and `prepare-agent.sh` into the existing dedicated
+`reef-agent` folder. Once v0.10.0 is published, run there:
+
+```sh
+sh prepare-agent.sh v0.10.0 --enable-updates
+docker compose config --quiet
+docker compose pull reef-agent agent-updater
+docker compose up -d --no-deps reef-agent agent-updater
+docker compose logs --tail=30 reef-agent agent-updater
+```
+
+The opt-in adds `COMPOSE_FILE=compose.yaml:compose.updates.yaml` and an independent
+`REEF_AGENT_UPDATER_IMAGE` to `.env`. Existing conflicting Compose-file overrides
+need manual review. The worker stays on its explicitly configured image while
+updating agents, so it can observe the replacement and record its outcome.
+Upgrade the worker manually when its own protocol or fixes require it; do not
+bind its image variable to `REEF_AGENT_IMAGE`.
+
+The optional worker opens no network port and uses no container network. It
+mounts the dedicated installation read/write, Docker socket, host registry
+configuration read-only, and a separate private `agent-updates` volume shared
+with the agent. It does not mount the identity volume. Do not remove either
+state volume. Its image, mounts and setup remain operator-controlled.
+
+Updates require an idle host: active Compose/build/image/volume/cache operations,
+image checks and console sessions block admission. While updating, Reef blocks
+new host mutations/checks/consoles. Other hosts and managed application containers
+continue running. The worker pulls the fixed official agent repository, verifies
+its version/revision labels, checks the existing Compose project and identity
+volume, and refuses configuration/container changes detected during download.
+Only the `REEF_AGENT_IMAGE` line changes in the private `.env`; its other values
+are preserved. The update uses explicit base/update Compose files and recreates
+only `reef-agent`, without dependencies, builds, pruning or volume renewal.
+
+A failed download or image validation leaves the current agent and `.env`
+unchanged. After recreation begins, an error or missing reconnection is reported
+as **unknown**. Inspect the host before retrying: the requested image may already
+be configured/running. There is no automatic rollback or replay. A worker restart
+also marks unfinished requests unknown rather than repeating them. The update
+has a ten-minute deadline, including confirmation that the replacement container
+uses the expected image and has reconnected to central Reef with the expected
+version/revision. Outcomes persist in `agent-updates` and are visible after page
+reload once the agent is connected. During disconnection, Reef keeps the last
+known status; an unreachable agent needs host-side inspection.
+
+The first supported setup uses the supplied Compose model, plain unquoted
+`COMPOSE_PROJECT_NAME`/`REEF_AGENT_IMAGE` entries, a private regular `.env`,
+regular Compose files without symlinked paths, one running `reef-agent` service
+and its existing named `agent-state` volume. Custom image repositories, digest
+references and alternative identity mounts require manual upgrades.
 
 ## First enrollment on a new host
 
