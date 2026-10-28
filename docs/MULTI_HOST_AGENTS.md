@@ -151,3 +151,13 @@ replayed for notification delivery. Old agents/centrals retain previous behavior
 a central connect response advertises event ingestion separately so an upgraded
 agent does not call an older central's unsupported endpoint. See WEBHOOKS.md for
 best-effort semantics, activation cutoff, queue/retry limits and excluded data.
+
+## Network management (v0.13.0)
+
+Upgraded agents advertise networks-v1 per connection. Central gates all
+/api/networks routes on that capability, never falling back to Local. The agent
+executes the same inventory, bridge creation, unused-network cleanup and explicit
+container connect/disconnect operations as Local. Built-in/unsupported networks,
+Reef administration containers/networks and stopped-container references are
+protected. Upgrade central before agents, preserving identity, CA and mounts.
+Network action events use the existing action-events-v1 outbox and webhook relay.

@@ -29,6 +29,7 @@ never enabled from the version string alone.
 | --- | --- | --- |
 | control-v1 | 0.6.0 | Projects, logs and consoles |
 | images-v1 | 0.7.0 | Image inventory and operations |
+| networks-v1 | 0.13.0 | Network inventory, creation, cleanup and container connections |
 | volumes-v1 | 0.8.0 | Volume management |
 | images-batch-v1 | 0.8.2 | Image selections above 100 |
 | builds-v1 | 0.9.0 | Project builds and default-builder cache |
@@ -44,13 +45,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.11.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.13.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.11.0
+sh prepare-agent.sh v0.13.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -222,3 +223,13 @@ private managed state holds a bounded metadata outbox and sends acknowledged
 batches through the same outbound HTTPS connection. No port or new enrollment is
 required. Older agents keep existing capabilities without action notifications.
 See [webhook setup, event fields and delivery limits](WEBHOOKS.md).
+
+## Network management (v0.13.0)
+
+Upgraded agents advertise networks-v1 per connection. Central gates all
+/api/networks routes on that capability, never falling back to Local. The agent
+executes the same inventory, bridge creation, unused-network cleanup and explicit
+container connect/disconnect operations as Local. Built-in/unsupported networks,
+Reef administration containers/networks and stopped-container references are
+protected. Upgrade central before agents, preserving identity, CA and mounts.
+Network action events use the existing action-events-v1 outbox and webhook relay.

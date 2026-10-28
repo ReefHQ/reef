@@ -76,13 +76,13 @@ existing language settings.
 
 ## Containers and Projects
 
-Containers, Projects, Images and Volumes display an animated loading indicator
+Containers, Projects, Images, Volumes and Networks display an animated loading indicator
 for their first inventory read and a refreshing indicator during later reads.
 Previously loaded rows remain visible. A reserved status area avoids shifting
 filters/tables on refresh, and reduced-motion preferences disable the animation.
 An unavailable inventory ends the loading state and reports the error.
 
-Reloading the same browser tab restores the Containers/Projects/Images/Volumes/Builds view, open
+Reloading the same browser tab restores the Containers/Projects/Images/Volumes/Networks/Builds view, open
 managed project, Docker host, filters and page scroll position. Navigation is
 stored in sessionStorage for that tab; unavailable projects return to the
 overview and revoked/missing hosts fall back to Local. If browser storage is
@@ -167,6 +167,44 @@ older agents retain their existing features and request an upgrade for Images.
 Selections above 100 also require images-batch-v1 (agent v0.8.2). Older image
 agents keep small operations available and show a clear upgrade message for a
 large selection. Upgrade central before agents and preserve identity/CA/config.
+
+The approved feature sequence is tracked in [the roadmap](docs/ROADMAP.md).
+
+## Networks
+
+**Networks** lists the selected host's Docker networks with a total navigation
+count, search and used/unused filters. Details show driver, scope, creation time,
+Compose project, internal/IPv6/attachable flags, subnets, gateways and referencing
+containers, including stopped containers. Driver options, IPAM options and
+arbitrary labels are not exposed.
+
+Create network uses the local bridge driver with automatic IP addressing. Select
+unused networks for deletion or choose Review unused networks to confirm exact
+candidates. Up to 2000 networks can be selected per operation. Networks with any
+container reference or endpoint are retained. Built-in networks, non-local scopes,
+non-bridge drivers and networks used by Reef administration containers are
+inspection-only. Mutations use immutable IDs and recheck configuration/usage;
+Docker commands never force removal or prune globally.
+
+In network details, choose a running container and Connect or Disconnect after
+confirmation. Reef containers and their Compose companions, shared network
+namespaces and host/none network modes are protected. These are live changes:
+they can interrupt application traffic and do not update Compose files. Configure
+persistent network connections in Compose before recreating a managed project.
+Other Docker clients can still change the engine concurrently.
+
+Network operations share the existing host-wide mutation lock with Compose,
+images, volumes, builds and agent updates. Accepted operations run independently
+of the browser, with a five-minute deadline and per-target results. Reports are
+in-memory; refresh inventory after a process restart or uncertain outcome before
+retrying. Inventory reads are limited to 2000 networks/10000 containers and ten
+seconds. Successful reports auto-hide; dismissed failed/partial results stay
+hidden after reload. Action metadata is included in existing webhooks.
+
+Remote agents require the negotiated **networks-v1** capability (v0.13.0).
+Upgrade central first, then agents, preserving their existing identity/configuration;
+older agents keep their other features and display an upgrade message for Networks.
+The view, filters and page position are restored across reloads.
 
 ## Volumes
 
@@ -511,7 +549,7 @@ jobs run on merge requests and tags, without repeating after a merge.
 ### Versioning
 
 Reef uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The `VERSION` file is the
-source of truth for the application version, currently `0.12.3` in development.
+source of truth for the application version, currently `0.13.0` in development.
 Release tags
 use the matching `v` prefix, for example `v0.1.0`; a version in this file alone
 does not mean a release has been tagged or published.

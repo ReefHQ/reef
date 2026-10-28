@@ -131,6 +131,10 @@ func (s *Server) Handler() http.Handler {
 			}
 		}
 
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/networks") && (s.agents == nil || !s.agents.CanNetworks(host)) {
+			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage networks", 409)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/volumes") && (s.agents == nil || !s.agents.CanVolumes(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage volumes", 409)
 			return
@@ -162,6 +166,8 @@ func (s *Server) Handler() http.Handler {
 			s.agentUpdate(w, r)
 		case "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/action", "/api/builds/cache", "/api/builds/cache/action", "/api/builds/cache/operation":
 			s.builds(w, r)
+		case "/api/networks", "/api/networks/operation", "/api/networks/action":
+			s.networkCatalog(w, r)
 		case "/api/volumes", "/api/volumes/operation", "/api/volumes/action":
 			s.volumeCatalog(w, r)
 		case "/api/images", "/api/images/operation", "/api/images/action":
