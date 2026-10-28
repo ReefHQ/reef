@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — Unreleased
+
+- Group resource views before Statistics and History in navigation; replace the long README with a friendly quick start and linked usage/setup/development guides.
+
+- Add persistent action history for Local and remote hosts, with grouped operation outcomes, filters, details and stable pagination.
+- Record metadata independently of enabled webhooks, with bounded asynchronous local writes, retention and explicit persistence/loss warnings.
+- Deduplicate remote event retries and preserve Docker operation results when history storage fails.
+
 ## 0.14.0 — Unreleased
 
 - Add Statistics for Local and upgraded agents: CPU, memory, network and block I/O with explicit counters/rates, search, state filters and 32-container pages.

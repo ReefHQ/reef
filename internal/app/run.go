@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reef/internal/agents"
+	"reef/internal/history"
 	"reef/internal/notifications"
 	"strings"
 	"syscall"
@@ -61,10 +62,17 @@ func Run() {
 		log.Print("Action notifications unavailable; inspect private notification state")
 		s.webhooks = notifications.Unavailable(false)
 	}
-	m.Notify = s.webhooks.Emit
+	s.history, e = history.Open(c.StateDir)
+	if e != nil {
+		log.Print("Action history unavailable; inspect private history state")
+		s.history = history.Unavailable()
+	}
+	m.Notify = s.recordEvent
 	webhookContext, stopWebhooks := context.WithCancel(context.Background())
 	webhookStopped := make(chan struct{})
-	defer func() { stopWebhooks(); <-webhookStopped }()
+	historyStopped := make(chan struct{})
+	defer func() { stopWebhooks(); <-webhookStopped; <-historyStopped }()
+	go func() { defer close(historyStopped); s.history.Run(webhookContext) }()
 	go func() { defer close(webhookStopped); s.webhooks.Run(webhookContext) }()
 	m.startImageChecks(checksContext)
 	s.agents, e = agents.Open(c.StateDir)

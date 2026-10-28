@@ -220,3 +220,5 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .catalog-operation-heading{position:sticky;top:-13px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--warning);margin:-13px -15px 10px;padding:10px 15px;border-bottom:1px solid var(--warning-border)}.catalog-operation-heading strong{min-width:0;overflow-wrap:anywhere}.notice .catalog-operation-heading button{flex:none;margin:0}
 
 #stats-view .filter-bar{margin-bottom:14px}.stats-table{min-width:1040px}.stats-table td:first-child{min-width:150px;max-width:250px;overflow-wrap:anywhere}.stats-table td{font-variant-numeric:tabular-nums}.stats-table td small{display:block;margin-top:5px}
+
+#history-view .filter-bar{margin-bottom:14px}.history-table{min-width:1000px}.history-table td{max-width:260px;overflow-wrap:anywhere}.history-table td small{display:block;margin-top:5px}

@@ -3,15 +3,19 @@
 The user approved implementing these features in this order. Each feature is
 prepared on a dedicated branch, with a SemVer bump and Local/remote parity.
 The user signs commits and pushes; do not mix later features into a pending branch.
+Use `Refs #IID` in commit messages and merge request descriptions, without automatic
+closing keywords. After validation, move the issue to `Done` (removing `Doing`/
+`To Do`), then close it explicitly. Merge alone does not complete publication or
+remaining validation.
 
 1. [#22](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/22) — **Network management — merged and published (0.13.0).**
    Inventory/details, local bridge creation, targeted unused-network deletion,
    batch cleanup and live container connections, with host isolation and protections.
-2. [#23](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/23) — **Live container statistics — implemented, awaiting review/release (0.14.0).** CPU, memory, network and block I/O on
+2. [#23](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/23) — **Live container statistics — merged and published (0.14.0).** CPU, memory, network and block I/O on
    Local and agents; visible-page polling, bounded sampling and no disk history.
-3. [#24](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/24) — **Action history in Reef — next.** Consult operations/results in the UI, complementing
+3. [#24](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/24) — **Action history in Reef — implemented, awaiting review/release (0.15.0).** Consult operations/results in the UI, complementing
    external webhooks; keep secrets, terminal content and application logs excluded.
-4. [#25](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/25) — **Monitoring alerts.** Agent disconnection, unhealthy containers and restart
+4. [#25](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/25) — **Monitoring alerts — next.** Agent disconnection, unhealthy containers and restart
    loops, with recovery notifications, deduplication and configurable thresholds.
 5. [#26](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/26) — **Multiple users and access permissions.** Individual accounts, read-only/admin
    roles and per-host authorization enforced centrally and on every route/console.
@@ -23,4 +27,4 @@ The user signs commits and pushes; do not mix later features into a pending bran
    communication errors without exposing credentials or private transport data.
 
 The source remains authoritative for which features are actually available.
-Items 3–8 are approved future work, not implemented or enabled by this document.
+Items 4–8 are approved future work, not implemented or enabled by this document.

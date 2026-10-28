@@ -170,3 +170,11 @@ and bounded non-streaming Docker stats reads with local cache/concurrency limits
 The browser aborts reads on view/visibility/host changes; relay cancellation uses
 the existing command lifecycle. Rate baselines stay in browser memory for at most
 one 32-container page. There is no persistent or unsolicited telemetry collection.
+
+## Central action history (v0.15.0)
+
+History consumes the existing action-events-v1 metadata after registry binding.
+Notification storage and history are independent sinks with separate durable
+deduplication; a ready sink's failure leaves the metadata batch retryable. The
+central-only /api/history read endpoint never relays to an agent or falls back
+to Local for a remote host filter. See [history architecture](ACTION_HISTORY.md).

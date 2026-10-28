@@ -98,3 +98,7 @@ test('Statistics restoration opens the lazy view first then waits for its first 
  test('explicit Statistics interactions override pending saved restoration and persist its current page',async()=>{
  const p=page({view:'stats',host:'local',statsOffset:32,filters:{'stats-search':'old'},scroll:320});await p.start();p.nodes.get('#stats-search').value='new';p.window.reefStatsOffset=64;p.window.dispatchEvent({type:'reef-stats-interaction'});p.window.reefStatsReady=true;p.window.dispatchEvent({type:'reef-stats-ready'});p.flushFrames();assert.equal(p.nodes.get('#stats-search').value,'new');assert.equal(p.reloadState().statsOffset,64);assert.equal(p.window.scrollY,0);
  });
+
+test('History reload waits for central records before restoring its view, filters, cursor and scroll',async()=>{
+ const p=page({view:'history',host:'local',historyOffset:50,historyCursor:'99',filters:{'history-search':'db'},scroll:360});await p.start();assert.equal(p.nodes.get('#history-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefHistoryOffset=50;p.window.reefHistoryCursor='99';p.window.reefHistoryReady=true;p.window.dispatchEvent({type:'reef-history-ready'});p.flushFrames();assert.equal(p.nodes.get('#history-search').value,'db');assert.equal(p.window.scrollY,360);assert.equal(p.reloadState().historyOffset,50);assert.equal(p.reloadState().historyCursor,'99');
+});
