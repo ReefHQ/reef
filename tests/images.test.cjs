@@ -55,3 +55,15 @@ test('image operation reports progress without replacing rows on every update',a
  const p=page({report});await p.settle();const lines=p.find('images-operation').children;assert.match(lines[0].textContent,/121 \/ 250 images processed/);assert.match(lines[0].textContent,/batch 2 \/ 3/);assert.match(lines[1].textContent,/Image retained/);assert.equal(p.find('images-cleanup').disabled,true);
  const originalRow=p.find('images-rows').children[0];report.completed=122;await p.timers.at(-1)();assert.equal(p.find('images-rows').children[0],originalRow);assert.match(p.find('images-operation').children[0].textContent,/122 \/ 250 images processed/);report.running=false;report.skipped=128;await p.timers.at(-1)();assert.match(p.find('images-operation').children[0].textContent,/stopped/);assert.match(p.find('images-operation').children[0].textContent,/128 not processed/);
 });
+
+test('successful image cleanup hides its progress panel and stays hidden on later polls',async()=>{
+ const report={id:'cleanup-job',action:'cleanup',running:true,total:1,completed:0,results:[]},p=page({report});await p.settle();assert.equal(p.find('images-operation').hidden,false);
+ report.running=false;report.completed=1;report.results=[{id:'image',ok:true,message:'Removed'}];await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);assert.equal(p.find('images-select-all').disabled,false);
+});
+test('partial image cleanup can be dismissed without reappearing and dismissal stays scoped to its host and operation',async()=>{
+ const report={id:'cleanup-job',action:'cleanup',running:false,total:1,completed:1,results:[{id:'image',ok:false,message:'Image retained'}]},p=page({report});await p.settle();assert.equal(p.find('images-operation').hidden,false);
+ await p.find('images-operation').children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
+ await p.host('ego',['images-v1']);await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,false);
+ await p.host('local');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
+ report.id='new-job';report.running=true;report.results=[];await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,false);assert.equal(p.find('images-operation').children.some(n=>n.textContent==='Dismiss'),false);
+});

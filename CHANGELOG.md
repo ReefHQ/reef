@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1 — Unreleased
+
+- Hide image, volume and build-cache operation panels after successful completion.
+  Keep failed/partial outcomes readable with a dismiss control that survives polling.
+
 ## 0.12.0 — Unreleased
 
 - Add explicit local launcher --lan and --local modes, preserve existing private
