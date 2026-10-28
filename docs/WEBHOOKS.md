@@ -123,3 +123,7 @@ A crash or timeout after a receiver accepted a message can lead to a duplicate.
 A process killed during an operation may leave only its started event. Central
 queue/remote outbox state survives normal restarts; operation retries are separate
 from webhook retries and are never triggered by webhook delivery.
+
+Network actions (v0.13.0): create, remove, cleanup, connect and disconnect emit
+started/results metadata through the same Local/remote notification pipeline.
+No network driver options, IPAM options or container output enter events.

@@ -86,3 +86,7 @@ test('Volumes restoration waits for volume inventory and restores its filters an
 test('Builds view restoration waits for its host state without opening the project editor',async()=>{
  const p=page({view:'builds',host:'local',scroll:180});await p.start();assert.equal(p.nodes.get('#builds-view').hidden,false);assert.equal(p.documentLoads,0);p.window.reefBuildsReady=true;p.window.dispatchEvent({type:'reef-builds-ready'});p.flushFrames();assert.equal(p.window.scrollY,180);assert.equal(p.reloadState().view,'builds');
 });
+
+ test('Networks restoration waits for inventory and restores filters and scroll',async()=>{
+ const p=page({view:'networks',host:'local',filters:{'networks-search':'app'},scroll:280});await p.start();assert.equal(p.nodes.get('#networks-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefNetworksReady=true;p.window.dispatchEvent({type:'reef-networks-ready'});p.flushFrames();assert.equal(p.window.scrollY,280);assert.equal(p.nodes.get('#networks-search').value,'app');assert.equal(p.reloadState().view,'networks');
+ });

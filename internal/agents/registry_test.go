@@ -362,3 +362,38 @@ func TestAgentUpdateCapabilityResetsOnReconnectDisableAndRevocation(t *testing.T
 		t.Fatal("Revoked agent can update")
 	}
 }
+
+func TestNetworkCapabilityBelongsToCurrentConnection(t *testing.T) {
+	r, _ := Open(t.TempDir())
+	id, key := enrolled(t, r, "networks")
+	gen, _ := r.Begin(id, key, "test", Protocol)
+	if err := r.Networks(id, gen, true); err != nil || r.CanNetworks(id) {
+		t.Fatal("networks requires control", err)
+	}
+	r.Control(id, gen, true)
+	r.Networks(id, gen, true)
+	if !r.CanNetworks(id) {
+		t.Fatal("missing volume capability")
+	}
+	views := r.Views()
+	found := false
+	for _, cap := range views[0].Capabilities {
+		found = found || cap == NetworksCapability
+	}
+	if !found {
+		t.Fatal(views)
+	}
+	next, _ := r.Begin(id, key, "test", Protocol)
+	r.Control(id, next, true)
+	if r.CanNetworks(id) {
+		t.Fatal("capability survived reconnect")
+	}
+	if err := r.Networks(id, gen, true); err == nil {
+		t.Fatal("stale generation accepted")
+	}
+	r.Networks(id, next, true)
+	r.Change(id, "", true)
+	if r.CanNetworks(id) {
+		t.Fatal("revoked host retained capability")
+	}
+}

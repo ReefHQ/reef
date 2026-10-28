@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0 — Unreleased
+
+- Add Networks for Local and upgraded remote agents: inventory, addressing details, bridge creation, targeted unused-network removal and cleanup.
+- Connect/disconnect running containers with confirmation; protect built-in and Reef administration networks and retain stopped-container references.
+- Restore the Networks view and filters across reloads, and include network actions in webhook events.
+
 ## 0.12.3 — Unreleased
 
 - Highlight a managed project only while its detail is displayed, keeping editor drafts when returning to Projects.

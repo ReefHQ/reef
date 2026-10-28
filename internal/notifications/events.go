@@ -17,6 +17,7 @@ var eventID = regexp.MustCompile(`^[0-9a-f]{48}$`)
 var actions = map[string]string{
 	"project": " save apply start stop register unmanage ",
 	"image":   " pull tag untag remove cleanup check ",
+	"network": " create remove cleanup connect disconnect ",
 	"volume":  " create remove cleanup ",
 	"build":   " build cache_cleanup ",
 	"agent":   " enroll rename revoke update ",
