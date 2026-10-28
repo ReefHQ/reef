@@ -46,13 +46,18 @@ async function selectProject(id){
  selected=id;dirty=false;loaded=false;revision='';$('#editor').value='';lastOp='';openedLog='';message('');render();window.dispatchEvent(new CustomEvent('reef-open-project'));
  const pending=pendingEdits.get(id);if(pending){$('#editor').value=pending.content;revision=pending.revision;loaded=true;dirty=pending.dirty;controls();}else if(!current()?.busy)await loadDocument();
 }
-function render(){
+function renderProjectNavigation(){
+ const activeProject=!$('#projects-view').hidden&&!$('#project-detail').hidden?selected:'';
  $('#project-count').textContent=projects.length;
- const picker=$('#managed-project-select'),pickerSignature=JSON.stringify(projects.map(p=>[p.id,p.name]));if(picker.dataset.signature!==pickerSignature){picker.replaceChildren(new Option('Choose a project',''),...projects.map(p=>new Option(p.name,p.id)));picker.dataset.signature=pickerSignature;}picker.value=selected;
- const buttons=projects.map(p=>{const button=document.createElement('button');button.type='button';button.dataset.focusKey='managed-'+p.id;button.className='project'+(p.id===selected?' active':'');button.append(textNode('strong',p.name),textNode('small',p.busy?'Operation in progress':p.operation.needs_start?(['failed','interrupted'].includes(p.operation.phase)?'Needs attention':'Start available'):p.operation.phase==='failed'?'Last action failed':'Managed'));button.addEventListener('click',()=>selectProject(p.id));return button;});
- const signature=JSON.stringify(projects.map(p=>[p.id,p.name,p.busy,p.operation.phase,p.operation.needs_start]))+selected;
+ const picker=$('#managed-project-select'),pickerSignature=JSON.stringify(projects.map(p=>[p.id,p.name]));if(picker.dataset.signature!==pickerSignature){picker.replaceChildren(new Option('Choose a project',''),...projects.map(p=>new Option(p.name,p.id)));picker.dataset.signature=pickerSignature;}picker.value=activeProject;
+ const buttons=projects.map(p=>{const button=document.createElement('button');button.type='button';button.dataset.focusKey='managed-'+p.id;button.className='project'+(p.id===activeProject?' active':'');button.append(textNode('strong',p.name),textNode('small',p.busy?'Operation in progress':p.operation.needs_start?(['failed','interrupted'].includes(p.operation.phase)?'Needs attention':'Start available'):p.operation.phase==='failed'?'Last action failed':'Managed'));button.addEventListener('click',()=>selectProject(p.id));return button;});
+ const signature=JSON.stringify(projects.map(p=>[p.id,p.name,p.busy,p.operation.phase,p.operation.needs_start]))+activeProject;
  if($('#projects').dataset.signature!==signature){replaceKeepingFocus($('#projects'),buttons);$('#projects').dataset.signature=signature;}
  $('#no-managed-projects').hidden=projects.length>0;
+}
+window.addEventListener('reef-view-changed',renderProjectNavigation);
+function render(){
+ renderProjectNavigation();
  const p=current();if(!p){controls();return;}
  $('#project-name').textContent=p.name;$('#project-path').textContent=p.directory;$('#project-identity').textContent=`${p.project_name} · ${p.files.length} Compose file(s)`;$('#file-name').textContent=p.files[0];$('#file-context').textContent=p.files.length>1?`${p.files.length-1} additional file(s) preserved in order`:'Main Compose file';$('#unmanage-current').hidden=!p.registered_in_ui;
  const op=p.operation;const status=op.phase==='completed'?'Completed':op.phase==='failed'?'Failed':op.phase==='interrupted'?'Interrupted':op.running?'In progress':'None';
