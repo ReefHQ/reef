@@ -10,6 +10,12 @@ no database and no CDN.
 
 **In development: 0.17.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
+> **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
+> and **your existing Reef password**. Reef now uses individual accounts, so you’ll
+> need to sign in again after the upgrade. You can then change your password and
+> manage users from your username in the header.
+> [Accounts and upgrade details](docs/USERS.md#upgrade-an-existing-installation)
+
 ## 🚀 Get your feet wet
 
 From the Reef checkout, with a running local Linux Docker engine, Docker CLI,
