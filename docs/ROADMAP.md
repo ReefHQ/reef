@@ -15,9 +15,9 @@ remaining validation.
    Local and agents; visible-page polling, bounded sampling and no disk history.
 3. [#24](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/24) — **Action history in Reef — merged and published (0.15.0).** Consult operations/results in the UI, complementing
    external webhooks; keep secrets, terminal content and application logs excluded.
-4. [#25](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/25) — **Monitoring alerts — implemented, awaiting review/release (0.16.0).** Agent disconnection, unhealthy containers and restart
+4. [#25](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/25) — **Monitoring alerts — merged and published (0.16.0).** Agent disconnection, unhealthy containers and restart
    loops, with recovery notifications, deduplication and configurable thresholds.
-5. [#26](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/26) — **Multiple users and access permissions.** Individual accounts, read-only/admin
+5. [#26](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/26) — **Multiple users and access permissions — implemented, awaiting review/release (0.17.0).** Individual accounts, read-only/admin
    roles and per-host authorization enforced centrally and on every route/console.
 6. [#27](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/27) — **Volume backup and restore.** Manual/scheduled backups and guided restoration;
    define storage, consistency while applications write and retention before coding.
@@ -27,4 +27,4 @@ remaining validation.
    communication errors without exposing credentials or private transport data.
 
 The source remains authoritative for which features are actually available.
-Items 5–8 are approved future work, not implemented or enabled by this document.
+Items 6–8 are approved future work, not implemented or enabled by this document.

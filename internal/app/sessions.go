@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reef/internal/accounts"
 	"time"
 )
 
@@ -31,7 +32,11 @@ func sessionKey(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 func (s *Server) sessionSignature(payload []byte) []byte {
-	mac := hmac.New(sha256.New, s.password[:])
+	key := s.password[:]
+	if s.accounts != nil {
+		key = s.accounts.Key()
+	}
+	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte("reef-auth-sessions-v1\x00"))
 	mac.Write(payload)
 	return mac.Sum(nil)
@@ -69,7 +74,11 @@ func (s *Server) saveSessions(sessions map[string]session) error {
 	if e != nil || path == "" {
 		return e
 	}
-	payload, e := json.Marshal(sessionState{Version: 1, Sessions: sessions})
+	version := 1
+	if s.accounts != nil {
+		version = 2
+	}
+	payload, e := json.Marshal(sessionState{Version: version, Sessions: sessions})
 	if e != nil {
 		return e
 	}
@@ -105,7 +114,7 @@ func (s *Server) restoreSessions() error {
 	signature, e := hex.DecodeString(signed.Signature)
 	valid = valid && e == nil && hmac.Equal(signature, s.sessionSignature(signed.Payload))
 	var state sessionState
-	valid = valid && json.Unmarshal(signed.Payload, &state) == nil && state.Version == 1 && len(state.Sessions) <= maxSessions
+	valid = valid && json.Unmarshal(signed.Payload, &state) == nil && state.Version == s.sessionVersion() && len(state.Sessions) <= maxSessions
 	if valid {
 		for key, sess := range state.Sessions {
 			fingerprint, e1 := hex.DecodeString(key)
@@ -125,7 +134,7 @@ func (s *Server) restoreSessions() error {
 	s.sessions = map[string]session{}
 	now := time.Now()
 	for key, sess := range state.Sessions {
-		if now.Before(sess.Expires) {
+		if now.Before(sess.Expires) && s.userSessionValid(sess) {
 			s.sessions[key] = sess
 		}
 	}
@@ -146,15 +155,25 @@ func (s *Server) nextSessions() map[string]session {
 	return result
 }
 
-func (s *Server) createSession() (string, error) {
+func (s *Server) createSession() (string, error) { return s.createUserSession(accounts.User{}) }
+func (s *Server) createUserSession(u accounts.User) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.accounts != nil && !s.userSessionValid(session{UserID: u.ID, Revision: u.Revision}) {
+		return "", errors.New("Account changed; sign in again")
+	}
 	next := s.nextSessions()
-	if len(next) >= maxSessions {
+	owned := 0
+	for _, sess := range next {
+		if u.ID != "" && sess.UserID == u.ID {
+			owned++
+		}
+	}
+	if owned >= 32 || len(next) >= maxSessions {
 		return "", errSessionLimit
 	}
 	id := randomID()
-	next[sessionKey(id)] = session{CSRF: randomID(), Expires: time.Now().Add(sessionLifetime)}
+	next[sessionKey(id)] = session{CSRF: randomID(), Expires: time.Now().Add(sessionLifetime), UserID: u.ID, Revision: u.Revision}
 	if e := s.saveSessions(next); e != nil {
 		return "", e
 	}
@@ -174,4 +193,18 @@ func (s *Server) removeSession(token string) error {
 	}
 	s.sessions = next
 	return nil
+}
+
+func (s *Server) sessionVersion() int {
+	if s.accounts != nil {
+		return 2
+	}
+	return 1
+}
+func (s *Server) userSessionValid(sess session) bool {
+	if s.accounts == nil {
+		return true
+	}
+	u, ok := s.accounts.User(sess.UserID)
+	return ok && !u.Disabled && u.Revision == sess.Revision
 }

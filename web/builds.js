@@ -2,15 +2,16 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('builds-view');
  let host=window.reefHost||'local',epoch=0,projects=[],selected='',detail=null,history=[],cache=[],cacheSelection=new Set(),cacheBusy=false,cacheLoading=false,cacheLoaded=false,stateLoading=false,stateLoaded=false,stateFailed=false,detailLoading=false,submitting=false,logID='',logProject='',timer,hostsReady=false;
+ const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('builds-v1');
  const active=()=>projects.find(p=>p.id===selected);
  const bytes=n=>{const units=['B','KiB','MiB','GiB','TiB'];let i=0;while(n>=1024&&i<4){n/=1024;i++;}return `${n.toFixed(i?1:0)} ${units[i]}`;};
  function notice(text,error=false){find('builds-error').textContent=text;find('builds-error').hidden=!text;find('builds-error').className='notice'+(error?' error':'');}
  function controls(){
-  const p=active();find('builds-refresh').disabled=!available()||stateLoading;find('build-submit').disabled=!available()||!p||p.busy||!detail?.services?.length||detailLoading||submitting||cacheBusy;
+  const p=active();find('builds-refresh').disabled=!available()||stateLoading;find('build-submit').disabled=!canWrite()||!available()||!p||p.busy||!detail?.services?.length||detailLoading||submitting||cacheBusy;
   find('builds-loading').hidden=!(stateLoading||detailLoading||(!stateLoaded&&!stateFailed&&available()));find('builds-rows').setAttribute('aria-busy',String(stateLoading));
-  find('build-cache-refresh').disabled=!available()||cacheLoading;find('build-cache-delete').disabled=!available()||cacheBusy||!cacheLoaded||!cacheSelection.size||projects.some(p=>p.busy);
-  find('build-cache-cleanup').disabled=!available()||cacheBusy||!cacheLoaded||!cache.some(row=>row.reclaimable&&!row.mutable)||projects.some(p=>p.busy);
+  find('build-cache-refresh').disabled=!available()||cacheLoading;find('build-cache-delete').disabled=!canWrite()||!available()||cacheBusy||!cacheLoaded||!cacheSelection.size||projects.some(p=>p.busy);
+  find('build-cache-cleanup').disabled=!canWrite()||!available()||cacheBusy||!cacheLoaded||!cache.some(row=>row.reclaimable&&!row.mutable)||projects.some(p=>p.busy);
   find('build-cache-loading').hidden=!cacheLoading;find('build-cache-rows').setAttribute('aria-busy',String(cacheLoading));
  }
  function renderProjects(){
@@ -49,7 +50,7 @@
  function renderCache(){
   const query=find('build-cache-search').value.toLowerCase().trim(),rows=cache.filter(row=>`${row.id} ${row.type}`.toLowerCase().includes(query));
   find('build-cache-summary').textContent=cacheLoaded?`${cache.length} cache records · ${bytes(cache.reduce((n,r)=>n+r.size,0))} cumulative size; shared layers are not an estimate of freed space.`:'';
-  const nodes=rows.map(row=>{const tr=document.createElement('tr'),selection=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.checked=cacheSelection.has(row.id);check.disabled=cacheBusy||!row.reclaimable||row.mutable||!cacheLoaded;check.setAttribute('aria-label',`Select cache ${row.id}`);check.dataset.focusKey='cache-'+row.id;check.addEventListener('change',()=>{if(check.checked)cacheSelection.add(row.id);else cacheSelection.delete(row.id);controls();});selection.append(check);tr.append(selection,textNode('td',row.id),textNode('td',row.type),textNode('td',bytes(row.size)),textNode('td',row.last_used||row.created||'Unknown'),textNode('td',!row.reclaimable?'In use':row.mutable?'Mutable · retained':row.shared?'Reclaimable · shared':'Reclaimable'));return tr;});replaceKeepingFocus(find('build-cache-rows'),nodes);find('build-cache-empty').hidden=!!rows.length;find('build-cache-empty').textContent=cacheLoaded?'No cache records match this selection.':'Use Refresh cache to read the default Docker builder.';controls();
+  const nodes=rows.map(row=>{const tr=document.createElement('tr'),selection=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.checked=cacheSelection.has(row.id);check.disabled=!canWrite()||cacheBusy||!row.reclaimable||row.mutable||!cacheLoaded;check.setAttribute('aria-label',`Select cache ${row.id}`);check.dataset.focusKey='cache-'+row.id;check.addEventListener('change',()=>{if(check.checked)cacheSelection.add(row.id);else cacheSelection.delete(row.id);controls();});selection.append(check);tr.append(selection,textNode('td',row.id),textNode('td',row.type),textNode('td',bytes(row.size)),textNode('td',row.last_used||row.created||'Unknown'),textNode('td',!row.reclaimable?'In use':row.mutable?'Mutable · retained':row.shared?'Reclaimable · shared':'Reclaimable'));return tr;});replaceKeepingFocus(find('build-cache-rows'),nodes);find('build-cache-empty').hidden=!!rows.length;find('build-cache-empty').textContent=cacheLoaded?'No cache records match this selection.':'Use Refresh cache to read the default Docker builder.';controls();
  }
  async function loadCache(){
   if(cacheLoading||!available())return;const current=epoch;cacheLoading=true;controls();

@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const launcherUsage = "Usage: ./reef-local.sh [up [--lan|--local]|stop|status|password]"
+const launcherUsage = "Usage: ./reef-local.sh [up [--lan|--local]|stop|status|password|recover-admin USERNAME]"
 
 func networkMode(action string, options []string) (string, error) {
 	mode := ""

@@ -13,8 +13,8 @@
  function filters(){const saved=window.ReefNavigation?.read();if(saved?.view==='alerts'&&saved.host===host){for(const id of ['alerts-search','alerts-scope','alerts-result']){const f=find(id),v=saved.filters[id]||'';if(f.tagName!=='SELECT'||[...f.options].some(o=>o.value===v))f.value=v;}}}
  filters();
  function controls(){
-  find('alerts-refresh').disabled=loading||saving;find('alerts-save').disabled=!policyLoaded||saving;
-  for(const id of ['alerts-enabled',...Object.values(fields)])find(id).disabled=!policyLoaded||saving;
+  find('alerts-refresh').disabled=loading||saving;find('alerts-save').disabled=window.reefAccess?.globalAdmin===false||!policyLoaded||saving;
+  for(const id of ['alerts-enabled',...Object.values(fields)])find(id).disabled=window.reefAccess?.globalAdmin===false||!policyLoaded||saving;
   find('alerts-loading').hidden=!loading;find('alerts-loading-text').textContent=data?'Refreshing monitoring state…':'Loading monitoring state…';find('alerts-rows').setAttribute('aria-busy',String(loading));
  }
  function policy(c){find('alerts-enabled').checked=c.enabled;for(const [key,id]of Object.entries(fields))find(id).value=String(c[key]);policyLoaded=true;}

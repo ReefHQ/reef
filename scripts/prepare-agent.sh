@@ -7,14 +7,14 @@ installation=$(pwd -P)
 [ "$(basename "$installation")" = reef-agent ] || { echo 'Run from the dedicated reef-agent folder.' >&2;exit 1; }
 parent=$(dirname "$installation")
 [ "$parent" != / ] || { echo 'The installation parent cannot be the filesystem root.' >&2;exit 1; }
-version=${1:-v0.16.0}
+version=${1:-v0.17.0}
 updates=${2:-}
 case "$updates" in ''|--enable-updates) ;; *) echo 'Usage: sh prepare-agent.sh VERSION [--enable-updates]' >&2;exit 1;; esac
 if [ "$updates" = --enable-updates ]; then
  [ -f compose.updates.yaml ] && [ ! -L compose.updates.yaml ] || { echo 'Copy compose.updates.yaml into this installation first.' >&2;exit 1; }
  if grep -q '^COMPOSE_FILE=' .env && ! grep -Fxq 'COMPOSE_FILE=compose.yaml:compose.updates.yaml' .env; then echo 'Review the existing COMPOSE_FILE before enabling agent updates.' >&2;exit 1;fi
 fi
-printf '%s\n' "$version" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || { echo 'Pass a published stable version, e.g. v0.16.0.' >&2;exit 1; }
+printf '%s\n' "$version" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || { echo 'Pass a published stable version, e.g. v0.17.0.' >&2;exit 1; }
 if [ "$updates" = --enable-updates ]; then
  printf '%s\n' "$version" | awk -F. '{sub(/^v/,"",$1);if($1==0 && $2<10)exit 1}' || { echo 'Agent updates require v0.10.0 or newer.' >&2;exit 1; }
 fi

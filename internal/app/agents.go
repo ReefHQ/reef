@@ -157,7 +157,7 @@ func (s *Server) hosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" {
-		writeJSON(w, map[string]any{"enabled": s.cfg.AgentsEnabled, "hosts": s.agents.Views(), "version": buildinfo.Version, "updates_available": agentupdate.ValidTarget(buildinfo.Version, buildinfo.Revision)})
+		writeJSON(w, map[string]any{"enabled": s.cfg.AgentsEnabled, "hosts": s.filterHosts(s.requestUser(r), s.agents.Views()), "local_allowed": s.requestUser(r).Allows("local"), "version": buildinfo.Version, "updates_available": agentupdate.ValidTarget(buildinfo.Version, buildinfo.Revision)})
 		return
 	}
 	switch r.Form.Get("action") {

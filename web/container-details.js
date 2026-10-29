@@ -7,9 +7,9 @@
   const group=document.createElement('div');group.className='container-log-actions';
   const logs=node('button','Logs','compact-button');logs.type='button';logs.disabled=!!c.inventory_only;if(c.inventory_only)logs.title='Remote logs are not available yet';logs.dataset.focusKey='container-logs-'+c.id;logs.setAttribute('aria-label',`Logs for ${c.name}`);
   logs.addEventListener('click',()=>{if(dialog.open)dialog.close();window.openContainerLogs({containers:[c],id:c.id});});group.append(logs);
-  if(c.state==='running'&&!c.inventory_only){
+  if(c.state==='running'&&!c.inventory_only&&window.reefAccess?.canWrite!==false){
    const console=node('button','Console','compact-button');console.type='button';console.dataset.focusKey='container-console-'+c.id;console.setAttribute('aria-label',`Console for ${c.name}`);console.addEventListener('click',()=>{if(dialog.open)dialog.close();window.openContainerConsole(c);});group.append(console);
-  }else{const console=node('button','Console','compact-button');console.type='button';console.disabled=true;console.title=c.inventory_only?'Remote consoles are not available yet':'Console access requires a running container';group.append(console);}
+  }else{const console=node('button','Console','compact-button');console.type='button';console.disabled=true;console.title=window.reefAccess?.canWrite===false?'Console access requires an admin account':c.inventory_only?'Remote consoles are not available yet':'Console access requires a running container';group.append(console);}
   return group;
  }
  function render(c){

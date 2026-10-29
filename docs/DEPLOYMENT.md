@@ -97,7 +97,7 @@ provided examples are not executed automatically:
   is the default authorized root and is mounted at the identical absolute path.
   For HTTP over the LAN, `secure_cookie` is false; if using internal HTTPS, set
   it true and preserve the exact Host. No external domain is required.
-- The generated browser password is stored privately in `secrets/password.txt`
+- The initial `admin` password is stored privately in `secrets/password.txt`
   without being printed by preparation. Use it for the initial login. Existing
   password/config/state are preserved; do not replace registrations or sessions
   when updating an already installed Reef.
@@ -164,3 +164,13 @@ preservation on failure. It never contacts a registry or production host.
 Go tests additionally verify health metadata and unchanged API authentication.
 The production Compose recipe can be checked with disposable placeholder files;
 never use a real target `.env` merely to validate the example locally.
+
+
+## Individual-account migration (v0.17.0)
+
+The first central startup creates username `admin` with the existing private
+password. Shared-login cookies are invalidated; sign in again with that username.
+Existing projects, agents and Docker resources are not re-enrolled or modified.
+Back up private auth state and preserve the original bootstrap password file for
+explicit offline recovery. Established account passwords are managed in Reef,
+not reset automatically when that file changes. See [accounts and recovery](USERS.md).

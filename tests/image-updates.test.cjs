@@ -43,3 +43,5 @@ test('service metadata renders as text and failed manual requests restore contro
 test('upgraded remote hosts can run manual image checks',async()=>{
  const p=page({host:'remote',capabilities:['control-v1']});const pending=p.check();assert.equal(p.requests.length,1);p.resolve();await pending;assert.equal(p.project.image_updates.checking,true);
 });
+
+test('viewer can read update status but cannot start a manual registry check',async()=>{const p=page();p.window.reefAccess={canWrite:false};p.window.ReefImageUpdates.render(p.project);assert.equal(p.nodes.get('#check-image-updates').disabled,true);await p.check();assert.equal(p.requests.length,0)});

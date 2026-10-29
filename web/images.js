@@ -2,6 +2,7 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('images-view');
  let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,operation='',timer,hostsReady=false;
+ const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('images-v1');
  const bytes=value=>{if(value<1024)return value+' B';const units=['KiB','MiB','GiB','TiB'];let n=value/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toFixed(1)+' '+units[i];};
  const name=row=>row.tags?.join(', ')||'<untagged>';
@@ -14,9 +15,9 @@
   find('images-rows').setAttribute('aria-busy',String(pending));
   if(!hasSnapshot){find('images-results').textContent='';find('images-empty').hidden=false;find('images-empty').textContent=pending?'Loading images…':available()?'Inventory unavailable. Use Refresh to try again.':'Upgrade the agent to manage images.';}
 
-  const disabled=!available()||busy||loading||!loaded;
+  const disabled=!canWrite()||!available()||busy||loading||!loaded;
   find('images-refresh').disabled=!available()||loading;
-  find('images-pull-submit').disabled=!available()||busy;
+  find('images-pull-submit').disabled=!canWrite()||!available()||busy;
   find('images-delete').disabled=disabled||!selected.size;
   find('images-cleanup').disabled=disabled||!rows.some(row=>!row.containers.length&&(find('images-cleanup-mode').value==='all'||!row.tags?.length));
   find('images-select-all').disabled=disabled;
@@ -38,9 +39,9 @@
   find('images-results').textContent=`${filtered.length} shown · ${selected.size} selected`;
   const nodes=filtered.map(row=>{
    const tr=document.createElement('tr'),check=document.createElement('input'),selection=document.createElement('td'),title=document.createElement('td'),actions=document.createElement('td');
-   check.type='checkbox';check.checked=selected.has(row.id);check.disabled=busy||!!row.containers.length;check.setAttribute('aria-label',`Select ${name(row)} ${row.id.slice(7,19)}`);check.dataset.focusKey='image-check-'+row.id;check.addEventListener('change',()=>{if(check.checked)selected.add(row.id);else selected.delete(row.id);render();});selection.append(check);
+   check.type='checkbox';check.checked=selected.has(row.id);check.disabled= !canWrite()||busy||!!row.containers.length;check.setAttribute('aria-label',`Select ${name(row)} ${row.id.slice(7,19)}`);check.dataset.focusKey='image-check-'+row.id;check.addEventListener('change',()=>{if(check.checked)selected.add(row.id);else selected.delete(row.id);render();});selection.append(check);
    const open=textNode('button',name(row),'text-button');open.type='button';open.dataset.focusKey='image-open-'+row.id;open.addEventListener('click',()=>details(row));title.append(open,textNode('small',row.id.slice(7,19),'muted'));
-   const tag=textNode('button','Add tag','compact-button');tag.type='button';tag.disabled=busy;tag.addEventListener('click',()=>tagDialog(row));actions.append(tag);
+   const tag=textNode('button','Add tag','compact-button');tag.type='button';tag.disabled= !canWrite()||busy;tag.addEventListener('click',()=>tagDialog(row));actions.append(tag);
    tr.append(selection,title,textNode('td',bytes(row.size)),textNode('td',`${row.os}/${row.architecture}${row.variant?'/'+row.variant:''}`),textNode('td',row.containers.length?row.containers.join(', '):'Unused'),actions);return tr;
   });
   replaceKeepingFocus(find('images-rows'),nodes);find('images-empty').hidden=!!filtered.length;find('images-empty').textContent=hasSnapshot?'No images match this selection.':'Loading images…';
@@ -77,7 +78,7 @@
   const fields=find('image-detail-fields');fields.replaceChildren();
   for(const [label,value] of [['Image ID',row.id],['Tags',(row.tags||[]).join('\n')||'None'],['Repository digests',(row.digests||[]).join('\n')||'None'],['Platform',`${row.os}/${row.architecture}${row.variant?'/'+row.variant:''}`],['Created',row.created||'Not recorded'],['Size',bytes(row.size)],['Containers (including stopped)',row.containers.join(', ')||'Unused']])fields.append(textNode('dt',label),textNode('dd',value));
   const actions=find('image-detail-actions');actions.replaceChildren();
-  for(const tag of row.tags||[]){const button=textNode('button',`Remove tag ${tag}`,'compact-button');button.type='button';button.disabled=busy||!!row.containers.length;button.addEventListener('click',async()=>{find('image-details').close();await action('untag',[row],'',tag,`Remove ${tag} from ${hostName()}? Removing its last reference can also delete the unused image.`);});actions.append(button);}
+  for(const tag of row.tags||[]){const button=textNode('button',`Remove tag ${tag}`,'compact-button');button.type='button';button.disabled= !canWrite()||busy||!!row.containers.length;button.addEventListener('click',async()=>{find('image-details').close();await action('untag',[row],'',tag,`Remove ${tag} from ${hostName()}? Removing its last reference can also delete the unused image.`);});actions.append(button);}
   find('image-details').showModal();
  }
  function hostName(){return window.reefHostName||'Local';}

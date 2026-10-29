@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.16.0 — Unreleased
+## 0.17.0 — Unreleased
+
+- Replace shared browser access with individual admin/viewer accounts, host assignments, account management and self-service password/session controls.
+- Enforce permissions centrally on every UI/API/console route, filter hosts/history/alerts before exposing data and block delayed responses after session revocation.
+- Bootstrap admin from the existing password, invalidate shared-login cookies, preserve per-user sessions across restarts and provide offline administrator recovery.
+- Require Go 1.24+ for the standard-library password KDF; retain zero external Go dependencies.
+
+## 0.16.0 — 2026-10-28
 
 - Add opt-in monitoring alerts for agent disconnections, unhealthy containers and restart loops, with configurable thresholds and observed-recovery notifications.
 - Collect bounded snapshots in the background on Local and compatible agents without blocking heartbeats; distinguish collection failures, maintenance and unavailable coverage.

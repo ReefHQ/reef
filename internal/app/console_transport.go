@@ -22,6 +22,11 @@ func (s *Server) consoleStream(w http.ResponseWriter, r *http.Request, sess sess
 	id := randomID()
 	stream := &consoleTransport{owner: sess.CSRF, ctx: ctx, cancel: cancel, events: make(chan map[string]any, 64)}
 	s.mu.Lock()
+	if !s.userSessionValid(sess) {
+		s.mu.Unlock()
+		http.Error(w, "Sign-in required", 401)
+		return
+	}
 	if s.consoleStreams == nil {
 		s.consoleStreams = map[string]*consoleTransport{}
 	}

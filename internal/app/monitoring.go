@@ -85,7 +85,26 @@ func (s *Server) monitoringSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	writeJSON(w, s.monitor.View())
+	v := s.monitor.View()
+	u := s.requestUser(r)
+	incidents := v.Incidents[:0]
+	for _, i := range v.Incidents {
+		if u.Allows(i.HostID) {
+			incidents = append(incidents, i)
+		}
+	}
+	v.Incidents = incidents
+	hosts := v.Hosts[:0]
+	for _, h := range v.Hosts {
+		if u.Allows(h.HostID) {
+			hosts = append(hosts, h)
+		}
+	}
+	v.Hosts = hosts
+	if !u.GlobalAdmin() {
+		v.Pending = 0
+	}
+	writeJSON(w, v)
 }
 func (s *Server) dispatchMonitoring() {
 	for _, event := range s.monitor.Pending() {

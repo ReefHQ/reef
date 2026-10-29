@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reef/internal/accounts"
 	"reef/internal/agents"
 	"reef/internal/history"
 	"reef/internal/monitoring"
@@ -19,6 +20,7 @@ import (
 
 func Run() {
 	configPath := flag.String("config", "config.json", "JSON configuration file")
+	recoverUser := flag.String("recover-admin", "", "offline: reset an existing account to all-host admin using QCU_PASSWORD_FILE/QCU_PASSWORD")
 	listen := flag.String("listen", "", "override the listening address")
 	flag.Parse()
 	c, e := loadConfig(*configPath)
@@ -50,6 +52,17 @@ func Run() {
 	if e = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); e != nil {
 		log.Fatal("Another instance is using this state directory")
 	}
+	users, e := accounts.Open(c.StateDir, password)
+	if e != nil {
+		log.Fatal(e)
+	}
+	if *recoverUser != "" {
+		if e = users.Recover(*recoverUser, password); e != nil {
+			log.Fatal(e)
+		}
+		log.Print("Administrator recovered; that user's sessions are invalidated. Start Reef normally.")
+		return
+	}
 	m, e := newManager(c, DockerExecutor{})
 	if e != nil {
 		log.Fatal(e)
@@ -58,6 +71,7 @@ func Run() {
 	defer stopChecks()
 	m.Images = &ImageService{Exec: m.Exec}
 	s := newServer(m, c, password)
+	s.accounts = users
 	s.webhooks, e = notifications.Open(c.StateDir, false)
 	if e != nil {
 		log.Print("Action notifications unavailable; inspect private notification state")

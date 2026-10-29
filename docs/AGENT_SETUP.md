@@ -47,13 +47,13 @@ Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state vol
 Do not enroll again. Copy `examples/agent/compose.yaml` into the existing dedicated
 `reef-agent` installation and `scripts/prepare-agent.sh` there as `prepare-agent.sh`.
 The image is separate from the central service, with Linux amd64/arm64 variants:
-`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.16.0` once published.
+`registry.gitlab.renaudbaivier.com/reef/reef/agent:v0.17.0` once published.
 
 The existing host Docker login must be valid for this registry. From that host's
 `reef-agent` folder, after the chosen version is published:
 
 ```sh
-sh prepare-agent.sh v0.16.0
+sh prepare-agent.sh v0.17.0
 docker compose config --quiet
 docker compose pull reef-agent
 docker compose up -d --no-deps reef-agent
@@ -263,3 +263,14 @@ the monitoring policy. Changing that policy takes effect through ordinary
 inventory replies without reconnecting or restarting the agent. Older agents
 still support connection/disconnection monitoring but need an upgrade for
 container health/restart observations. See [monitoring behavior](MONITORING.md).
+
+
+## Central user permissions (v0.17.0)
+
+Accounts are managed on central Reef. User host/role authorization is enforced
+before every relay dispatch and on delayed browser output; agents continue to
+trust their authenticated central connection. No new agent protocol/capability,
+port, enrollment or identity volume is needed for accounts. Existing agents retain
+their negotiated features without an upgrade solely for user permissions.
+Already admitted Docker operations continue after a user is revoked; new actions,
+console input and delayed browser reads are denied. See [the access model](USERS.md).

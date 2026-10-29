@@ -186,3 +186,12 @@ five-second heartbeat, enabled by central policy replies, and bound to the
 current connection generation. No monitoring settings or raw Docker inspection
 are accepted from a browser/agent command. Central evaluates incident timing and
 sends transitions to its History/webhook sinks. See [Monitoring](MONITORING.md).
+
+
+Central individual accounts (v0.17.0) restrict every browser request to assigned
+hosts and admin/viewer roles before relay dispatch. Machine credentials remain
+independent; agents trust central authorization and never accept browser cookies
+or arbitrary user-supplied identity claims. Existing protocol agents need no new
+capability for this central policy. Revocation blocks subsequent dispatch and
+delayed output and closes active consoles; already admitted detached operations
+are left to finish, without replay or an unsafe interruption. See [Users](USERS.md).

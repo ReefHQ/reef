@@ -6,7 +6,7 @@
  const key=id=>(window.reefHost||'local')+':'+id;
  function render(p){
   const report=p?.image_updates,remote=window.reefHost&&window.reefHost!=='local'&&!window.reefCapabilities?.includes('control-v1');
-  button.disabled=!p||remote||p.busy||report?.checking||checking.has(key(p.id));
+  button.disabled=window.reefAccess?.canWrite===false||!p||remote||p.busy||report?.checking||checking.has(key(p.id));
   find('#image-updates-summary').textContent=ReefUI.imageUpdateSummary(report);
   find('#image-updates-checked').textContent=report?.checked_at&&!report.checked_at.startsWith('0001-')?`Last checked ${new Date(report.checked_at).toLocaleString('en-GB')} · automatic checks every 6 hours`: 'Automatic checks every 6 hours. Checks use the saved Compose configuration.';
   const nodes=(report?.services||[]).map(service=>{
@@ -17,7 +17,7 @@
   });find('#image-update-services').replaceChildren(...nodes);
  }
  async function check(id){
-  if(checking.has(key(id))||window.reefHost&&window.reefHost!=='local'&&!window.reefCapabilities?.includes('control-v1'))return;
+  if(window.reefAccess?.canWrite===false||checking.has(key(id))||window.reefHost&&window.reefHost!=='local'&&!window.reefCapabilities?.includes('control-v1'))return;
   const checkKey=key(id),host=window.reefHost||'local',project=projects.find(p=>p.id===id);checking.add(checkKey);render(current());
   try{
    await request('/api/image-updates',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,id})});

@@ -68,3 +68,5 @@ test('partial image cleanup can be dismissed without reappearing and dismissal s
  await p.host('local');await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,true);
  report.id='new-job';report.running=true;report.results=[];await p.timers.at(-1)();assert.equal(p.find('images-operation').hidden,false);assert.equal(p.find('images-operation').children.some(n=>n.textContent==='Dismiss'),false);
 });
+
+test('viewer keeps image inspection available while mutations and selection are disabled',async()=>{const p=page();p.window.reefAccess={canWrite:false};await p.settle();assert.equal(p.find('images-refresh').disabled,false);assert.equal(p.find('images-pull-submit').disabled,true);assert.equal(p.find('images-cleanup').disabled,true);const row=p.find('images-rows').children[0];assert.equal(row.children[0].children[0].disabled,true);await row.children[1].children[0].fire('click');assert.equal(p.find('image-details').open,true)});

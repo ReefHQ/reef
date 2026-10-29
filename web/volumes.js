@@ -2,6 +2,7 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('volumes-view');
  let host=window.reefHost||'local',epoch=0,rows=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,timer,hostsReady=false;
+ const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('volumes-v1');
  const candidates=()=>rows.filter(row=>row.removable);
  const target=row=>({name:row.name,fingerprint:row.fingerprint});
@@ -13,9 +14,9 @@
   find('volumes-rows').setAttribute('aria-busy',String(pending));
   if(!hasSnapshot){find('volumes-results').textContent='';find('volumes-empty').hidden=false;find('volumes-empty').textContent=pending?'Loading volumes…':available()?'Inventory unavailable. Use Refresh to try again.':'Upgrade the agent to manage volumes.';}
 
-  const disabled=!available()||busy||loading||!loaded;
+  const disabled=!canWrite()||!available()||busy||loading||!loaded;
   find('volumes-refresh').disabled=!available()||loading;
-  find('volumes-create-submit').disabled=!available()||busy;
+  find('volumes-create-submit').disabled=!canWrite()||!available()||busy;
   find('volumes-delete').disabled=disabled||!selected.size;
   find('volumes-cleanup').disabled=disabled||!candidates().length;
   find('volumes-select-all').disabled=disabled;
@@ -35,9 +36,9 @@
   find('volumes-results').textContent=`${visible.length} shown · ${selected.size} selected`;
   const nodes=visible.map(row=>{
    const tr=document.createElement('tr'),selection=document.createElement('td'),title=document.createElement('td'),actions=document.createElement('td'),check=document.createElement('input');
-   check.type='checkbox';check.checked=selected.has(row.name);check.disabled=busy||loading||!loaded||!row.removable;check.title=row.retain_reason||'';check.setAttribute('aria-label',`Select ${row.name}`);check.dataset.focusKey='volume-check-'+row.name;check.addEventListener('change',()=>{if(check.checked)selected.add(row.name);else selected.delete(row.name);render();});selection.append(check);
+   check.type='checkbox';check.checked=selected.has(row.name);check.disabled= !canWrite()||busy||loading||!loaded||!row.removable;check.title=row.retain_reason||'';check.setAttribute('aria-label',`Select ${row.name}`);check.dataset.focusKey='volume-check-'+row.name;check.addEventListener('change',()=>{if(check.checked)selected.add(row.name);else selected.delete(row.name);render();});selection.append(check);
    const open=textNode('button',row.name,'text-button');open.type='button';open.dataset.focusKey='volume-open-'+row.name;open.addEventListener('click',()=>details(row));title.append(open);
-   const remove=textNode('button','Delete','compact-button');remove.type='button';remove.disabled=busy||loading||!loaded||!row.removable;remove.title=row.retain_reason||'';remove.dataset.focusKey='volume-delete-'+row.name;remove.setAttribute('aria-label',`Delete volume ${row.name}`);remove.addEventListener('click',()=>removeVolumes([row],'remove'));actions.append(remove);
+   const remove=textNode('button','Delete','compact-button');remove.type='button';remove.disabled= !canWrite()||busy||loading||!loaded||!row.removable;remove.title=row.retain_reason||'';remove.dataset.focusKey='volume-delete-'+row.name;remove.setAttribute('aria-label',`Delete volume ${row.name}`);remove.addEventListener('click',()=>removeVolumes([row],'remove'));actions.append(remove);
    tr.append(selection,title,textNode('td',row.driver),textNode('td',row.project||'—'),textNode('td',row.containers.length?row.containers.join(', '):'Unused'),actions);return tr;
   });replaceKeepingFocus(find('volumes-rows'),nodes);find('volumes-empty').hidden=!!visible.length;find('volumes-empty').textContent=hasSnapshot?'No volumes match this selection.':'Loading volumes…';
   const eligible=visible.filter(row=>row.removable);find('volumes-select-all').checked=!!eligible.length&&eligible.every(row=>selected.has(row.name));controls();
@@ -71,7 +72,7 @@
  }
  function details(row){
   const fields=find('volume-detail-fields');fields.replaceChildren();for(const [label,value] of [['Name',row.name],['Driver',row.driver],['Scope',row.scope||'Not recorded'],['Created',row.created||'Not recorded'],['Docker mountpoint',row.mountpoint||'Not provided by driver'],['Compose project',row.project||'None'],['Containers (including stopped)',row.containers.join(', ')||'None'],['Removal',row.removable?'Eligible for explicit deletion; may contain valuable data':row.retain_reason]])fields.append(textNode('dt',label),textNode('dd',value));
-  const remove=find('volume-detail-delete');remove.disabled=busy||!loaded||!row.removable;remove.onclick=()=>{find('volume-details').close();removeVolumes([row],'remove');};find('volume-details').showModal();
+  const remove=find('volume-detail-delete');remove.disabled= !canWrite()||busy||!loaded||!row.removable;remove.onclick=()=>{find('volume-details').close();removeVolumes([row],'remove');};find('volume-details').showModal();
  }
  find('volume-detail-close').addEventListener('click',()=>find('volume-details').close());
  find('volumes-create').addEventListener('submit',event=>{event.preventDefault();const name=find('volumes-name').value.trim();action('create',[],name,`Create the Docker volume ${name} on ${window.reefHostName||'Local'} using the default local driver?`);});
