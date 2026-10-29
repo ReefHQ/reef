@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.19.0 — Unreleased
+## 0.20.0 — Unreleased
+
+- Add read-only per-agent diagnostics in Manage hosts: authenticated contact/inventory freshness, accepted version/protocol, negotiated features and actionable troubleshooting guidance.
+- Retain a bounded in-memory observation history for connection/inventory/communication transitions, with generation-bound association and no new agent probes, commands or incoming ports.
+- Distinguish current, historical, incompatible, unavailable and unreported states; withhold arbitrary agent error/version text and never expose private identities, credentials or raw transport data.
+
+## 0.19.0 — 2026-10-29
 
 - Add central daily/weekly schedules with explicit IANA timezones, next/last results and reviewed activation for project image checks, volume backups, old untagged-image cleanup and old default-builder cache cleanup.
 - Persist claims before dispatch, skip missed/offline/busy slots, handle daylight-saving gaps/folds and block future host schedules after uncertain mutations until explicit review.

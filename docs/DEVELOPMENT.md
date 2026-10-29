@@ -46,6 +46,7 @@ with an installed Compose CLI and a nonexistent socket.
 | `cmd/reef-agent/` | Remote agent entry point |
 | `cmd/reef-local/` | Local launcher entry point |
 | `internal/app/` | HTTP/auth, configuration and operation handlers |
+| `internal/agents/diagnostics.go` | Bounded, fixed central observations and curated per-agent snapshots |
 | `internal/docker/` | Docker inventory and resource operations |
 | `internal/schedules/` | Explicit timezone policies, durable claims, restart recovery and latest results |
 | `internal/volumebackup/` | Private archive catalog, checksums, validation and retention |

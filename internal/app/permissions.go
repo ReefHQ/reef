@@ -43,6 +43,8 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request, sess session)
 		allowed = true
 	case "/api/users", "/api/webhook":
 		allowed = u.GlobalAdmin()
+	case "/api/agent-diagnostics":
+		allowed = r.Method == "GET" && u.Allows(host)
 	case "/api/hosts":
 		allowed = r.Method == "GET" || u.GlobalAdmin()
 	case "/api/history":

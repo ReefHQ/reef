@@ -105,7 +105,17 @@ func (p *remoteDocker) do(ctx context.Context, method, path string, query, form 
 			f[key] = values
 		}
 	}
-	return p.server.relay.Do(ctx, p.host, agents.Command{Owner: p.owner, Expires: p.expires, Method: method, Path: path, Query: q, Form: f})
+	marker := p.server.agents.ConnectionMarker(p.host)
+	response, err := p.server.relay.Do(ctx, p.host, agents.Command{Owner: p.owner, Expires: p.expires, Method: method, Path: path, Query: q, Form: f})
+	if err != nil {
+		p.diagnosticFailure(ctx, marker, method, "")
+		return nil, err
+	}
+	if response.StatusCode >= 500 {
+		p.diagnosticFailure(ctx, marker, method, "remote_service_error")
+	}
+	response.Body = &diagnosticBody{ReadCloser: response.Body, report: func() { p.diagnosticFailure(ctx, marker, method, "") }}
+	return response, nil
 }
 func (p *remoteDocker) List(ctx context.Context) ([]docker.Container, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

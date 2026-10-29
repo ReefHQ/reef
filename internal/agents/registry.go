@@ -88,12 +88,13 @@ type Update struct {
 	Maintenance bool               `json:"maintenance,omitempty"`
 }
 type Registry struct {
-	mu       sync.Mutex
-	path     string
-	data     disk
-	live     map[string]snapshot
-	attempts int
-	window   time.Time
+	diagnostics map[string]diagnosticState
+	mu          sync.Mutex
+	path        string
+	data        disk
+	live        map[string]snapshot
+	attempts    int
+	window      time.Time
 }
 
 func secret() string {
@@ -259,6 +260,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 		return "", ErrInvalid
 	}
 	if protocol != Protocol {
+		r.observe(id, "protocol_incompatible", time.Now())
 		v := r.live[id]
 		v.Error = "Incompatible agent protocol"
 		r.live[id] = v
@@ -268,8 +270,21 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 		return "", ErrInvalid
 	}
 	v := r.live[id]
+	now := time.Now()
+	d := r.diagnostics[id]
+	code := "connected"
+	if !d.Connected.IsZero() {
+		code = "reconnected"
+	}
+	r.observe(id, code, now)
+	d = r.diagnostics[id]
+	d.Connected = now
+	d.Version = publicAgentVersion(version)
+	r.diagnostics[id] = d
+	v.Error = ""
 	if v.Generation != "" && time.Since(v.Contact) < 45*time.Second {
-		v.Notice = "Connection replaced; check that this identity is used on only one host."
+		r.observe(id, "connection_replaced", now)
+		v.Notice = "Previous connection replaced. Expected during updates; if repeated unexpectedly, check that this identity is used on only one host."
 	}
 	v.MonitorEnabled = false
 	v.MonitorMaintenance = false
@@ -288,8 +303,11 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.ImageBatch = false
 	v.Images = false
 	v.Sequence = 0
-	v.Contact = time.Now()
-	v.Version = version
+	v.Contact = now
+	d = r.diagnostics[id]
+	d.Contact = now
+	r.diagnostics[id] = d
+	v.Version = publicAgentVersion(version)
 	r.live[id] = v
 	return v.Generation, nil
 }
@@ -300,9 +318,19 @@ func (r *Registry) Publish(id, key string, u Update) error {
 	if !r.authorized(id, key) || u.Protocol != Protocol || u.Generation == "" || u.Generation != v.Generation || u.Sequence <= v.Sequence {
 		return ErrInvalid
 	}
+	d := r.diagnostics[id]
+	d.Attempt = time.Now()
+	if r.diagnostics == nil {
+		r.diagnostics = map[string]diagnosticState{}
+	}
+	r.diagnostics[id] = d
 	reject := func(message string) error {
+		r.observe(id, "inventory_rejected", time.Now())
 		v.Error = message
 		v.Contact = time.Now()
+		d := r.diagnostics[id]
+		d.Contact = v.Contact
+		r.diagnostics[id] = d
 		r.live[id] = v
 		return errors.New(message)
 	}
@@ -354,13 +382,27 @@ func (r *Registry) Publish(id, key string, u Update) error {
 	v.MonitorMaintenance = u.Maintenance
 	v.Contact = time.Now()
 	v.Sequence = u.Sequence
-	v.Error = u.Error
+	previousError := v.Error
+	v.Error = publicInventoryError(u.Error)
 	if u.Error == "" {
 		v.Containers = append([]docker.Container{}, u.Containers...)
 		v.Checked = v.Contact
+		d := r.diagnostics[id]
+		if previousError != "" {
+			r.observe(id, "inventory_recovered", v.Contact)
+		} else if d.Checked.IsZero() || d.Checked.Before(d.Connected) {
+			r.observe(id, "inventory_ready", v.Contact)
+		}
 		encoded, _ := json.Marshal(u.Containers)
 		v.Bytes = len(encoded)
 	}
+	if v.Error != "" {
+		r.observe(id, inventoryCode(v.Error), v.Contact)
+	}
+	d = r.diagnostics[id]
+	d.Contact = v.Contact
+	d.Checked = v.Checked
+	r.diagnostics[id] = d
 	r.live[id] = v
 	return nil
 }
@@ -385,14 +427,26 @@ func (r *Registry) Change(id, name string, revoke bool) error {
 		return e
 	}
 	if revoke {
+		d := r.diagnostics[id]
+		v := r.view(h)
+		d.Contact = v.LastContact
+		d.Checked = v.CheckedAt
+		d.Version = v.Version
+		d.Capabilities = append([]string{}, v.Capabilities...)
+		if r.diagnostics == nil {
+			r.diagnostics = map[string]diagnosticState{}
+		}
+		r.diagnostics[id] = d
+		r.observe(id, "revoked", time.Now())
 		delete(r.live, id)
 	}
 	return nil
 }
-func (r *Registry) view(h Host) View {
+func (r *Registry) view(h Host) View { return r.viewAt(h, time.Now()) }
+func (r *Registry) viewAt(h Host, now time.Time) View {
 	v := r.live[h.ID]
 	status := "connected"
-	if time.Since(v.Contact) > 45*time.Second {
+	if now.Sub(v.Contact) > 45*time.Second {
 		status = "disconnected"
 	}
 	if h.Revoked {
@@ -432,7 +486,7 @@ func (r *Registry) view(h Host) View {
 	if v.Control {
 		capabilities = append(capabilities, ControlCapability)
 	}
-	return View{Capabilities: capabilities, Notice: v.Notice, ID: h.ID, Name: h.Name, Status: status, LastContact: v.Contact, CheckedAt: v.Checked, Version: v.Version, Stale: status != "connected" || v.Error != "" || time.Since(v.Checked) > 15*time.Second, Error: v.Error}
+	return View{Capabilities: capabilities, Notice: v.Notice, ID: h.ID, Name: h.Name, Status: status, LastContact: v.Contact, CheckedAt: v.Checked, Version: v.Version, Stale: status != "connected" || v.Sequence == 0 || v.Error != "" || now.Sub(v.Checked) > 15*time.Second, Error: publicInventoryError(v.Error)}
 }
 func (r *Registry) Views() []View {
 	r.mu.Lock()

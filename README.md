@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.19.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.20.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -109,9 +109,11 @@ builds and statistics. Features depend on the agent’s negotiated capabilities;
 an older agent shows an upgrade message when needed.
 
 Prepared agents can be updated from **Manage hosts** to the same stable version
-as central Reef, preserving their identity and configuration.
+as central Reef, preserving their identity and configuration. Open **Manage hosts →
+Diagnostics** for connection freshness, negotiated features and recent observations
+with troubleshooting steps — without running a probe on the agent.
 
-[Set up or upgrade an agent](docs/AGENT_SETUP.md)
+[Set up or upgrade an agent](docs/AGENT_SETUP.md) · [Agent diagnostics](docs/AGENT_DIAGNOSTICS.md)
 
 ## 📬 Keep track without keeping a tab open
 

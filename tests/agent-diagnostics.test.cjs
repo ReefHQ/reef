@@ -1,0 +1,30 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../web/agent-diagnostics.js'),'utf8');
+const data=(id='agent-a',extra={})=>({central_version:'0.20.0',version_relation:'older',history_limit:20,scope:'since_central_startup',agents_enabled:true,diagnostic:{host:{id,name:id,status:'connected',stale:false,last_contact:'2026-10-29T12:00:00Z',checked_at:'2026-10-29T12:00:00Z',version:'0.19.0'},observed_at:'2026-10-29T12:00:01Z',connected_at:'2026-10-29T11:00:00Z',last_inventory_attempt:'2026-10-29T12:00:00Z',contact_age_seconds:1,inventory_age_seconds:1,summary:'Agent reachable; Docker inventory current',hint:'No probe was sent',level:'info',docker:'inventory_current',expected_protocol:1,negotiated_protocol:1,capabilities_current:true,features:[{name:'Volume backups',state:'reported',hint:'Negotiated, not an execution test'}],observations:[{code:'inventory_ready',message:'Valid inventory received',hint:'Not an operation outcome',first:'2026-10-29T12:00:00Z',last:'2026-10-29T12:00:00Z',count:1}],...extra}});
+function page({defer=false}={}){
+ const nodes=new Map(),events={},requests=[],pending=[],timers=new Map();let serial=0,reply=null,failure=null;
+ class Node{constructor(){this.value='';this.textContent='';this.hidden=false;this.open=false;this.checked=false;this.disabled=false;this.children=[];this.listeners={};this.scrollTop=0;this.className='';}addEventListener(k,f){(this.listeners[k]??=[]).push(f);}async fire(k){for(const f of this.listeners[k]||[])await f({target:this});}append(...ns){this.children.push(...ns);}replaceChildren(...ns){this.children=ns;}setAttribute(){}showModal(){this.open=true;}close(){this.open=false;this.fire('close');}}
+ const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};const window={};const document={hidden:false,getElementById:find,createElement:()=>new Node(),addEventListener(k,f){events[k]=f;}};
+ const context={window,document,AbortController,Date,setTimeout:f=>{timers.set(++serial,f);return serial;},clearTimeout:n=>timers.delete(n),request:async(url,opts,host)=>{requests.push({url,opts,host});if(failure)throw failure;if(defer)return await new Promise(resolve=>pending.push({resolve,host}));return{json:async()=>reply||data(host)};}};
+ vm.runInNewContext(source,context);return{find,window,document,requests,pending,timers,reply(v){reply=v;},fail(e){failure=e;},async settle(){for(let i=0;i<30;i++)await Promise.resolve();},async open(id='agent-a'){window.ReefHostDiagnostics.open(id,id);await this.settle();},async tick(){const f=[...timers.values()].at(-1);timers.clear();if(f)await f();await this.settle();}};
+}
+test('diagnostics stays idle until opened and only reads the explicitly selected host',async()=>{
+ const p=page();await p.settle();assert.equal(p.requests.length,0);await p.open();assert.equal(p.requests.length,1);assert.equal(p.requests[0].url,'/api/agent-diagnostics');assert.equal(p.requests[0].host,'agent-a');assert.equal(p.requests[0].opts.method,undefined);assert.equal(p.find('diagnostics-content').hidden,false);assert.match(p.find('diagnostics-title').textContent,/agent-a/);assert.match(p.find('diagnostics-capability-note').textContent,/not a live feature execution test/);
+});
+test('historical capabilities, unavailable Docker and raw-looking text remain explicit plain text',async()=>{
+ const p=page();p.reply(data('agent-a',{summary:'<script>unsafe</script>',hint:'Check the agent Docker socket',level:'error',docker:'reported_unavailable',capabilities_current:false,features:[{name:'Images',state:'historical',hint:'Historical report only'}]}));await p.open();assert.equal(p.find('diagnostics-summary').textContent,'<script>unsafe</script>');assert.match(p.find('diagnostics-summary').className,/error/);assert.match(p.find('diagnostics-capability-note').textContent,/historical or unknown/);assert.equal(p.find('diagnostics-features').children[0].children[1].textContent,'Historical report');assert.ok(p.find('diagnostics-fields').children.some(n=>n.textContent==='Agent reports Docker inventory unavailable'));
+});
+test('closed or replaced diagnostic requests cannot render the former host',async()=>{
+ const p=page({defer:true});await p.open('a');assert.equal(p.find('diagnostics-loading').hidden,false);p.find('agent-diagnostics').close();await p.open('b');p.pending[1].resolve({json:async()=>data('b')});await p.settle();p.pending[0].resolve({json:async()=>data('a')});await p.settle();assert.match(p.find('diagnostics-title').textContent,/b/);assert.equal(p.requests[0].opts.signal.aborted,true);assert.equal(p.requests.some(r=>r.opts.method==='POST'),false);
+});
+test('refresh preserves modal scroll and supports pausing automatic refresh',async()=>{
+ const p=page();await p.open();const content=p.find('diagnostics-content');p.find('agent-diagnostics').scrollTop=420;await p.tick();assert.equal(p.find('agent-diagnostics').scrollTop,420);assert.equal(p.find('diagnostics-content'),content);p.find('diagnostics-auto').checked=false;await p.find('diagnostics-auto').fire('change');assert.equal(p.timers.size,0);await p.find('diagnostics-refresh').fire('click');assert.equal(p.timers.size,0);
+});
+test('refresh failures visibly mark the previous snapshot stale and mismatched hosts never render',async()=>{
+ const p=page();await p.open();p.fail(Error('Central unreachable'));await p.tick();assert.match(p.find('diagnostics-error').textContent,/previous snapshot.*stale/);assert.equal(p.find('diagnostics-content').hidden,false);
+ const wrong=page();wrong.reply(data('other-host'));await wrong.open();assert.equal(wrong.find('diagnostics-content').hidden,true);assert.match(wrong.find('diagnostics-error').textContent,/does not match/);
+});
+test('closing diagnostics cancels refresh and clears timers without affecting agent state',async()=>{
+ const p=page();await p.open();p.find('agent-diagnostics').close();await p.settle();assert.equal(p.timers.size,0);assert.ok(p.requests.every(r=>r.url==='/api/agent-diagnostics'&&!r.opts.method));
+});

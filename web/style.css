@@ -236,3 +236,8 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .schedule-form,.schedule-card{padding:1.25rem;margin-block:1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow-wrap:anywhere}.schedule-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:1rem;margin-block:1rem}.schedule-fields input,.schedule-fields select{width:100%}.schedule-check{display:flex;align-items:flex-start;gap:.6rem;margin-block:1rem}.schedule-check input{flex:0 0 auto;margin-top:.25rem}.schedule-card h2{font-size:1.1rem;margin:0}.schedule-form [hidden]{display:none}
 
 .schedule-form #schedule-cancel{font-size:12px;line-height:1.3;padding:9px 13px}#schedules-view>.page-heading .dialog-actions{margin-top:0;flex-shrink:0;flex-wrap:wrap}
+
+#agent-diagnostics{width:min(900px,calc(100vw - 28px))}.diagnostics-heading{position:sticky;top:-24px;z-index:2;background:var(--surface);padding-block:12px}.diagnostics-toolbar{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.diagnostics-toolbar label{display:flex;gap:8px;align-items:center;margin:0}#agent-diagnostics h3{margin-top:24px}#diagnostics-observations{padding-left:20px}#diagnostics-observations li{margin-block:16px}#diagnostics-observations p{margin-block:5px}#diagnostics-features td{overflow-wrap:anywhere}#diagnostics-content .table-scroll{margin-block:14px}
+
+.diagnostics-ok{background:var(--banner);color:var(--banner-text);border-color:var(--active-border)}
+.host-row-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.host-row-heading strong{min-width:0;overflow-wrap:anywhere}.host-row-heading button{flex:none;font-size:12px}

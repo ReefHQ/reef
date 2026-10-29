@@ -150,6 +150,10 @@ func (s *Server) Handler() http.Handler {
 			s.userAccounts(w, r, sess)
 			return
 		}
+		if r.URL.Path == "/api/agent-diagnostics" {
+			s.agentDiagnostics(w, r)
+			return
+		}
 		if r.URL.Path == "/api/schedules" {
 			s.scheduleAPI(w, r, sess)
 			return

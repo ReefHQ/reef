@@ -60,14 +60,14 @@ func TestUserPermissionMatrixDeniesEveryMutationAndForeignHostBeforeDispatch(t *
 	reader := addReader(t, s, "viewer", remote)
 	cookie, csrf := userCookie(t, s, reader)
 	h := s.Handler()
-	reads := []string{"/api/containers", "/api/container-logs", "/api/state", "/api/document", "/api/stats", "/api/images", "/api/images/operation", "/api/volumes", "/api/volume-backups", "/api/schedules", "/api/networks", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/console", "/api/agent-update"}
+	reads := []string{"/api/containers", "/api/container-logs", "/api/state", "/api/document", "/api/stats", "/api/images", "/api/images/operation", "/api/volumes", "/api/volume-backups", "/api/schedules", "/api/agent-diagnostics", "/api/networks", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/console", "/api/agent-update"}
 	for _, path := range reads {
 		w := call(h, "GET", path, "", "", cookie)
 		if w.Code != 403 {
 			t.Fatal("foreign Local access", path, w.Code, w.Body.String())
 		}
 	}
-	mutations := []string{"/api/action", "/api/image-updates", "/api/projects/register", "/api/projects/unmanage", "/api/images/action", "/api/volumes/action", "/api/volume-backups", "/api/schedules", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close", "/api/console/stream", "/api/agent-update", "/api/hosts", "/api/webhook", "/api/users", "/api/monitoring"}
+	mutations := []string{"/api/action", "/api/image-updates", "/api/projects/register", "/api/projects/unmanage", "/api/images/action", "/api/volumes/action", "/api/volume-backups", "/api/schedules", "/api/agent-diagnostics", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close", "/api/console/stream", "/api/agent-update", "/api/hosts", "/api/webhook", "/api/users", "/api/monitoring"}
 	for _, path := range mutations {
 		w := call(h, "POST", path+"?host="+remote, "csrf="+csrf+"&confirmed=yes", "http://reef.test", cookie)
 		if w.Code != 403 {
