@@ -86,14 +86,14 @@ func (s *Server) getSession(r *http.Request) (session, bool) {
 	if sess, ok := r.Context().Value(agentSessionKey{}).(session); ok {
 		return sess, time.Now().Before(sess.Expires)
 	}
-	c, e := r.Cookie("qcu_session")
+	c, e := s.requestSessionCookie(r)
 	if e != nil {
 		return session{}, false
 	}
 	s.mu.Lock()
 	key := sessionKey(c.Value)
 	v, ok := s.sessions[key]
-	if ok && time.Now().After(v.Expires) {
+	if ok && !time.Now().Before(v.Expires) {
 		delete(s.sessions, key)
 		s.mu.Unlock()
 		return session{}, false
@@ -123,6 +123,9 @@ func (s *Server) Handler() http.Handler {
 		}
 		if s.accounts != nil {
 			w.Header().Set("X-Reef-User", sess.UserID)
+		}
+		if r.Method == "GET" {
+			s.migrateSessionCookie(w, r, sess)
 		}
 		if r.Method != "GET" {
 			if r.Method != "POST" || !s.originOK(r) {
@@ -354,8 +357,12 @@ func (s *Server) Handler() http.Handler {
 				http.Error(w, "Method not allowed", 405)
 				return
 			}
-			c, _ := r.Cookie("qcu_session")
-			if e := s.removeSession(c.Value); e != nil {
+			c, _ := s.requestSessionCookie(r)
+			tokens := []string{c.Value}
+			if legacy, e := r.Cookie("qcu_session"); e == nil {
+				tokens = append(tokens, legacy.Value)
+			}
+			if e := s.removeSession(tokens...); e != nil {
 				http.Error(w, "Cannot save sign-out. Please try again.", 503)
 				return
 			}
@@ -371,7 +378,7 @@ func (s *Server) Handler() http.Handler {
 				}
 			}
 			s.mu.Unlock()
-			http.SetCookie(w, &http.Cookie{Name: "qcu_session", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode})
+			http.SetCookie(w, &http.Cookie{Name: s.sessionCookieName(), Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode})
 			http.Redirect(w, r, "/login", 303)
 		default:
 			http.NotFound(w, r)
@@ -440,6 +447,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid form", 400)
 		return
 	}
+	remember := r.PostForm.Get("remember") == "true"
 	var user accounts.User
 	authenticated := false
 	if s.accounts != nil {
@@ -460,10 +468,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		if s.accounts == nil {
 			message = "Incorrect password"
 		}
-		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": message, "Username": r.Form.Get("username")}, http.StatusUnauthorized)
+		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": message, "Username": r.Form.Get("username"), "Remember": remember}, http.StatusUnauthorized)
 		return
 	}
-	id, e := s.createUserSession(user)
+	id, e := s.createLoginSession(user, remember, r)
 	if e != nil {
 		if e == errSessionLimit {
 			http.Error(w, "Too many sessions", 429)
@@ -472,7 +480,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "qcu_session", Value: id, Path: "/", HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode, MaxAge: 43200})
+	s.mu.Lock()
+	expires := s.sessions[sessionKey(id)].Expires
+	s.mu.Unlock()
+	s.setSessionCookie(w, id, expires)
 	http.Redirect(w, r, "/", 303)
 }
 func (s *Server) state(w http.ResponseWriter) {

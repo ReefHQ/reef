@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reef/internal/accounts"
@@ -14,7 +15,47 @@ import (
 )
 
 const sessionLifetime = 12 * time.Hour
+const rememberedSessionLifetime = 30 * 24 * time.Hour
 const maxSessions = 256
+
+// Browsers share cookies across ports. Give each installation a stable namespace
+// so signing into another Reef on the same hostname cannot overwrite this token.
+func (s *Server) sessionCookieName() string {
+	key := s.password[:]
+	if s.accounts != nil {
+		key = s.accounts.Key()
+	}
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte("reef-session-cookie-name-v1"))
+	return "reef_session_" + hex.EncodeToString(mac.Sum(nil)[:12])
+}
+
+func (s *Server) requestSessionCookie(r *http.Request) (*http.Cookie, error) {
+	c, e := r.Cookie(s.sessionCookieName())
+	if e == nil {
+		return c, nil // An invalid current cookie must never fall back to a legacy login.
+	}
+	return r.Cookie("qcu_session")
+}
+
+func (s *Server) setSessionCookie(w http.ResponseWriter, token string, expires time.Time) {
+	remaining := int(time.Until(expires).Seconds())
+	if remaining < 1 {
+		remaining = 1
+	}
+	http.SetCookie(w, &http.Cookie{Name: s.sessionCookieName(), Value: token, Path: "/", HttpOnly: true, Secure: s.cfg.SecureCookie, SameSite: http.SameSiteStrictMode, MaxAge: remaining, Expires: expires.UTC()})
+}
+
+func (s *Server) migrateSessionCookie(w http.ResponseWriter, r *http.Request, sess session) {
+	if _, e := r.Cookie(s.sessionCookieName()); e == nil {
+		return
+	}
+	if c, e := r.Cookie("qcu_session"); e == nil {
+		// Keep its original expiry and token. Do not delete a shared legacy cookie
+		// that may now belong to a different application or an older Reef instance.
+		s.setSessionCookie(w, c.Value, sess.Expires)
+	}
+}
 
 type sessionState struct {
 	Version  int                `json:"version"`
@@ -157,12 +198,24 @@ func (s *Server) nextSessions() map[string]session {
 
 func (s *Server) createSession() (string, error) { return s.createUserSession(accounts.User{}) }
 func (s *Server) createUserSession(u accounts.User) (string, error) {
+	return s.createLoginSession(u, false, nil)
+}
+func (s *Server) createLoginSession(u accounts.User, remember bool, r *http.Request) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.accounts != nil && !s.userSessionValid(session{UserID: u.ID, Revision: u.Revision}) {
 		return "", errors.New("Account changed; sign in again")
 	}
 	next := s.nextSessions()
+	// Replacing a browser login retires both its current and pre-upgrade tokens
+	// atomically, so a legacy cookie cannot resurrect a prior login after logout.
+	if r != nil {
+		for _, name := range []string{s.sessionCookieName(), "qcu_session"} {
+			if c, e := r.Cookie(name); e == nil {
+				delete(next, sessionKey(c.Value))
+			}
+		}
+	}
 	owned := 0
 	for _, sess := range next {
 		if u.ID != "" && sess.UserID == u.ID {
@@ -173,7 +226,11 @@ func (s *Server) createUserSession(u accounts.User) (string, error) {
 		return "", errSessionLimit
 	}
 	id := randomID()
-	next[sessionKey(id)] = session{CSRF: randomID(), Expires: time.Now().Add(sessionLifetime), UserID: u.ID, Revision: u.Revision}
+	lifetime := sessionLifetime
+	if remember {
+		lifetime = rememberedSessionLifetime
+	}
+	next[sessionKey(id)] = session{CSRF: randomID(), Expires: time.Now().Add(lifetime), UserID: u.ID, Revision: u.Revision}
 	if e := s.saveSessions(next); e != nil {
 		return "", e
 	}
@@ -183,11 +240,13 @@ func (s *Server) createUserSession(u accounts.User) (string, error) {
 
 var errSessionLimit = errors.New("Too many sessions")
 
-func (s *Server) removeSession(token string) error {
+func (s *Server) removeSession(tokens ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	next := s.nextSessions()
-	delete(next, sessionKey(token))
+	for _, token := range tokens {
+		delete(next, sessionKey(token))
+	}
 	if e := s.saveSessions(next); e != nil {
 		return e
 	}

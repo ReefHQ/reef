@@ -61,12 +61,37 @@ success/closing the dialog; no API returns passwords, salts, hashes or signing k
 
 ## Sessions, consoles and admitted operations
 
-Sessions last 12 hours from sign-in, survive ordinary restarts and do not extend
-expiry. There are at most 32 sessions per user and 256 centrally. Cookies retain
+Sessions last **12 hours from sign-in** by default. Select **Remember me for
+30 days** on the login page for a fixed **30-day** session on this browser. The
+option defaults off, and failed credentials keep your selection without signing
+you in. Both durations survive ordinary restarts; activity, refresh and restarts
+do not extend the original expiry. Existing sessions keep their previous expiry.
+There are at most 32 sessions per user and 256 centrally. Cookies retain
 HttpOnly/SameSite protections, CSRF tokens and exact-origin checks. Logins are
 rate-limited by IP, with at most four concurrent expensive credential operations.
 Invalid username/password attempts use one generic error and stay on the login
 page. Unknown usernames still perform the password KDF.
+
+Each installation uses its own stable cookie name, preventing another Reef on
+the same hostname (including a different port) from overwriting its login. A valid
+pre-0.21 cookie is adopted on the next authenticated GET with the same token and
+remaining expiry. Signing in again replaces this browser's prior login for this
+installation; logout revokes both current and applicable legacy tokens. Other
+installations' cookies are left alone. Use the same server address consistently:
+IP addresses and DNS names have separate browser cookies.
+
+If sign-ins still disappear before the selected duration, check browser cookie
+clearing/private browsing, that Reef keeps its private `state_dir/auth` across
+deployments, and whether an administrator changed the account or revoked sessions.
+A changed or corrupt authentication registry cannot restore its sessions. An
+ordinary restart with unchanged private state should not require another sign-in.
+Do not share cookie values, password files or private authentication state when
+reporting a problem.
+
+Remember me applies to browser access; existing console duration limits remain.
+Each remote command retains the existing maximum 12-hour grant, bounded by the
+remaining browser session and checked against current authorization centrally.
+Existing agents need no upgrade for remembered logins.
 
 Every browser request checks the account’s current persisted revision and enabled
 state. Role/scope/password changes and session revocation increment that revision.

@@ -106,7 +106,13 @@ func (p *remoteDocker) do(ctx context.Context, method, path string, query, form 
 		}
 	}
 	marker := p.server.agents.ConnectionMarker(p.host)
-	response, err := p.server.relay.Do(ctx, p.host, agents.Command{Owner: p.owner, Expires: p.expires, Method: method, Path: path, Query: q, Form: f})
+	// Remembered browser logins must not expand the existing agent grant window.
+	// Old agents retain their 12-hour limit; each command is still authorized live.
+	expires := p.expires
+	if limit := time.Now().Add(12 * time.Hour); expires.After(limit) {
+		expires = limit
+	}
+	response, err := p.server.relay.Do(ctx, p.host, agents.Command{Owner: p.owner, Expires: expires, Method: method, Path: path, Query: q, Form: f})
 	if err != nil {
 		p.diagnosticFailure(ctx, marker, method, "")
 		return nil, err

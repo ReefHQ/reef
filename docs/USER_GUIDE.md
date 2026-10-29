@@ -505,7 +505,10 @@ See [thresholds, maintenance and persistence](MONITORING.md).
 
 ## Accounts and host permissions
 
-Sign in with a username and password. The existing installation becomes initial
+Sign in with a username and password. Leave **Remember me for 30 days** unchecked
+for a 12-hour session, or select it to stay signed in on this browser for 30 days.
+Both survive normal Reef restarts; logout and account/session revocation still
+apply immediately. The existing installation becomes initial
 username `admin` using its current password; old shared-login cookies expire on
 upgrade. Open your username in the header to change your password or sign out
 everywhere. An all-host administrator can add users, assign admin/viewer roles

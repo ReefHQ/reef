@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.20.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.21.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -50,6 +50,9 @@ choice. `./reef-local.sh up --local` switches back to this machine only.
 
 Account passwords can be changed from your username in the header. The command
 above prints the bootstrap password, so it won’t reveal a password changed later.
+
+**Staying a while?** Check **Remember me for 30 days** when signing in. Leave it
+off for the usual 12-hour session. [Session details](docs/USERS.md#sessions-consoles-and-admitted-operations)
 
 Your configuration and accounts survive restarts in the private `.reef-local/`
 folder. Stopping Reef leaves your applications running. Rebuilding can recreate
