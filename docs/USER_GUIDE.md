@@ -266,6 +266,11 @@ launched through Reef are recorded here, so an empty history can be expected.
 Use **Refresh cache** to load the selected host’s **default builder** cache; other
 builders are not included, and an unused/cleaned builder can have no records.
 
+For read-only deployments, upgrade central Reef and affected agents to **0.22.3+**
+to fix Buildx client metadata writes. Reef uses private temporary metadata while
+keeping registry credentials read-only. This fixes cache inspection and Compose
+build execution; it does not import builds launched outside Reef into history.
+
 The page shows the latest 50 builds per selected project, across subsequent
 project operations and process restarts. Summary metadata is stored separately
 from the bounded operation logs in the private state directory, with no automatic

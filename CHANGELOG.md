@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.22.2 — Unreleased
+## 0.22.3 — Unreleased
+
+- Keep Buildx client metadata in private temporary storage so cache inspection and Compose builds work with the read-only filesystem used by Reef and agents. Registry credentials remain read-only; upgrade affected agents as well as central Reef.
+
+## 0.22.2 — 2026-10-29
 
 - Keep the current navigation section when switching Docker hosts, including previously visited hosts and agents without support for that section.
 - Open Projects at its overview on a different host, retain same-host project detail during capability refreshes and notify resource views only after their host context resets.

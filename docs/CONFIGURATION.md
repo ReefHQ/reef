@@ -41,6 +41,21 @@ The `Dockerfile` builds a static Go executable and adds it to the official **Doc
 
 Every project bind mount must use **the same canonical absolute source and destination path**. The host Docker daemon must recognize the paths resolved by Compose inside Reef. Mount each authorized project without exposing unrelated shares. Do not move or separate Compose and data directories to accommodate Reef. References outside these directories require additional mounts preserving their paths, after explicit review.
 
+If registration reports an unauthorized folder, open **Allowed folders & mounting
+help** and compare its roots with the physical folder on the Docker host:
+
+```sh
+(cd /absolute/project/folder && pwd -P)
+```
+
+Enter that physical path as **Project folder**. For example, a NAS share alias
+may resolve to a directory under a different volume prefix; an alias is not an
+authorized root merely because it reaches the same files on the host. The physical
+parent must also be explicitly authorized (or be the installation-parent default)
+and mounted at the identical path inside Reef/the agent. An explicit
+`allowed_project_roots` list overrides that default; `[]` disables registrations.
+Do not change roots or mounts until the host path and displayed policy are checked.
+
 After adapting and checking the paths, and **only after installation is authorized**, the reference commands are:
 
 ```sh

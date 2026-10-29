@@ -41,6 +41,10 @@ never enabled from the version string alone.
 Older agents keep their supported features and show an upgrade message for new
 ones. The commands below install the version with all capabilities listed here.
 
+Buildx in read-only deployments requires the **0.22.3+ fix on each affected agent**,
+as well as central Reef for Local. Updating central alone does not change the
+Docker commands executed by an older remote agent.
+
 ## Upgrade the existing agent
 
 Keep its current `COMPOSE_PROJECT_NAME`, `REEF_SERVER`, CA and **agent-state volume**.

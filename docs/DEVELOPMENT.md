@@ -108,3 +108,11 @@ are documented in [STANDALONE_CONTAINERS.md](STANDALONE_CONTAINERS.md). Set
 `REEF_TEST_STANDALONE=1` only against a local test engine with the Docker CLI; the
 test creates uniquely named fixtures, simulates registry delivery with local image
 retagging, and verifies real recreation, retained mounts/ports/IP and rollback.
+
+Read-only Buildx regression: compile the app test binary for Linux with CGO disabled,
+then run `TestDockerReadOnlyBuildxIntegration` with `REEF_TEST_READONLY_BUILDX=1`
+in the release Docker CLI image using `--read-only --tmpfs /tmp --network none`.
+Mount the binary and a **synthetic** `/root/.docker/config.json` read-only, plus
+the test engine socket. The test reads cache metadata and Compose configuration;
+it performs no build, pull or cleanup. It checks registry configuration preservation
+and removal of per-command private Buildx metadata. Never mount real credentials.
