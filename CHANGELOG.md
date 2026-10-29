@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.22.1 — Unreleased
+## 0.22.2 — Unreleased
+
+- Keep the current navigation section when switching Docker hosts, including previously visited hosts and agents without support for that section.
+- Open Projects at its overview on a different host, retain same-host project detail during capability refreshes and notify resource views only after their host context resets.
+
+## 0.22.1 — 2026-10-29
 
 - Keep the Manage container dialog stable during refresh: reserve loading-indicator space, retain unchanged metadata/result nodes and preserve the current scroll position when content changes.
 
