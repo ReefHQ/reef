@@ -40,6 +40,17 @@ func dockerCommand(ctx context.Context, p Project, args []string, stdout, stderr
 	cmd.Dir = p.Directory
 	// Do not leak the UI password or inherit Compose/Docker overrides from the server.
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "DOCKER_HOST=unix://" + socket, "COMPOSE_ANSI=never", "COMPOSE_PROGRESS=plain", "LANG=C", "LC_ALL=C", "LANGUAGE=en"}
+	if len(args) > 0 && (args[0] == "buildx" || args[0] == "compose") {
+		// Production keeps the root filesystem and mounted Docker credentials
+		// read-only. Buildx still needs writable client metadata, including for du.
+		// Isolate that metadata per command; keep HOME/registry credentials intact.
+		dir, err := os.MkdirTemp("", "reef-buildx-")
+		if err != nil {
+			return errors.New("Cannot prepare private Buildx metadata in temporary storage")
+		}
+		defer os.RemoveAll(dir)
+		cmd.Env = append(cmd.Env, "BUILDX_CONFIG="+dir)
+	}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()
