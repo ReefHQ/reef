@@ -44,7 +44,7 @@ func (s *Server) containers(w http.ResponseWriter, r *http.Request) {
 		names[p.Project.ProjectName] = p.Project.ID
 	}
 	for _, row := range rows {
-		result = append(result, item{row, names[row.ComposeProject], s.m.registeredID(row.ComposeProject), selfProject(rows, row.ComposeProject)})
+		result = append(result, item{row, names[row.ComposeProject], s.m.registeredID(row.ComposeProject), row.Reef || (row.ComposeProject != "" && selfProject(rows, row.ComposeProject))})
 	}
 	writeJSON(w, struct {
 		Containers    []item     `json:"containers"`

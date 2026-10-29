@@ -91,6 +91,9 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 		if capability == agents.StatsCapability {
 			central.agents.Stats(id, gen, true)
 		}
+		if capability == agents.ContainersCapability {
+			central.agents.Containers(id, gen, true)
+		}
 		if capability == agents.NetworksCapability {
 			central.agents.Networks(id, gen, true)
 		}

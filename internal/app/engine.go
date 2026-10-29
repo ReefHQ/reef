@@ -66,6 +66,7 @@ type Managed struct {
 	ImageUpdates ImageUpdates
 }
 type Manager struct {
+	containers    *containerManagement
 	Backups       *VolumeBackups
 	Notify        func(notifications.Event) // Set once before workers start.
 	mu            sync.RWMutex

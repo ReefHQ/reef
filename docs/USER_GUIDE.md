@@ -364,6 +364,14 @@ groups use the order **Logs → Console**; stopped containers keep logs availabl
 and disable console access. The container list refreshes without replacing the
 Compose editor or discarding its unsaved changes.
 
+Standalone containers also offer **Manage** after Logs/Console: start, stop,
+restart, update their image or delete the container while retaining volumes.
+Review host, exact identity, downtime and writable-layer loss first. Compose/Swarm
+and Reef administration containers stay with their owner/project. Remote management
+requires agent 0.22.0+; see [recreation and recovery](STANDALONE_CONTAINERS.md).
+**Review container operation** reopens the latest host operation even after the
+original disappears, without replaying it.
+
 Choose **Logs** on a container or project row, or **Application logs** in the
 project editor. Project logs let you select a container/service, including
 stopped containers. This is read-only access for every container in the selected host’s

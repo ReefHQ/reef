@@ -58,7 +58,7 @@
  function renderProjects(){
   find('#project-access-details').hidden=!management()||window.reefAccess?.canWrite===false;find('#no-managed-projects').hidden=!management()||managed.length>0;
   find('#projects-description').textContent=window.reefAccess?.canWrite===false?'Inspect Compose projects on this host. Changes require an admin account.':management()?'Connect a project to edit its Compose files and manage updates.':'Upgrade the agent to manage projects on this host.';
-  find('#host-note').textContent=window.reefAccess?.canWrite===false?'Read-only access to your assigned hosts, Compose files and logs.':management()?'Visible containers stay read-only until you connect their project.':'This agent supports inventory only. Upgrade it to enable remote operations.';
+  find('#host-note').textContent=window.reefAccess?.canWrite===false?'Read-only access to your assigned hosts, Compose files and logs.':management()?'Compose apps use projects. Standalone containers use Manage.':'This agent supports inventory only. Upgrade it to enable remote operations.';
   updateProjectConsole();renderProjectContainers();
   const all=ReefUI.projectRows(snapshot,visibleManaged()),query=find('#project-search').value.trim().toLowerCase(),mode=find('#project-access').value;
   const rows=all.filter(g=>(!query||`${g.name} ${g.managed?.name||''}`.toLowerCase().includes(query))&&(!mode||(mode==='managed'?!!g.managed:!g.managed)));
@@ -102,7 +102,7 @@
     const row=document.createElement('tr'),name=document.createElement('td');name.append(ReefContainers.name(c),textNode('small',c.id.slice(0,12),'muted'));name.title=c.id;
     const image=textNode('td',c.image,'image-name');image.title=c.image;
     const project=textNode('td',c.compose_project||'—','container-project-name'),permission=document.createElement('td');
-    if(c.managed_project_id){const button=textNode('button','Open project','compact-button');button.type='button';button.dataset.focusKey='container-open-'+c.id;button.setAttribute('aria-label',`Open project for ${c.name}`);button.addEventListener('click',()=>selectProject(c.managed_project_id));permission.append(textNode('span','Managed','managed-label'),button);}else permission.append(textNode('span',c.is_reef?'Reef itself':'View only','muted'));
+    if(c.managed_project_id){const button=textNode('button','Open project','compact-button');button.type='button';button.dataset.focusKey='container-open-'+c.id;button.setAttribute('aria-label',`Open project for ${c.name}`);button.addEventListener('click',()=>selectProject(c.managed_project_id));permission.append(textNode('span','Managed','managed-label'),button);}else permission.append(textNode('span',c.is_reef?'Reef itself':!c.compose_project?'Standalone':'View only','muted'));
     const actions=document.createElement('td');actions.append(ReefContainers.actions(c));row.append(name,image,ReefContainers.state(c),project,permission,actions);return row;
    });
    replaceKeepingFocus(find('#container-rows'),nodes);find('#container-rows').dataset.signature=signature;

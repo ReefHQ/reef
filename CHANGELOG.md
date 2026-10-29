@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.21.0 — Unreleased
+## 0.22.0 — Unreleased
+
+- Manage standalone containers on Local and compatible agents: reviewed start, stop, restart, image update/recreation and deletion without removing volumes or images.
+- Keep current configuration, named/anonymous mounts, network settings and published ports; pull before downtime, retain the old container until startup checks pass and attempt bounded rollback on failure.
+- Exclude Compose/Swarm, Reef administration, auto-remove and namespace-dependent containers; revalidate immutable identity/configuration before mutations and keep private inspect data off browser/relay/history payloads.
+- Journal operation phases privately before Docker writes, require explicit host review after interruption, and record container actions in History/webhooks. Remote management requires the containers-v1 capability (agent 0.22.0+).
+
+## 0.21.0 — 2026-10-29
 
 - Add an opt-in Remember me choice for a fixed 30-day sign-in; keep the default 12-hour session, restart persistence and immediate logout/account revocation.
 - Isolate session cookies per installation so Reef instances on the same hostname do not overwrite each other's login; migrate valid legacy cookies without extending their expiry.

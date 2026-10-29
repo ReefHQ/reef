@@ -19,6 +19,7 @@ const ControlCapability = "control-v1"
 const ImagesCapability = "images-v1"
 const ImageBatchCapability = "images-batch-v1"
 const StatsCapability = "stats-v1"
+const ContainersCapability = "containers-v1"
 const NetworksCapability = "networks-v1"
 const VolumeBackupsCapability = "volume-backups-v1"
 const VolumesCapability = "volumes-v1"
@@ -34,9 +35,9 @@ func AllowedCommand(method, path string) bool {
 		return method == "GET" || method == "POST"
 	}
 	switch path {
-	case "/api/stats", "/api/networks", "/api/networks/operation", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/api/builds/cache/operation", "/api/volumes", "/api/volumes/operation", "/api/images", "/api/images/operation", "/api/state", "/api/document", "/api/containers", "/api/container-logs", "/api/projects/proposal":
+	case "/api/container-management", "/api/container-management/operation", "/api/stats", "/api/networks", "/api/networks/operation", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/api/builds/cache/operation", "/api/volumes", "/api/volumes/operation", "/api/images", "/api/images/operation", "/api/state", "/api/document", "/api/containers", "/api/container-logs", "/api/projects/proposal":
 		return method == "GET"
-	case "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/volumes/action", "/api/images/action", "/api/action", "/api/image-updates", "/api/projects/register", "/api/projects/unmanage", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close":
+	case "/api/container-management/action", "/api/container-management/acknowledge", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/volumes/action", "/api/images/action", "/api/action", "/api/image-updates", "/api/projects/register", "/api/projects/unmanage", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close":
 		return method == "POST"
 	}
 	return false

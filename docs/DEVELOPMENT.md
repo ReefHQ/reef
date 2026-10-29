@@ -102,3 +102,9 @@ then removes only its own fixtures. It is excluded from ordinary socket-free CI.
 exercises a central scheduler claim through the backup APIs using only a uniquely
 named disposable volume/container; validates source preservation, restart, archive
 integrity and no duplicate slot, then cleans its own fixtures.
+
+Standalone container management and its opt-in disposable Docker integration test
+are documented in [STANDALONE_CONTAINERS.md](STANDALONE_CONTAINERS.md). Set
+`REEF_TEST_STANDALONE=1` only against a local test engine with the Docker CLI; the
+test creates uniquely named fixtures, simulates registry delivery with local image
+retagging, and verifies real recreation, retained mounts/ports/IP and rollback.

@@ -116,6 +116,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			if capability == agents.StatsCapability {
 				_ = s.agents.Stats(host, generation, true)
 			}
+			if capability == agents.ContainersCapability {
+				_ = s.agents.Containers(host, generation, true)
+			}
 			if capability == agents.NetworksCapability {
 				_ = s.agents.Networks(host, generation, true)
 			}

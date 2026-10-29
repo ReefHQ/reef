@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.21.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.22.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -64,7 +64,7 @@ Reef itself, so let active operations finish first.
 
 | In Reef | What you can do |
 | --- | --- |
-| **Containers** | Find running and stopped containers, inspect details, read stdout/stderr and open console sessions. |
+| **Containers** | Inspect containers, read logs, open consoles and start, stop, update or delete standalone containers. |
 | **Projects** | Connect existing Compose projects, edit and validate their main file, save backups, start, stop and apply updates. |
 | **Images** | Inspect usage, pull images, manage tags and review unused-image cleanup. |
 | **Volumes** | Inspect references, create volumes, back up their data, restore into a new volume and review cleanup. |
@@ -81,7 +81,7 @@ working in several shells. Refreshing the page restores your view, filters,
 selected host and scroll position; live shells and unsaved drafts are not restored.
 Light, dark or system theme? Your choice.
 
-[Explore the usage guide](docs/USER_GUIDE.md)
+[Explore the usage guide](docs/USER_GUIDE.md) · [Standalone containers and safe updates](docs/STANDALONE_CONTAINERS.md)
 
 ## 🛠️ Bring your existing projects
 

@@ -290,7 +290,7 @@ func (r *Registry) Diagnostic(id string, now time.Time) (Diagnostic, bool) {
 	} else if !view.CheckedAt.IsZero() {
 		result.Docker = "last_snapshot_only"
 	}
-	features := []struct{ name, capability string }{{"Projects, logs and consoles", ControlCapability}, {"Images", ImagesCapability}, {"Large image batches", ImageBatchCapability}, {"Volumes", VolumesCapability}, {"Volume backups", VolumeBackupsCapability}, {"Networks", NetworksCapability}, {"Builds and cache", BuildsCapability}, {"Statistics", StatsCapability}, {"Container monitoring", MonitoringCapability}, {"Action events", EventsCapability}, {"Updates from Reef", UpdatesCapability}}
+	features := []struct{ name, capability string }{{"Standalone containers", ContainersCapability}, {"Projects, logs and consoles", ControlCapability}, {"Images", ImagesCapability}, {"Large image batches", ImageBatchCapability}, {"Volumes", VolumesCapability}, {"Volume backups", VolumeBackupsCapability}, {"Networks", NetworksCapability}, {"Builds and cache", BuildsCapability}, {"Statistics", StatsCapability}, {"Container monitoring", MonitoringCapability}, {"Action events", EventsCapability}, {"Updates from Reef", UpdatesCapability}}
 	for _, f := range features {
 		reported := false
 		for _, cap := range view.Capabilities {
