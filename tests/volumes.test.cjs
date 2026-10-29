@@ -18,7 +18,7 @@ function page({host='local',capabilities=[],rows=[volume()],defer=false,report={
 }
 test('volume details render only metadata as text and stop deletion for used or unidentified volumes',async()=>{
  const p=page({rows:[volume('app-data',{project:'<script>bad</script>'}),volume('database',{removable:false,containers:['stopped-db'],retain_reason:'Used by a running or stopped container'}),volume('plugin-data',{removable:false,retain_reason:'Creation identity unavailable'})]});await p.settle();
- const rows=p.find('volumes-rows').children;assert.equal(rows.length,3);assert.equal(rows[0].children[3].textContent,'<script>bad</script>');assert.equal(rows[1].children[0].children[0].disabled,true);assert.equal(rows[2].children[5].children[0].disabled,true);
+ const rows=p.find('volumes-rows').children;assert.equal(rows.length,3);assert.equal(rows[0].children[3].textContent,'<script>bad</script>');assert.equal(rows[1].children[0].children[0].disabled,true);assert.equal(rows[2].children[5].children[1].disabled,true);
  await rows[1].children[1].children[0].fire('click');assert.equal(p.find('volume-details').open,true);assert.equal(p.find('volume-detail-delete').disabled,true);assert.ok(p.find('volume-detail-fields').children.some(n=>n.textContent==='stopped-db'));
 });
 test('remote creation pins host and uses CSRF plus explicit confirmation',async()=>{

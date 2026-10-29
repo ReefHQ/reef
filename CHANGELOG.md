@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.17.0 — Unreleased
+## 0.18.0 — Unreleased
+
+- Add host-local volume backups with an explicit downtime review, temporary stop and restart of previously running containers, private verified archives and configurable retention.
+- Restore verified backups into a new named volume, preserving numeric ownership, Unix modes and supported links while keeping existing volumes and application configuration intact.
+- Add the Backups dialog in Volumes, bounded archive/catalog storage, interrupted-operation recovery guidance, host permissions and the negotiated volume-backups-v1 agent capability.
+
+## 0.17.0 — 2026-10-29
 
 - Replace shared browser access with individual admin/viewer accounts, host assignments, account management and self-service password/session controls.
 - Enforce permissions centrally on every UI/API/console route, filter hosts/history/alerts before exposing data and block delayed responses after session revocation.

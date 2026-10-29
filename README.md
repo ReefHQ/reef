@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.17.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.18.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -64,7 +64,7 @@ Reef itself, so let active operations finish first.
 | **Containers** | Find running and stopped containers, inspect details, read stdout/stderr and open console sessions. |
 | **Projects** | Connect existing Compose projects, edit and validate their main file, save backups, start, stop and apply updates. |
 | **Images** | Inspect usage, pull images, manage tags and review unused-image cleanup. |
-| **Volumes** | Inspect references, create volumes and review individual or grouped removal. |
+| **Volumes** | Inspect references, create volumes, back up their data, restore into a new volume and review cleanup. |
 | **Networks** | Inspect addressing and usage, create bridge networks and connect or disconnect running containers. |
 | **Builds** | Build saved project definitions, read build results and review default-builder cache cleanup. |
 | **Statistics** | Watch CPU, memory, network and disk I/O, with pause/resume and per-container measurements. |
@@ -136,7 +136,7 @@ selected metadata, without terminal contents, application logs or credentials.
   for changes, limited to assigned hosts. Viewers can read Compose files and logs,
   which may contain secrets. [Accounts and recovery](docs/USERS.md).
 - Cleanup previews name their targets, but deleting a volume still deletes data.
-  Keep application backups; Reef does not provide volume backup/restore yet.
+  Use [volume backups](docs/VOLUME_BACKUPS.md) for compatible local volumes; keep an independent copy off the host.
 - Logs and consoles can show application secrets. Review them before sharing.
 - Compose updates can interrupt services. Reef does not automatically roll back
   or replay interrupted operations.
@@ -150,6 +150,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Config fields, mounts and manual installation | [Configuration](docs/CONFIGURATION.md) |
 | Server installation and versioned CI delivery | [Deployment](docs/DEPLOYMENT.md) |
 | User accounts, host permissions and access recovery | [Accounts](docs/USERS.md) |
+| Volume archives, retention and restoration | [Volume backups](docs/VOLUME_BACKUPS.md) |
 | Remote hosts and agent upgrades | [Agent setup](docs/AGENT_SETUP.md) |
 | Architecture of remote operations | [Multi-host agents](docs/MULTI_HOST_AGENTS.md) |
 | Development checks and versioning | [Development](docs/DEVELOPMENT.md) |

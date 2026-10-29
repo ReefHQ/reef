@@ -19,7 +19,7 @@ var actions = map[string]string{
 	"project": " save apply start stop register unmanage ",
 	"image":   " pull tag untag remove cleanup check ",
 	"network": " create remove cleanup connect disconnect ",
-	"volume":  " create remove cleanup ",
+	"volume":  " create remove cleanup backup restore backup_delete ",
 	"build":   " build cache_cleanup ",
 	"agent":   " enroll rename revoke update ",
 	"console": " session ",

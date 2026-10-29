@@ -206,7 +206,7 @@ func run() error {
 		return e
 	}
 	defer backend.Close()
-	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.NetworksCapability, agents.StatsCapability, agents.MonitoringCapability, agents.ImageBatchCapability}
+	capabilities := []string{agents.ControlCapability, agents.BuildsCapability, agents.ImagesCapability, agents.VolumesCapability, agents.VolumeBackupsCapability, agents.NetworksCapability, agents.StatsCapability, agents.MonitoringCapability, agents.ImageBatchCapability}
 	if backend.HasActionEvents() {
 		capabilities = append(capabilities, agents.EventsCapability)
 	}

@@ -119,6 +119,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			if capability == agents.NetworksCapability {
 				_ = s.agents.Networks(host, generation, true)
 			}
+			if capability == agents.VolumeBackupsCapability {
+				_ = s.agents.VolumeBackups(host, generation, true)
+			}
 			if capability == agents.VolumesCapability {
 				_ = s.agents.Volumes(host, generation, true)
 			}

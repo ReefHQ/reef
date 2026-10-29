@@ -159,7 +159,9 @@ The approved feature sequence is tracked in [the roadmap](ROADMAP.md).
 Search by name, driver or Compose project and filter used/unused volumes.
 Details show driver, scope, creation date, Docker mountpoint, Compose project and
 referencing containers, including stopped containers. Mountpoints are metadata
-only: Reef never opens their paths or browses/edits volume contents. Bind mounts,
+only: Reef never opens their mountpoint paths or browses/edits individual files.
+From v0.18.0, use **Backup** or **Backups** for explicit filesystem archives and
+restoration into new volumes. See [Volume backups](VOLUME_BACKUPS.md). Bind mounts,
 volume driver options and arbitrary labels are not exposed. Volume sizes are not
 estimated by scanning application data.
 
@@ -485,7 +487,7 @@ private identity/state volume and needs no new enrollment token.
 
 Simple `.env` values and the access password are masked in captured output; `config` runs quietly. This is not a universal secret detector: transformed values, YAML secrets, registry output or application messages can escape masking. Compose files and backups may contain plaintext secrets and are visible to the authenticated user. Review screenshots and logs before sharing.
 
-File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Reef does not back up application data. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
+File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Compose file backups do not include application data. Use the separate [volume backup workflow](VOLUME_BACKUPS.md) for compatible local volumes. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
 
 A successful Compose command does not by itself prove application health. Apply update checks running/healthcheck state before eligible old-image cleanup, but application-level checks remain your responsibility. Reef supports [individual accounts and host permissions](USERS.md), but has no automatic rollback or unattended recovery. Live Statistics is available; [monitoring alerts](MONITORING.md) can be enabled in Alerts.
 

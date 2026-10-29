@@ -274,3 +274,11 @@ port, enrollment or identity volume is needed for accounts. Existing agents reta
 their negotiated features without an upgrade solely for user permissions.
 Already admitted Docker operations continue after a user is revoked; new actions,
 console input and delayed browser reads are denied. See [the access model](USERS.md).
+
+## Volume backups (v0.18.0)
+
+Agents advertising `volume-backups-v1` support the same backup/restore workflow
+as Local, with archives kept in their own private managed-state folder. Upgrade
+central first and then the relevant agents, preserving their identity and config.
+For another persistent destination, configure `volume_backup_directory` and mount
+it into the agent; [storage and recovery details](VOLUME_BACKUPS.md).
