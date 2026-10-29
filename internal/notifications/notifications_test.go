@@ -258,3 +258,19 @@ func TestSlowWebhookDoesNotBlockNewActionEvents(t *testing.T) {
 		t.Fatal(s.View())
 	}
 }
+
+func TestScheduleEventsAreCentralOnly(t *testing.T) {
+	s := fixture(t)
+	e := New("schedule", "run", "completed", strings.Repeat("b", 48), "Nightly check")
+	e.HostID = strings.Repeat("a", 64)
+	e.Host = "Remote host"
+	if !e.Valid() {
+		t.Fatal("schedule event invalid")
+	}
+	if err := s.Accept(e.HostID, e.Host, []Event{e}); err == nil {
+		t.Fatal("agent forged a central schedule event")
+	}
+	if err := s.AcceptCentral(e); err != nil {
+		t.Fatal(err)
+	}
+}

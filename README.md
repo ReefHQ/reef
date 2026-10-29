@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.18.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.19.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -70,6 +70,7 @@ Reef itself, so let active operations finish first.
 | **Statistics** | Watch CPU, memory, network and disk I/O, with pause/resume and per-container measurements. |
 | **Alerts** | Detect agent disconnections, unhealthy containers and restart loops, with configurable delays and recovery notifications. |
 | **Accounts** | Give each person a username, role and selected hosts; manage passwords and sessions from the header. |
+| **Schedules** | Run image checks, volume backups and reviewed age-based cleanup daily or weekly, with an explicit timezone. |
 | **History** | Follow actions and results across hosts, with search, filters and operation details. |
 
 Console sessions live in a bottom panel, so you can keep navigating Reef while
@@ -118,6 +119,10 @@ as central Reef, preserving their identity and configuration.
 results are grouped by operation, with up to **2,000 events or 30 days** retained.
 It’s a best-effort journal; storage failures or queue overflow are reported.
 
+**Schedules** takes the night shift: daily/weekly checks, volume backups and
+reviewed cleanup policies, with explicit timezones and visible results. Missed
+slots are skipped; uncertain operations wait for your review.
+
 **Alerts** watches hosts in the background once enabled. Configure disconnect,
 health and restart thresholds, then follow incidents and collection coverage.
 Opening and recovery notifications use the existing webhook destination.
@@ -126,7 +131,7 @@ Opening and recovery notifications use the existing webhook destination.
 it once, send a test and check delivery status from Reef. These events contain
 selected metadata, without terminal contents, application logs or credentials.
 
-[Monitoring alerts](docs/MONITORING.md) · [Action history](docs/ACTION_HISTORY.md) · [Webhook setup and payloads](docs/WEBHOOKS.md)
+[Scheduled operations](docs/SCHEDULES.md) · [Monitoring alerts](docs/MONITORING.md) · [Action history](docs/ACTION_HISTORY.md) · [Webhook setup and payloads](docs/WEBHOOKS.md)
 
 ## ⚓ A few things to know
 
@@ -150,6 +155,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Config fields, mounts and manual installation | [Configuration](docs/CONFIGURATION.md) |
 | Server installation and versioned CI delivery | [Deployment](docs/DEPLOYMENT.md) |
 | User accounts, host permissions and access recovery | [Accounts](docs/USERS.md) |
+| Timed checks, backups and cleanup policies | [Schedules](docs/SCHEDULES.md) |
 | Volume archives, retention and restoration | [Volume backups](docs/VOLUME_BACKUPS.md) |
 | Remote hosts and agent upgrades | [Agent setup](docs/AGENT_SETUP.md) |
 | Architecture of remote operations | [Multi-host agents](docs/MULTI_HOST_AGENTS.md) |

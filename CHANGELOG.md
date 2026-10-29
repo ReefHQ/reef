@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.18.0 — Unreleased
+## 0.19.0 — Unreleased
+
+- Add central daily/weekly schedules with explicit IANA timezones, next/last results and reviewed activation for project image checks, volume backups, old untagged-image cleanup and old default-builder cache cleanup.
+- Persist claims before dispatch, skip missed/offline/busy slots, handle daylight-saving gaps/folds and block future host schedules after uncertain mutations until explicit review.
+- Bind schedules to an authorizing account and host permissions; reuse Local/agent APIs and resource locks without storing passwords or requiring a new agent scheduling capability.
+
+## 0.18.0 — 2026-10-29
 
 - Add host-local volume backups with an explicit downtime review, temporary stop and restart of previously running containers, private verified archives and configurable retention.
 - Restore verified backups into a new named volume, preserving numeric ownership, Unix modes and supported links while keeping existing volumes and application configuration intact.

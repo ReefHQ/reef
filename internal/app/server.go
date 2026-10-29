@@ -23,6 +23,7 @@ import (
 	"reef/internal/history"
 	"reef/internal/monitoring"
 	"reef/internal/notifications"
+	"reef/internal/schedules"
 	assets "reef/web"
 )
 
@@ -40,6 +41,9 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	schedules      *schedules.Store
+	scheduleMu     sync.Mutex
+	scheduleActive map[string]bool
 	accounts       *accounts.Store
 	loginSlots     chan struct{}
 	monitor        *monitoring.Store
@@ -62,7 +66,7 @@ type Server struct {
 }
 
 func newServer(m *Manager, c Config, password string) *Server {
-	return &Server{loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+	return &Server{scheduleActive: map[string]bool{}, loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	u, e := url.Parse(r.Header.Get("Origin"))
@@ -76,6 +80,9 @@ func (s *Server) originOK(r *http.Request) bool {
 	return u.Scheme == scheme
 }
 func (s *Server) getSession(r *http.Request) (session, bool) {
+	if v, ok := r.Context().Value(scheduleSessionKey{}).(scheduleIdentity); ok {
+		return v.Session, s.scheduleIdentityValid(r, v)
+	}
 	if sess, ok := r.Context().Value(agentSessionKey{}).(session); ok {
 		return sess, time.Now().Before(sess.Expires)
 	}
@@ -141,6 +148,10 @@ func (s *Server) Handler() http.Handler {
 		host := r.URL.Query().Get("host")
 		if r.URL.Path == "/api/me" || r.URL.Path == "/api/users" {
 			s.userAccounts(w, r, sess)
+			return
+		}
+		if r.URL.Path == "/api/schedules" {
+			s.scheduleAPI(w, r, sess)
 			return
 		}
 		if r.URL.Path == "/api/monitoring" {

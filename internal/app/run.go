@@ -13,6 +13,7 @@ import (
 	"reef/internal/history"
 	"reef/internal/monitoring"
 	"reef/internal/notifications"
+	"reef/internal/schedules"
 	"strings"
 	"syscall"
 	"time"
@@ -105,6 +106,11 @@ func Run() {
 	if e != nil {
 		log.Fatal(e)
 	}
+	s.schedules, e = schedules.Open(c.StateDir, time.Now())
+	if e != nil {
+		log.Print("Schedules unavailable; inspect private schedule state")
+	}
+	s.runSchedules(checksContext)
 	monitoringStopped := make(chan struct{})
 	defer func() { stopChecks(); <-monitoringStopped }()
 	go func() { defer close(monitoringStopped); s.runMonitoring(checksContext) }()

@@ -47,6 +47,7 @@ with an installed Compose CLI and a nonexistent socket.
 | `cmd/reef-local/` | Local launcher entry point |
 | `internal/app/` | HTTP/auth, configuration and operation handlers |
 | `internal/docker/` | Docker inventory and resource operations |
+| `internal/schedules/` | Explicit timezone policies, durable claims, restart recovery and latest results |
 | `internal/volumebackup/` | Private archive catalog, checksums, validation and retention |
 | `internal/accounts/` | Individual credentials and host authorization |
 | `internal/history/` | Central action metadata journal |
@@ -95,3 +96,8 @@ Update the linked guide, changelog and source version together when relevant.
 uses the Docker CLI/socket to create uniquely named disposable volumes/containers.
 It checks content, UID/GID, modes, links, active-only restart and stop/export/restart errors,
 then removes only its own fixtures. It is excluded from ordinary socket-free CI.
+
+`REEF_TEST_SCHEDULES=1 go test ./internal/app -run TestDockerScheduledBackupIntegration -v`
+exercises a central scheduler claim through the backup APIs using only a uniquely
+named disposable volume/container; validates source preservation, restart, archive
+integrity and no duplicate slot, then cleans its own fixtures.

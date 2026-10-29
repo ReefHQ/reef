@@ -156,3 +156,11 @@ username if that initial account was deleted. Native installations use
 `reef -config /private/path/config.json -recover-admin USERNAME` with the private
 password-file environment. If account state is damaged, restore its private backup
 first; do not delete auth files to bypass recovery.
+
+## Scheduled authorizations (v0.19.0)
+
+Admins can configure [Schedules](SCHEDULES.md) on assigned hosts; viewers read
+metadata only. Saving a schedule binds it to that admin’s account revision. A
+password/permission change, disable/delete or session revocation invalidates its
+future grant; an authorized admin must edit and confirm the schedule again. No
+password or browser session is stored for unattended execution.

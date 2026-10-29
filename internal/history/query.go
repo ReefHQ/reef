@@ -14,7 +14,7 @@ import (
 
 const PageSize = 50
 
-var scopes = map[string]bool{"project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true, "monitor": true}
+var scopes = map[string]bool{"schedule": true, "project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true, "monitor": true}
 var statuses = map[string]bool{"started": true, "completed": true, "failed": true, "partial": true, "closed": true, "unknown": true}
 
 type Query struct {

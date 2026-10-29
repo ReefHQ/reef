@@ -97,8 +97,9 @@ but **not encrypted**. Protect the disk and any independent copies accordingly.
 Keep an independent copy off the host: these backups do not protect against loss
 of the host or its storage. Restore is currently limited to archives produced by
 Reef on that host; importing/downloading archives and cross-host transfers are not
-part of this version. Scheduled backups will be integrated with planned scheduling
-work; no background backup schedule is enabled by this feature.
+part of this version. From central v0.19.0, [Schedules](SCHEDULES.md) can run backups after explicit
+approval of the volume identity and temporary-stop policy. No schedule is enabled
+by default.
 
 ## Supported data and recovery
 
