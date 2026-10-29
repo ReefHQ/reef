@@ -17,6 +17,13 @@ overview and revoked/missing hosts fall back to Local. If browser storage is
 blocked, navigation still works without persistence. Editor drafts, open dialogs,
 log output and console connections are not restored by this preference.
 
+Changing Docker hosts keeps the current section, including when returning to a
+previously visited server. Projects returns to its overview on a different host;
+a project from one host is never opened on another automatically. Host-specific
+data, selections and filters reset as before. Unsupported sections stay visible
+with their agent-upgrade guidance. A capability refresh on the same host keeps
+its open project detail.
+
 **Containers** is the default view. It lists running, stopped, created, paused and other Docker container states, supports combined text, state, Compose project and access filters, and refreshes every five seconds. Counts always describe the full snapshot; the result line describes the filtered subset. If Docker becomes unavailable, Reef shows a clear error and keeps the last successful snapshot marked as disconnected.
 
 **Projects** combines discovered Compose groups with managed projects that currently have no containers, and distinguishes **View only** from **Managed**. Search and the Access filter narrow this list; counts include managed projects with no containers. Choose **Open project** to enter its editor, or use **All projects** to return to the overview. The managed-project highlight and picker reflect only the displayed project detail; returning to the overview clears their visual selection while retaining editor drafts in memory. No Compose file is loaded merely by opening the overview. Only projects explicitly authorized in configuration or confirmed through **Manage this project** have an editor or Compose operations. Seeing a container never grants management access. Reef reads only the Compose working-directory/config-file labels as untrusted form suggestions; opening the form does not follow those paths.
@@ -252,6 +259,12 @@ has a ten-second UI timeout; changing saved files invalidates the submitted
 revision. Missing contexts/Buildx/authentication are reported as build failures.
 Existing engine credentials apply; no shell snippets/build args or arbitrary
 Dockerfile paths are submitted by the browser.
+
+The Builds navigation counter counts **managed projects**, not executed builds or
+cache records. Choose a managed project to see its **Build history**: only builds
+launched through Reef are recorded here, so an empty history can be expected.
+Use **Refresh cache** to load the selected host’s **default builder** cache; other
+builders are not included, and an unused/cleaned builder can have no records.
 
 The page shows the latest 50 builds per selected project, across subsequent
 project operations and process restarts. Summary metadata is stored separately
