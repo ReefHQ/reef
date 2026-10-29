@@ -20,6 +20,7 @@ const ImagesCapability = "images-v1"
 const ImageBatchCapability = "images-batch-v1"
 const StatsCapability = "stats-v1"
 const NetworksCapability = "networks-v1"
+const VolumeBackupsCapability = "volume-backups-v1"
 const VolumesCapability = "volumes-v1"
 const MaxCommandBytes = 4 << 20
 const MaxFrameBytes = 16 << 10
@@ -29,7 +30,7 @@ var ErrRelay = errors.New("Agent disconnected or command outcome unknown; refres
 // Only Reef operations are transported. No arbitrary URL, headers, Docker API,
 // shell command, filesystem path or browser authentication can be dispatched.
 func AllowedCommand(method, path string) bool {
-	if path == "/api/agent-update" {
+	if path == "/api/agent-update" || path == "/api/volume-backups" {
 		return method == "GET" || method == "POST"
 	}
 	switch path {

@@ -50,6 +50,7 @@ type snapshot struct {
 	Updates            bool
 	Builds             bool
 	ImageBatch         bool
+	Backups            bool
 	Volumes            bool
 	Networks           bool
 	Stats              bool
@@ -280,6 +281,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.Updates = false
 	v.Builds = false
 	v.Control = false
+	v.Backups = false
 	v.Volumes = false
 	v.Networks = false
 	v.Stats = false
@@ -418,6 +420,9 @@ func (r *Registry) view(h Host) View {
 	if v.Networks {
 		capabilities = append(capabilities, NetworksCapability)
 	}
+	if v.Backups {
+		capabilities = append(capabilities, VolumeBackupsCapability)
+	}
 	if v.Volumes {
 		capabilities = append(capabilities, VolumesCapability)
 	}
@@ -471,6 +476,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 		v.Events = false
 		v.Updates = false
 		v.Builds = false
+		v.Backups = false
 		v.Volumes = false
 		v.Networks = false
 		v.Stats = false
@@ -670,4 +676,23 @@ func (r *Registry) MonitorSample(id string) (monitoring.Sample, time.Time, bool)
 	sample.Maintenance = sample.Maintenance || v.MonitorMaintenance
 	sample.Containers = append([]monitoring.Container{}, sample.Containers...)
 	return sample, v.MonitorReceived, true
+}
+
+func (r *Registry) VolumeBackups(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.Backups = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanVolumeBackups(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.Backups && time.Since(v.Contact) < 45*time.Second
 }

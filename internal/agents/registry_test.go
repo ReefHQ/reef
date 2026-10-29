@@ -432,3 +432,39 @@ func TestStatsCapabilityBelongsToCurrentConnection(t *testing.T) {
 		t.Fatal("revoked host retained capability")
 	}
 }
+
+func TestVolumeBackupCapabilityIsConnectionScoped(t *testing.T) {
+	r, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, key := enrolled(t, r, "backups")
+	g, e := r.Begin(id, key, "0.18.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = r.VolumeBackups(id, g, true); e != nil || r.CanVolumeBackups(id) {
+		t.Fatal("control required", e)
+	}
+	r.Control(id, g, true)
+	r.VolumeBackups(id, g, true)
+	if !r.CanVolumeBackups(id) {
+		t.Fatal("capability missing")
+	}
+	next, e := r.Begin(id, key, "0.18.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r.CanVolumeBackups(id) {
+		t.Fatal("stale capability survived reconnect")
+	}
+	if e = r.VolumeBackups(id, g, true); e == nil {
+		t.Fatal("old generation accepted")
+	}
+	r.Control(id, next, true)
+	r.VolumeBackups(id, next, true)
+	r.Control(id, next, false)
+	if r.CanVolumeBackups(id) {
+		t.Fatal("disabled control retained capability")
+	}
+}

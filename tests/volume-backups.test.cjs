@@ -1,0 +1,28 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../web/volume-backups.js'),'utf8');
+const volume={name:'database',driver:'local',scope:'local',fingerprint:'a'.repeat(64)},record={id:'b'.repeat(48),volume:'database',status:'succeeded',created:'2026-10-29T10:00:00Z',bytes:1048576,message:'Verified archive',containers:[]};
+function page({host='local',caps=[],write=true,confirm=async()=>true,records=[record]}={}){
+ const nodes=new Map(),events={},requests=[],timers=[];
+ class Node{constructor(tag='div',id=''){this.tagName=tag;this.id=id;this.value='';this.hidden=false;this.disabled=false;this.children=[];this.listeners={};this.open=false;this.textContent='';}addEventListener(k,f){(this.listeners[k]??=[]).push(f);}async fire(k){for(const f of this.listeners[k]||[])await f({preventDefault(){},target:this});}append(...ns){this.children.push(...ns);if(this.id==='backups-volume'&&!this.value)this.value=ns[0]?.value||'';}replaceChildren(...ns){this.children=ns;if(this.id==='backups-volume')this.value='';}showModal(){this.open=true;}close(){this.open=false;this.fire('close');}scrollIntoView(){}focus(){}}
+ const find=id=>{if(!nodes.has(id))nodes.set(id,new Node('div',id));return nodes.get(id);};
+ const window={reefHost:host,reefHostName:host,reefCapabilities:caps,reefAccess:{canWrite:write},ReefOperationPanels:{render(){}},addEventListener(k,f){(events[k]??=[]).push(f);}};
+ const context={window,document:{getElementById:find,createElement:t=>new Node(t),addEventListener(){},hidden:false},URLSearchParams,csrf:'csrf-fixture',ask:confirm,setTimeout:f=>{timers.push(f);return timers.length;},clearTimeout(){},request:async(url,opts,selected)=>{requests.push({url,opts,host:selected});return{json:async()=>url==='/api/volumes'?{volumes:[volume]}:{backups:records,total:records.length,offset:0,retention:7,operation:{},preview:{name:volume.name,fingerprint:volume.fingerprint,usage:'c'.repeat(64),containers:[{id:'d'.repeat(64),name:'db-running',running:true},{id:'e'.repeat(64),name:'db-stopped',running:false}]}}};}};
+ vm.runInNewContext(source,context);return{find,window,requests,timers,async settle(){for(let i=0;i<30;i++)await Promise.resolve();},async open(){await window.ReefVolumeBackups.open(volume);await this.settle();},switchHost(){window.reefHost='other';for(const f of events['reef-host-changed']||[])f();}};
+}
+test('backup reviews active containers and pins the host, volume identity, usage and CSRF',async()=>{
+ let confirmation='';const p=page({host:'remote',caps:['volume-backups-v1'],confirm:async text=>{confirmation=text;return true;}});await p.open();await p.find('backups-create').fire('click');await p.settle();const call=p.requests.find(r=>r.opts?.method==='POST');assert.equal(call.host,'remote');for(const [key,value] of Object.entries({action:'backup',volume:'database',fingerprint:'a'.repeat(64),usage:'c'.repeat(64),csrf:'csrf-fixture',confirmed:'yes'}))assert.equal(call.opts.body.get(key),value);assert.match(confirmation,/db-running/);assert.doesNotMatch(confirmation,/db-stopped/);assert.match(confirmation,/downtime/);assert.match(confirmation,/not a database dump/);
+});
+test('viewer sees backup metadata with every mutation disabled; old agents get upgrade guidance',async()=>{
+ const p=page({write:false,records:[{...record,message:'<script>private data</script>'}]});await p.open();assert.equal(p.find('backups-create').disabled,true);const card=p.find('backups-records').children[0];assert.equal(card.children[2].textContent,'<script>private data</script>');assert.ok(card.children.at(-1).children.every(n=>n.disabled));
+ const old=page({host:'old',caps:['volumes-v1']});await old.open();assert.equal(old.requests.length,0);assert.equal(old.find('backups-create').disabled,true);assert.match(old.find('backups-error').textContent,/Upgrade/);
+});
+test('host change during backup confirmation cancels the POST and closes the modal',async()=>{
+ let answer;const p=page({confirm:()=>new Promise(resolve=>{answer=resolve;})});await p.open();const pending=p.find('backups-create').fire('click');await p.settle();assert.equal(typeof answer,'function');p.switchHost();answer(true);await pending;await p.settle();assert.equal(p.find('volume-backups').open,false);assert.ok(p.requests.every(r=>!r.opts));
+});
+test('guided restoration requires a new name and never submits an overwrite option',async()=>{
+ let confirmation='';const p=page({confirm:async text=>{confirmation=text;return true;}});await p.open();await p.find('backups-records').children[0].children.at(-1).children[0].fire('click');assert.equal(p.find('backups-restore-form').hidden,false);p.find('backups-restore-name').value='database-recovered';await p.find('backups-restore-form').fire('submit');await p.settle();const body=p.requests.find(r=>r.opts)?.opts.body;assert.equal(body.get('action'),'restore');assert.equal(body.get('backup'),record.id);assert.equal(body.get('name'),'database-recovered');assert.equal(body.has('overwrite'),false);assert.match(confirmation,/NEW volume/);assert.match(confirmation,/Existing volumes/);
+});
+test('failed and interrupted archives have no restore action and expose recovery identities',async()=>{
+ const p=page({records:[{...record,status:'interrupted',containers:['d'.repeat(64)],message:'Check container state'}]});await p.open();const card=p.find('backups-records').children[0];assert.match(card.children[3].textContent,/dddd/);assert.equal(card.children.at(-1).children.length,1);assert.match(card.children.at(-1).children[0].textContent,/Delete/);
+});

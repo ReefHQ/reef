@@ -13,6 +13,8 @@ import (
 )
 
 type Config struct {
+	VolumeBackupDirectory   string    `json:"volume_backup_directory,omitempty"`
+	VolumeBackupRetention   int       `json:"volume_backup_retention,omitempty"`
 	AgentsEnabled           bool      `json:"agents_enabled,omitempty"`
 	Listen                  string    `json:"listen"`
 	StateDir                string    `json:"state_dir"`
@@ -50,6 +52,12 @@ func loadConfigState(path, stateOverride string) (Config, error) {
 	return finishConfig(c)
 }
 func finishConfig(c Config) (Config, error) {
+	if c.VolumeBackupRetention < 0 || c.VolumeBackupRetention > 100 {
+		return c, errors.New("volume_backup_retention must be 1–100, or 0 for the default of 7")
+	}
+	if p := c.VolumeBackupDirectory; p != "" && (!filepath.IsAbs(p) || filepath.Clean(p) != p || p == string(filepath.Separator)) {
+		return c, errors.New("volume_backup_directory must be a canonical absolute directory")
+	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8099"
 	}

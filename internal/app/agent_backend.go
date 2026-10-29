@@ -54,6 +54,7 @@ func NewAgentBackend(configPath, stateDir, socket string, updateDirs ...string) 
 	s.discovery = docker.NewClient(socket)
 	ctx, stop := context.WithCancel(context.Background())
 	m.Images = &ImageService{Exec: executor}
+	m.initVolumeBackups(c)
 	a := &AgentBackend{server: s, handler: s.Handler(), stop: stop}
 	updateDir := os.Getenv("REEF_AGENT_UPDATE_DIR")
 	if len(updateDirs) > 0 {
@@ -65,6 +66,9 @@ func NewAgentBackend(configPath, stateDir, socket string, updateDirs ...string) 
 	}
 	m.Notify = a.events.Emit
 	if err = a.configureAgentUpdates(ctx, updateDir); err != nil {
+		if m.Backups.store != nil {
+			m.Backups.store.Close()
+		}
 		stop()
 		return nil, err
 	}
@@ -72,7 +76,14 @@ func NewAgentBackend(configPath, stateDir, socket string, updateDirs ...string) 
 	return a, nil
 }
 func (a *AgentBackend) CloseConsoles() { a.server.closeConsoles() }
-func (a *AgentBackend) Close()         { a.stop(); a.CloseConsoles(); a.server.m.wg.Wait() }
+func (a *AgentBackend) Close() {
+	a.stop()
+	a.CloseConsoles()
+	a.server.m.wg.Wait()
+	if b := a.server.m.Backups; b != nil && b.store != nil {
+		_ = b.store.Close()
+	}
+}
 func (a *AgentBackend) Serve(ctx context.Context, w http.ResponseWriter, command agents.Command) {
 	if ctx.Err() != nil {
 		http.Error(w, "Agent command cancelled", 503)

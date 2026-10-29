@@ -70,6 +70,12 @@ func Run() {
 	checksContext, stopChecks := context.WithCancel(context.Background())
 	defer stopChecks()
 	m.Images = &ImageService{Exec: m.Exec}
+	m.initVolumeBackups(c)
+	defer func() {
+		if m.Backups.store != nil {
+			_ = m.Backups.store.Close()
+		}
+	}()
 	s := newServer(m, c, password)
 	s.accounts = users
 	s.webhooks, e = notifications.Open(c.StateDir, false)
