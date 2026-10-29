@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.22.0 — Unreleased
+## 0.22.1 — Unreleased
+
+- Keep the Manage container dialog stable during refresh: reserve loading-indicator space, retain unchanged metadata/result nodes and preserve the current scroll position when content changes.
+
+## 0.22.0 — 2026-10-29
 
 - Manage standalone containers on Local and compatible agents: reviewed start, stop, restart, image update/recreation and deletion without removing volumes or images.
 - Keep current configuration, named/anonymous mounts, network settings and published ports; pull before downtime, retain the old container until startup checks pass and attempt bounded rollback on failure.

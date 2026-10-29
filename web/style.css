@@ -244,3 +244,5 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 .login-card form .login-remember{display:flex;align-items:center;gap:10px;margin:4px 0;font-size:13px}.login-card .login-remember input{width:18px;height:18px;min-height:18px;padding:0;margin:0;flex:none}
 
 #container-management{width:min(760px,calc(100vw - 28px))}#cm-operation{overflow-wrap:anywhere}#cm-actions{margin-block:18px}
+
+#cm-loading[hidden]{display:flex;visibility:hidden}

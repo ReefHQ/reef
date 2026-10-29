@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.22.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.22.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -80,6 +80,8 @@ Console sessions live in a bottom panel, so you can keep navigating Reef while
 working in several shells. Refreshing the page restores your view, filters,
 selected host and scroll position; live shells and unsaved drafts are not restored.
 Light, dark or system theme? Your choice.
+
+The **Manage** panel refreshes container status without moving your reading position.
 
 [Explore the usage guide](docs/USER_GUIDE.md) · [Standalone containers and safe updates](docs/STANDALONE_CONTAINERS.md)
 
