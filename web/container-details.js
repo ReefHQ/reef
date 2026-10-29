@@ -10,6 +10,7 @@
   if(c.state==='running'&&!c.inventory_only&&window.reefAccess?.canWrite!==false){
    const console=node('button','Console','compact-button');console.type='button';console.dataset.focusKey='container-console-'+c.id;console.setAttribute('aria-label',`Console for ${c.name}`);console.addEventListener('click',()=>{if(dialog.open)dialog.close();window.openContainerConsole(c);});group.append(console);
   }else{const console=node('button','Console','compact-button');console.type='button';console.disabled=true;console.title=window.reefAccess?.canWrite===false?'Console access requires an admin account':c.inventory_only?'Remote consoles are not available yet':'Console access requires a running container';group.append(console);}
+  if(!c.compose_project&&!c.is_reef&&window.reefAccess?.canWrite!==false){const manage=node('button','Manage','compact-button');manage.type='button';manage.dataset.focusKey='container-manage-'+c.id;manage.setAttribute('aria-label',`Manage ${c.name}`);const host=c.host_id||window.reefHost||'local';manage.disabled=!!c.inventory_only||(host!=='local'&&!window.reefCapabilities?.includes('containers-v1'));if(manage.disabled)manage.title='Upgrade the agent to 0.22.0 or later for standalone container management';manage.addEventListener('click',()=>{if(dialog.open)dialog.close();window.ReefContainerManagement?.open(c);});group.append(manage);}
   return group;
  }
  function render(c){

@@ -34,5 +34,5 @@ Items 1–8 are merged and published.
 The user approved #31 before #30, each on its own branch with review and publication
 between features.
 
-1. [#31](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/31) — **Sign-in persistence — implemented, awaiting review and publication (0.21.0).** Investigate frequent sign-outs, isolate installation cookies and offer opt-in 30-day sessions alongside the default 12 hours.
-2. [#30](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/30) — **Standalone container management — approved, not started.** Start/stop/restart, image update with configuration preservation and reviewed recovery, and deletion retaining volumes by default; Local/remote parity.
+1. [#31](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/31) — **Sign-in persistence — merged and published (0.21.0).** Investigate frequent sign-outs, isolate installation cookies and offer opt-in 30-day sessions alongside the default 12 hours.
+2. [#30](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/30) — **Standalone container management — implemented, awaiting review and publication (0.22.0).** Start/stop/restart, image update with configuration preservation and reviewed recovery, and deletion retaining volumes by default; Local/remote parity.

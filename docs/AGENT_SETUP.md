@@ -297,3 +297,12 @@ revoked ones. Read connection/inventory freshness, accepted version, negotiated
 features and recent fixed observations without sending a probe or command.
 [Agent diagnostics and troubleshooting](AGENT_DIAGNOSTICS.md) explains the limits
 of what central Reef can observe, privacy, and recovery steps.
+
+## Standalone container management
+
+Agent **0.22.0+** advertises `containers-v1` for reviewed start/stop/restart, image
+recreation and deletion of standalone containers. Older agents keep their existing
+features; central Reef rejects these new actions until the capability is reported.
+Private inspect/create data stays on the agent; only review/result metadata crosses
+the relay. Keep its private state for interrupted-operation review; see
+[recreation and recovery](STANDALONE_CONTAINERS.md).

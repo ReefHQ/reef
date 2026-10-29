@@ -66,6 +66,16 @@ type Server struct {
 }
 
 func newServer(m *Manager, c Config, password string) *Server {
+	if m.containers == nil {
+		socket := ""
+		if d, ok := m.Exec.(DockerExecutor); ok {
+			socket = d.Socket
+		}
+		m.containers = openContainerManagement(c.StateDir, socket)
+		if m.containers.op.Unknown || m.containers.err != nil {
+			m.storageBusy = true
+		}
+	}
 	return &Server{scheduleActive: map[string]bool{}, loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
@@ -189,6 +199,10 @@ func (s *Server) Handler() http.Handler {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade for Statistics", 409)
 			return
 		}
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/container-management") && (s.agents == nil || !s.agents.CanContainers(host)) {
+			http.Error(w, "Upgrade the remote agent to 0.22.0 or later for standalone container management", 409)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/networks") && (s.agents == nil || !s.agents.CanNetworks(host)) {
 			http.Error(w, "Remote host disconnected or needs an agent upgrade to manage networks", 409)
 			return
@@ -230,6 +244,8 @@ func (s *Server) Handler() http.Handler {
 			s.builds(w, r)
 		case "/api/stats":
 			s.containerStats(w, r)
+		case "/api/container-management", "/api/container-management/operation", "/api/container-management/action", "/api/container-management/acknowledge":
+			s.containerManagementAPI(w, r)
 		case "/api/networks", "/api/networks/operation", "/api/networks/action":
 			s.networkCatalog(w, r)
 		case "/api/volume-backups":
