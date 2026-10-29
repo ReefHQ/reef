@@ -23,8 +23,16 @@ remaining validation.
    retention and restoration into a new volume, with private storage and interrupted-run guidance.
 7. [#28](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/28) — **Scheduled operations — merged and published (0.19.0).** Image checks and explicit cleanup policies with review,
    host availability, non-overlap and no automatic replay of uncertain mutations.
-8. [#29](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/29) — **Agent diagnostics — implemented, awaiting review and publication (0.20.0).** Last connection, capabilities/version and actionable
+8. [#29](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/29) — **Agent diagnostics — merged and published (0.20.0).** Last connection, capabilities/version and actionable
    communication errors without exposing credentials or private transport data.
 
 The source remains authoritative for which features are actually available.
-Item 8 is ready for review; items 1–7 are merged and published.
+Items 1–8 are merged and published.
+
+## Follow-up features
+
+The user approved #31 before #30, each on its own branch with review and publication
+between features.
+
+1. [#31](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/31) — **Sign-in persistence — implemented, awaiting review and publication (0.21.0).** Investigate frequent sign-outs, isolate installation cookies and offer opt-in 30-day sessions alongside the default 12 hours.
+2. [#30](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/30) — **Standalone container management — approved, not started.** Start/stop/restart, image update with configuration preservation and reviewed recovery, and deletion retaining volumes by default; Local/remote parity.

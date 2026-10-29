@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.20.0 — Unreleased
+## 0.21.0 — Unreleased
+
+- Add an opt-in Remember me choice for a fixed 30-day sign-in; keep the default 12-hour session, restart persistence and immediate logout/account revocation.
+- Isolate session cookies per installation so Reef instances on the same hostname do not overwrite each other's login; migrate valid legacy cookies without extending their expiry.
+- Keep existing agent command lifetime limits when using remembered sessions, without requiring an agent upgrade.
+
+## 0.20.0 — 2026-10-29
 
 - Add read-only per-agent diagnostics in Manage hosts: authenticated contact/inventory freshness, accepted version/protocol, negotiated features and actionable troubleshooting guidance.
 - Retain a bounded in-memory observation history for connection/inventory/communication transitions, with generation-bound association and no new agent probes, commands or incoming ports.

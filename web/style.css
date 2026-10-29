@@ -241,3 +241,4 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 
 .diagnostics-ok{background:var(--banner);color:var(--banner-text);border-color:var(--active-border)}
 .host-row-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.host-row-heading strong{min-width:0;overflow-wrap:anywhere}.host-row-heading button{flex:none;font-size:12px}
+.login-card form .login-remember{display:flex;align-items:center;gap:10px;margin:4px 0;font-size:13px}.login-card .login-remember input{width:18px;height:18px;min-height:18px;padding:0;margin:0;flex:none}
