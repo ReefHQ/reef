@@ -289,3 +289,11 @@ Schedules live on central Reef and use the existing authenticated host APIs. No
 new port, enrollment or scheduler capability is needed. Keep the agent connected
 at the rendezvous; missed/offline slots are skipped. Scheduled volume backups
 need `volume-backups-v1` (v0.18.0+). See [Schedules](SCHEDULES.md).
+
+## Read connection diagnostics (central v0.20.0)
+
+Open **Manage hosts → Diagnostics** for assigned agents, including older or
+revoked ones. Read connection/inventory freshness, accepted version, negotiated
+features and recent fixed observations without sending a probe or command.
+[Agent diagnostics and troubleshooting](AGENT_DIAGNOSTICS.md) explains the limits
+of what central Reef can observe, privacy, and recovery steps.

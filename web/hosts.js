@@ -21,7 +21,9 @@
     const name=node('input','');name.value=h.name;name.maxLength=100;name.setAttribute('aria-label',`Name for ${h.name}`);name.disabled=h.status==='revoked'||window.reefAccess?.globalAdmin===false;
     const rename=node('button','Rename');rename.type='button';rename.disabled=name.disabled;rename.addEventListener('click',async()=>{rename.disabled=true;try{await action({action:'rename',id:h.id,name:name.value});await refresh();}catch(e){showError(e);}finally{rename.disabled=name.disabled;}});
     const revoke=node('button','Revoke');revoke.type='button';revoke.className='danger';revoke.disabled=name.disabled;revoke.addEventListener('click',async()=>{if(!await ask(`Revoke agent ${h.name}? Its Docker containers will keep running.`))return;try{await action({action:'revoke',id:h.id});await refresh();}catch(e){showError(e);}});
-    const controls=node('div','');controls.className='host-controls';controls.append(name,rename,revoke);row.append(title,status,detail,controls);
+    const diagnostics=node('button','Diagnostics');diagnostics.type='button';diagnostics.setAttribute('aria-label',`Diagnostics for ${h.name}`);diagnostics.addEventListener('click',()=>window.ReefHostDiagnostics?.open(h.id,h.name));
+    const heading=node('div','');heading.className='host-row-heading';heading.append(title,diagnostics);
+    const controls=node('div','');controls.className='host-controls';controls.append(name,rename,revoke);row.append(heading,status,detail,controls);
     const state=updateStates.get(h.id),op=state?.operation,updateLine=node('p','');updateLine.className='muted small';updateLine.setAttribute('role','status');
     if(op?.id)updateLine.textContent=`Update to ${op.version}: ${op.phase} · ${op.message}${state.unreachable?' · Status temporarily unavailable':''}`;
     else if(!h.capabilities?.includes('agent-update-v1'))updateLine.textContent='Updates from Reef require one-time setup on this host.';

@@ -38,3 +38,7 @@ test('cancelled and revoked-host confirmations never dispatch an update',async()
 test('durable update status is rendered as text after page load and polled without replay',async()=>{
  const p=page({operation:{id:'job',version:'0.11.0',phase:'unknown',message:'<script>private output</script>'}});await p.ready();await p.refresh();assert.match(p.text(),/Update to 0\.11\.0: unknown/);assert.match(p.text(),/<script>private output<\/script>/);assert.equal(p.requests.filter(r=>r.options?.method==='POST').length,0);
 });
+
+test('assigned viewers can open diagnostics for legacy and revoked hosts without a mutation',async()=>{
+ const p=page({capability:false,current:'0.3.0'});p.context.window.reefAccess={canWrite:false,globalAdmin:false};let opened;p.context.window.ReefHostDiagnostics={open:(id,name)=>{opened={id,name};}};await p.ready();const visit=el=>[el,...el.children.flatMap(visit)];let button=visit(p.nodes.get('#hosts-list')).find(n=>n.tagName==='BUTTON'&&n.textContent==='Diagnostics');assert.ok(button);assert.equal(button.disabled,false);button.listeners.click();assert.deepEqual(opened,{id:'remote-one',name:'Remote One'});p.revoke();await p.refresh();button=visit(p.nodes.get('#hosts-list')).find(n=>n.tagName==='BUTTON'&&n.textContent==='Diagnostics');assert.equal(button.disabled,false);assert.equal(p.requests.filter(r=>r.options?.method==='POST').length,0);
+});

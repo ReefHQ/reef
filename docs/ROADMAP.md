@@ -21,10 +21,10 @@ remaining validation.
    roles and per-host authorization enforced centrally and on every route/console.
 6. [#27](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/27) — **Volume backup and restore — merged and published (0.18.0).** Host-local archives, explicit downtime review,
    retention and restoration into a new volume, with private storage and interrupted-run guidance.
-7. [#28](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/28) — **Scheduled operations — implemented, awaiting review/release (0.19.0).** Image checks and explicit cleanup policies with review,
+7. [#28](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/28) — **Scheduled operations — merged and published (0.19.0).** Image checks and explicit cleanup policies with review,
    host availability, non-overlap and no automatic replay of uncertain mutations.
-8. [#29](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/29) — **Agent diagnostics.** Last connection, capabilities/version and actionable
+8. [#29](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/29) — **Agent diagnostics — implemented, awaiting review and publication (0.20.0).** Last connection, capabilities/version and actionable
    communication errors without exposing credentials or private transport data.
 
 The source remains authoritative for which features are actually available.
-Item 7 awaits review/publication; item 8 remains approved future work.
+Item 8 is ready for review; items 1–7 are merged and published.

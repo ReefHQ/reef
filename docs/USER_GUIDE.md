@@ -521,3 +521,10 @@ volume backups and explicitly approved age-based image/cache cleanup. Choose a
 timezone, review the target/policy and enable the task. Missed/offline/busy slots
 are skipped. Uncertain mutations require host review before scheduled work can
 resume; [timing, permissions and recovery](SCHEDULES.md).
+
+## Agent diagnostics
+
+From central v0.20.0, **Manage hosts → Diagnostics** shows central observations
+for an assigned agent: freshness, version/protocol, current or historical feature
+reports and recent troubleshooting hints. It is read-only and requires no agent
+upgrade or probe; [interpret the results](AGENT_DIAGNOSTICS.md).

@@ -210,6 +210,7 @@ func (s *Server) agentCommands(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Path == "/agent/v1/results" {
 		if err := s.relay.Results(host, input.Generation, input.Frames); err != nil {
+			s.agents.Communication(host, input.Generation, "response_rejected")
 			http.Error(w, "Agent response rejected", 409)
 			return
 		}
