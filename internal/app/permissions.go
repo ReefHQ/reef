@@ -47,6 +47,8 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request, sess session)
 		allowed = r.Method == "GET" || u.GlobalAdmin()
 	case "/api/history":
 		allowed = r.Method == "GET" && (host == "all" || u.Allows(host))
+	case "/api/schedules":
+		allowed = (u.Allows(host) || (r.Method == "GET" && r.URL.Query().Get("all") == "true")) && (r.Method == "GET" || u.Role == "admin")
 	case "/api/monitoring":
 		allowed = r.Method == "GET" || u.GlobalAdmin()
 	case "/api/console/stream":

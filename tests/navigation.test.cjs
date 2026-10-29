@@ -106,3 +106,7 @@ test('History reload waits for central records before restoring its view, filter
 test('Alerts reload waits for central monitoring before restoring filters and scroll',async()=>{
  const p=page({view:'alerts',host:'local',filters:{'alerts-search':'database'},scroll:230});await p.start();assert.equal(p.nodes.get('#alerts-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefAlertsReady=true;p.window.dispatchEvent({type:'reef-alerts-ready'});p.flushFrames();assert.equal(p.nodes.get('#alerts-search').value,'database');assert.equal(p.window.scrollY,230);assert.equal(p.reloadState().view,'alerts');
 });
+
+test('Schedules reload waits for central records before restoring view, host filter and scroll',async()=>{
+ const p=page({view:'schedules',host:'local',filters:{'schedules-hosts':'all'},scroll:310});await p.start();assert.equal(p.nodes.get('#schedules-view').hidden,false);assert.equal(p.window.scrollY,0);p.window.reefSchedulesReady=true;p.window.dispatchEvent({type:'reef-schedules-ready'});p.flushFrames();assert.equal(p.window.scrollY,310);assert.equal(p.nodes.get('#schedules-hosts').value,'all');assert.equal(p.reloadState().view,'schedules');
+});

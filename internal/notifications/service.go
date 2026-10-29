@@ -260,7 +260,7 @@ func (s *Service) accept(host, name string, events []Event, central bool) error 
 		return errors.New("Event batch exceeds limit")
 	}
 	for _, e := range events {
-		if !e.Valid() || e.Scope == "webhook" || (e.Scope == "monitor" && !central) {
+		if !e.Valid() || e.Scope == "webhook" || ((e.Scope == "monitor" || e.Scope == "schedule") && !central) {
 			return errors.New("Invalid action event")
 		}
 	}

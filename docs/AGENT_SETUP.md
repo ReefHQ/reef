@@ -282,3 +282,10 @@ as Local, with archives kept in their own private managed-state folder. Upgrade
 central first and then the relevant agents, preserving their identity and config.
 For another persistent destination, configure `volume_backup_directory` and mount
 it into the agent; [storage and recovery details](VOLUME_BACKUPS.md).
+
+## Scheduled operations (central v0.19.0)
+
+Schedules live on central Reef and use the existing authenticated host APIs. No
+new port, enrollment or scheduler capability is needed. Keep the agent connected
+at the rendezvous; missed/offline slots are skipped. Scheduled volume backups
+need `volume-backups-v1` (v0.18.0+). See [Schedules](SCHEDULES.md).

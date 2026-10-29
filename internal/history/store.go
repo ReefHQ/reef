@@ -286,7 +286,7 @@ func (s *Store) Accept(host, name string, events []notifications.Event) error {
 	}
 	bound := make([]notifications.Event, 0, len(events))
 	for _, e := range events {
-		if !e.Valid() || (e.Scope == "webhook" || e.Scope == "monitor") {
+		if !e.Valid() || (e.Scope == "webhook" || e.Scope == "monitor" || e.Scope == "schedule") {
 			return errors.New("Invalid action event")
 		}
 		e.HostID = host

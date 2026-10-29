@@ -513,3 +513,11 @@ and select hosts, disable/delete accounts or revoke their sessions. At least one
 enabled all-host admin must remain. Viewers may read assigned hosts, including
 Compose files/logs, but cannot save, mutate resources, open consoles or change
 global settings. See [migration, behavior and offline recovery](USERS.md).
+
+## Schedules
+
+From central v0.19.0, open **Schedules** for daily/weekly project image checks,
+volume backups and explicitly approved age-based image/cache cleanup. Choose a
+timezone, review the target/policy and enable the task. Missed/offline/busy slots
+are skipped. Uncertain mutations require host review before scheduled work can
+resume; [timing, permissions and recovery](SCHEDULES.md).

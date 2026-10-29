@@ -248,3 +248,20 @@ func TestHistoryWebhookTestRecordsQueueAcceptanceNotDelivery(t *testing.T) {
 		t.Fatal(page, err)
 	}
 }
+
+func TestScheduleHistoryRejectsAgentClaimsAndBindsCentralHost(t *testing.T) {
+	s, _ := openStore(t)
+	e := notifications.New("schedule", "run", "completed", strings.Repeat("b", 48), "Nightly check")
+	e.HostID = testHost
+	e.Host = "Remote host"
+	if err := s.Accept(testHost, "Remote host", []notifications.Event{e}); err == nil {
+		t.Fatal("agent forged schedule history")
+	}
+	if err := s.AcceptCentral(e); err != nil {
+		t.Fatal(err)
+	}
+	page, err := s.Query(Query{Host: testHost, Scope: "schedule"})
+	if err != nil || len(page.Rows) != 1 {
+		t.Fatal(page, err)
+	}
+}
