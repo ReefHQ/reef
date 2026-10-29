@@ -345,7 +345,8 @@ is a best-effort journal: abrupt shutdowns, queue overflow, missing final events
 or unavailable agent event delivery can leave gaps. An unmatched local start is
 shown as Unknown after a central restart; remote starts remain last-recorded
 starts until their outcome arrives. History does not prove current running state
-or identify an individual user under the shared login.
+or identify an individual actor for legacy, automatic or remote events. Individual
+accounts restrict access but do not retroactively attribute those events.
 
 History starts with new events after this upgrade and any eligible pending agent
 metadata. Existing project command-log history is not imported. Remote collection
@@ -486,7 +487,7 @@ Simple `.env` values and the access password are masked in captured output; `con
 
 File replacement preserves owner/group and normal Unix permissions, but not necessarily ACLs, extended attributes or hard links; check QNAP permissions and ACLs before production. Backups are private with mode 0600. Reef does not back up application data. Explicit volume changes and application commands remain your responsibility; Reef cannot prevent an application from deleting its own data.
 
-A successful Compose command does not by itself prove application health. Apply update checks running/healthcheck state before eligible old-image cleanup, but application-level checks remain your responsibility. Reef has no individual user accounts, automatic rollback or unattended recovery. Live Statistics is available; [monitoring alerts](MONITORING.md) can be enabled in Alerts.
+A successful Compose command does not by itself prove application health. Apply update checks running/healthcheck state before eligible old-image cleanup, but application-level checks remain your responsibility. Reef supports [individual accounts and host permissions](USERS.md), but has no automatic rollback or unattended recovery. Live Statistics is available; [monitoring alerts](MONITORING.md) can be enabled in Alerts.
 
 
 ## Monitoring alerts
@@ -498,3 +499,15 @@ check Collection coverage before treating the absence of alerts as good health.
 Notifications use the configured Webhooks destination. Compatible remote agents
 need v0.16.0; connection monitoring also works with older agents.
 See [thresholds, maintenance and persistence](MONITORING.md).
+
+
+## Accounts and host permissions
+
+Sign in with a username and password. The existing installation becomes initial
+username `admin` using its current password; old shared-login cookies expire on
+upgrade. Open your username in the header to change your password or sign out
+everywhere. An all-host administrator can add users, assign admin/viewer roles
+and select hosts, disable/delete accounts or revoke their sessions. At least one
+enabled all-host admin must remain. Viewers may read assigned hosts, including
+Compose files/logs, but cannot save, mutate resources, open consoles or change
+global settings. See [migration, behavior and offline recovery](USERS.md).

@@ -29,7 +29,7 @@ func (s *Server) remotePeer(r *http.Request) (*remoteDocker, error) {
 		return nil, errors.New("Remote host is disconnected or needs an agent upgrade")
 	}
 	sum := sha256.Sum256([]byte(host + ":" + sess.CSRF))
-	return &remoteDocker{server: s, host: host, owner: hex.EncodeToString(sum[:]), expires: sess.Expires}, nil
+	return &remoteDocker{server: s, host: host, owner: hex.EncodeToString(sum[:]), expires: sess.Expires, allowed: func() bool { v, ok := s.getSession(r); return ok && s.principal(v).Allows(host) }}, nil
 }
 func (s *Server) discoveryFor(r *http.Request) (docker.Lister, error) {
 	if host := r.URL.Query().Get("host"); host != "" && host != "local" {
@@ -83,9 +83,13 @@ type remoteDocker struct {
 	server      *Server
 	host, owner string
 	expires     time.Time
+	allowed     func() bool
 }
 
 func (p *remoteDocker) do(ctx context.Context, method, path string, query, form url.Values) (*http.Response, error) {
+	if p.allowed != nil && !p.allowed() {
+		return nil, agents.ErrRelay
+	}
 	if !p.server.remoteReady(p.host) {
 		return nil, agents.ErrRelay
 	}

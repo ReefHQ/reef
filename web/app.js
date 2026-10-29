@@ -14,8 +14,9 @@ window.addEventListener('reef-host-changed',event=>{
 });
 function message(text,error=false){$('#message').textContent=text;$('#message').className=text?'notice'+(error?' error':''):'';$('#message').setAttribute('role',error?'alert':'status');}
 async function request(path,opts,host=window.reefHost||'local'){
+ if(host==='none'&&!path.startsWith('/api/hosts'))throw Error('No Docker host is assigned to your account. Ask an administrator to grant access.');
  if(host!=='local'&&path.startsWith('/api/')&&!path.startsWith('/api/hosts')&&!/[?&]host=/.test(path))path+=(path.includes('?')?'&':'?')+'host='+encodeURIComponent(host);
- const response=await fetch(path,opts);if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');throw error;}return response;
+ const response=await fetch(path,opts);const responseUser=response.headers?.get('X-Reef-User');if(responseUser&&window.reefAccess?.userId&&responseUser!==window.reefAccess.userId){location.href='/';throw Error('Signed-in account changed; reloading Reef.');}if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');throw error;}return response;
 }
 function ask(text){const dialog=$('#confirmation');if(dialog.open)return Promise.resolve(false);$('#confirm-message').textContent=text;dialog.returnValue='cancel';return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true});dialog.showModal();});}
 function current(){return projects.find(p=>p.id===selected);}
@@ -23,10 +24,10 @@ function textNode(tag,value,className){const node=document.createElement(tag);no
 function replaceKeepingFocus(parent,nodes){const key=parent.contains(document.activeElement)?document.activeElement.dataset.focusKey:null;parent.replaceChildren(...nodes);if(key)[...parent.querySelectorAll('[data-focus-key]')].find(n=>n.dataset.focusKey===key)?.focus({preventScroll:true});}
 function controls(){
  const p=current(),busy=!canManageHost()||!p||p.busy||pendingEdits.has(selected)||loading||inFlight||!loaded;
- $('#editor').disabled=busy;
- document.querySelectorAll('[data-action]').forEach(button=>button.disabled=busy||p?.image_updates?.checking||(dirty&&['start','stop'].includes(button.dataset.action)));
+ $('#editor').disabled=busy;$('#editor').readOnly=window.reefAccess?.canWrite===false;
+ document.querySelectorAll('[data-action]').forEach(button=>button.disabled=window.reefAccess?.canWrite===false||busy||p?.image_updates?.checking||(dirty&&['start','stop'].includes(button.dataset.action)));
  $('#reload').disabled=!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
- $('#unmanage-current').disabled=!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
+ $('#unmanage-current').disabled=window.reefAccess?.canWrite===false||!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
  $('#edit-state').textContent=p?.busy||inFlight||pendingEdits.has(selected)?'Operation in progress':loading?'Loading file…':!loaded?'File unavailable':dirty?'Unsaved changes':'Saved';
  $('#edit-state').className='save-status'+(dirty?' unsaved':'');
  $('#chars').textContent=`${$('#editor').value.split('\n').length} lines · ${$('#editor').value.length.toLocaleString('en-GB')} characters`;

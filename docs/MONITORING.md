@@ -116,3 +116,9 @@ retry/expiry policy; the Alerts pending counter measures central acceptance,
 not successful external delivery. Use Webhooks to inspect actual delivery status.
 When webhooks are disabled, History still records the transitions; enabling a
 webhook later does not send older events.
+
+
+From v0.17.0, Alerts only returns incidents/coverage for the signed-in account’s
+assigned hosts. The global transition-queue count is hidden from restricted users.
+Only all-host administrators may change the instance-wide policy; a viewer or
+host-limited administrator can read its values but cannot save changes.

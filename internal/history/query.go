@@ -18,6 +18,8 @@ var scopes = map[string]bool{"project": true, "image": true, "volume": true, "ne
 var statuses = map[string]bool{"started": true, "completed": true, "failed": true, "partial": true, "closed": true, "unknown": true}
 
 type Query struct {
+	RestrictAdminEvents                 bool
+	AllowedHosts                        map[string]bool
 	Host, Scope, Status, Search, Cursor string
 	Offset                              int
 }
@@ -89,13 +91,24 @@ func (s *Store) Query(q Query) (Page, error) {
 		return page, errors.New("History cursor is no longer available; refresh the latest page")
 	}
 	page.Cursor = strconv.FormatUint(through, 10)
-	page.RetainedEvents = len(s.data.Entries)
+	visible := func(e notifications.Event) bool {
+		return (q.AllowedHosts == nil || q.AllowedHosts[e.HostID]) && (!q.RestrictAdminEvents || (e.Scope != "webhook" && !(e.Scope == "agent" && (e.Action == "enroll" || e.Action == "rename" || e.Action == "revoke"))))
+	}
+	page.RetainedEvents = 0
+	for _, item := range s.data.Entries {
+		if visible(item.Event) && (q.Host == "all" || q.Host == item.Event.HostID) {
+			page.RetainedEvents++
+		}
+	}
 	page.PersistenceError = s.persistenceError || !s.Ready()
 	page.Dropped = s.dropped.Load()
 	groups := map[string]entry{}
 	started := map[string]time.Time{}
 	for _, item := range s.data.Entries {
 		e := item.Event
+		if !visible(e) {
+			continue
+		}
 		if item.Sequence > through || (q.Host != "all" && q.Host != e.HostID) {
 			continue
 		}

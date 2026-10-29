@@ -209,12 +209,21 @@ func (l *Launcher) initialize(current engine, modes ...string) (metadata, error)
 	return meta, nil
 }
 func (l *Launcher) Run(action string, options ...string) error {
+	recoverUser := ""
+	if action == "recover-admin" {
+		if len(options) != 1 || !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{2,63}$`).MatchString(options[0]) {
+			return errors.New(launcherUsage)
+		}
+		recoverUser = options[0]
+		options = nil
+	}
+
 	mode, err := networkMode(action, options)
 	if err != nil {
 		return err
 	}
 	switch action {
-	case "up", "stop", "status", "password":
+	case "up", "stop", "status", "password", "recover-admin":
 	default:
 		return errors.New(launcherUsage)
 	}
@@ -255,6 +264,9 @@ func (l *Launcher) Run(action string, options ...string) error {
 			l.out.Write(out)
 		}
 		return e
+	}
+	if action == "recover-admin" {
+		return invoke("run", "--rm", "--no-deps", "reef", "-config", "/etc/reef/config.json", "-recover-admin", recoverUser)
 	}
 	switch action {
 	case "up":

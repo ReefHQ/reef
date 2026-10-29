@@ -1,0 +1,21 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../web/users.js'),'utf8');
+function page({admin=true,confirm=async()=>true}={}){
+ const nodes=new Map(),requests=[],location={href:''};
+ class Node{constructor(tag='DIV'){this.tagName=tag;this.children=[];this.listeners={};this.value='';this.textContent='';this.hidden=false;this.checked=false;}addEventListener(n,fn){(this.listeners[n]??=[]).push(fn)}async fire(n){for(const fn of this.listeners[n]||[])await fn({preventDefault(){}})}append(...n){this.children.push(...n)}prepend(...n){this.children.unshift(...n)}replaceChildren(...n){this.children=n}showModal(){this.open=true}close(){this.open=false;this.fire('close')}querySelectorAll(selector){if(selector==='input:checked')return this.children.flatMap(label=>label.children).filter(n=>n.tagName==='INPUT'&&n.checked);return []}}
+ const find=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id)};
+ const user={id:'a'.repeat(64),username:'admin',role:admin?'admin':'viewer',all_hosts:admin,hosts:admin?[]:['local'],revision:1};
+ const document={getElementById:find,createElement:tag=>new Node(tag.toUpperCase())};
+ const request=async(path,options,host)=>{requests.push({path,options,host});const result=options?.method?{updated:true,sign_in_required:path==='/api/me'}:path==='/api/me'?{user,instance_admin:admin}:path==='/api/users'?{users:[user]}:{hosts:[{id:'b'.repeat(64),name:'Remote worker',status:'connected'}]};return {json:async()=>result}};
+ vm.runInNewContext(source,{document,window:{},location,request,URLSearchParams,csrf:'csrf',ask:confirm});
+ return {find,requests,location,user,async open(){await find('open-account').fire('click')}};
+}
+const text=node=>[node.textContent,...node.children.map(text)].join(' ');
+test('viewer account dialog exposes only own profile and never requests the user registry',async()=>{const p=page({admin:false});await p.open();assert.equal(p.find('account-admin').hidden,true);assert.ok(p.requests.every(r=>r.path==='/api/me'&&r.host==='local'));assert.match(p.find('account-identity').textContent,/Viewer/)});
+test('admin user creation encodes repeated explicit hosts and clears secrets after success',async()=>{
+ const p=page();await p.open();assert.match(text(p.find('users-list')),/admin/);await p.find('user-new').fire('click');p.find('user-name').value='colleague';p.find('user-role').value='viewer';p.find('user-password').value='a-long-strong-password';p.find('user-password-confirmation').value='a-long-strong-password';p.find('user-host-options').children[0].children[0].checked=true;
+ await p.find('user-form').fire('submit');const r=p.requests.find(r=>r.options?.method==='POST');assert.equal(r.path,'/api/users');assert.equal(r.host,'local');assert.equal(r.options.body.get('csrf'),'csrf');assert.equal(r.options.body.get('confirmed'),'yes');assert.equal(r.options.body.get('role'),'viewer');assert.deepEqual(r.options.body.getAll('hosts'),['local']);assert.equal(r.options.body.get('all_hosts'),'false');assert.equal(p.find('user-password').value,'');assert.equal(p.find('user-form').hidden,true);
+});
+test('password change is confirmed, uses POST only and returns to login',async()=>{const p=page({admin:false});await p.open();p.find('account-current-password').value='old-long-password';p.find('account-new-password').value='new-long-password';p.find('account-confirm-password').value='new-long-password';await p.find('account-password-form').fire('submit');const r=p.requests.find(r=>r.options?.method==='POST');assert.equal(r.path,'/api/me');assert.equal(r.options.body.get('current_password'),'old-long-password');assert.equal(p.location.href,'/login');assert.equal(p.find('account-current-password').value,'');assert.ok(p.requests.every(r=>!r.path.includes('password')))});
+test('cancelled and closed-dialog confirmations cannot change accounts',async()=>{const p=page({confirm:async()=>false});await p.open();await p.find('account-revoke').fire('click');assert.ok(p.requests.every(r=>!r.options?.method));p.find('account-new-password').value='private';p.find('account-dialog').close();assert.equal(p.find('account-new-password').value,'')});

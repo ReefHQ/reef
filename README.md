@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.16.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.17.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 ## 🚀 Get your feet wet
 
@@ -21,7 +21,7 @@ Compose v2 and Buildx:
 ```
 
 Open the URL printed by the first command and sign in with the generated
-password. Reef prefers **8099** when available. Linux Docker Engine works;
+password, using **admin** as the initial username. Reef prefers **8099** when available. Linux Docker Engine works;
 on macOS, use a local Docker runtime. Docker Desktop is optional. You don’t need
 Go, Node.js or Python installed to launch Reef this way.
 
@@ -39,10 +39,13 @@ choice. `./reef-local.sh up --local` switches back to this machine only.
 | --- | --- |
 | Start or rebuild Reef | `./reef-local.sh up` |
 | Find its URL and status | `./reef-local.sh status` |
-| Read the saved password | `./reef-local.sh password` |
+| Read the initial admin password | `./reef-local.sh password` |
 | Stop Reef | `./reef-local.sh stop` |
 
-Your configuration and password survive restarts in the private `.reef-local/`
+Account passwords can be changed from your username in the header. The command
+above prints the bootstrap password, so it won’t reveal a password changed later.
+
+Your configuration and accounts survive restarts in the private `.reef-local/`
 folder. Stopping Reef leaves your applications running. Rebuilding can recreate
 Reef itself, so let active operations finish first.
 
@@ -60,6 +63,7 @@ Reef itself, so let active operations finish first.
 | **Builds** | Build saved project definitions, read build results and review default-builder cache cleanup. |
 | **Statistics** | Watch CPU, memory, network and disk I/O, with pause/resume and per-container measurements. |
 | **Alerts** | Detect agent disconnections, unhealthy containers and restart loops, with configurable delays and recovery notifications. |
+| **Accounts** | Give each person a username, role and selected hosts; manage passwords and sessions from the header. |
 | **History** | Follow actions and results across hosts, with search, filters and operation details. |
 
 Console sessions live in a bottom panel, so you can keep navigating Reef while
@@ -122,8 +126,9 @@ selected metadata, without terminal contents, application logs or credentials.
 
 - Docker access gives Reef substantial authority over the selected host. Keep
   the UI on a trusted network or behind an authenticated HTTPS reverse proxy.
-- The current login uses one shared password. Individual accounts and host
-  permissions are planned; they are not available yet.
+- Give each person their own account: **Viewer** for read-only access or **Admin**
+  for changes, limited to assigned hosts. Viewers can read Compose files and logs,
+  which may contain secrets. [Accounts and recovery](docs/USERS.md).
 - Cleanup previews name their targets, but deleting a volume still deletes data.
   Keep application backups; Reef does not provide volume backup/restore yet.
 - Logs and consoles can show application secrets. Review them before sharing.
@@ -138,6 +143,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Everyday actions, limits and recovery | [Usage guide](docs/USER_GUIDE.md) |
 | Config fields, mounts and manual installation | [Configuration](docs/CONFIGURATION.md) |
 | Server installation and versioned CI delivery | [Deployment](docs/DEPLOYMENT.md) |
+| User accounts, host permissions and access recovery | [Accounts](docs/USERS.md) |
 | Remote hosts and agent upgrades | [Agent setup](docs/AGENT_SETUP.md) |
 | Architecture of remote operations | [Multi-host agents](docs/MULTI_HOST_AGENTS.md) |
 | Development checks and versioning | [Development](docs/DEVELOPMENT.md) |

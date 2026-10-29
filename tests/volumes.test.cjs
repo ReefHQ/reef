@@ -51,3 +51,5 @@ test('successful volume cleanup hides its completed panel on every refresh',asyn
 test('volume cleanup errors remain readable until dismissed, without returning on a poll',async()=>{
  const report={id:'volume-cleanup',action:'cleanup',running:false,total:1,results:[{id:'old-data',ok:false,message:'Volume retained'}]},p=page({report});await p.settle();assert.equal(p.find('volumes-operation').hidden,false);await p.find('volumes-operation').children[0].children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('volumes-operation').hidden,true);
 });
+
+test('viewer can inspect volumes but cannot select, create or delete them',async()=>{const p=page();p.window.reefAccess={canWrite:false};await p.settle();assert.equal(p.find('volumes-refresh').disabled,false);assert.equal(p.find('volumes-create-submit').disabled,true);assert.equal(p.find('volumes-cleanup').disabled,true);const row=p.find('volumes-rows').children[0];assert.equal(row.children[0].children[0].disabled,true);await row.children[1].children[0].fire('click');assert.equal(p.find('volume-detail-delete').disabled,true)});

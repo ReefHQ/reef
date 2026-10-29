@@ -24,7 +24,7 @@ syntax checks and version validation. The quality containers have no network or
 Docker socket. Delivery and mirror suites use isolated fixtures rather than
 real deployments.
 
-For host-side checks, use Go compatible with `go.mod` and a current Node.js LTS:
+For host-side checks, use Go 1.24+ compatible with `go.mod` and a current Node.js LTS:
 
 ```sh
 go test -race ./...
@@ -47,6 +47,7 @@ with an installed Compose CLI and a nonexistent socket.
 | `cmd/reef-local/` | Local launcher entry point |
 | `internal/app/` | HTTP/auth, configuration and operation handlers |
 | `internal/docker/` | Docker inventory and resource operations |
+| `internal/accounts/` | Individual credentials and host authorization |
 | `internal/history/` | Central action metadata journal |
 | `internal/local/` | Local setup and engine checks |
 | `web/` | Embedded interface and themes |

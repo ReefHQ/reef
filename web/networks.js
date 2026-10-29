@@ -2,6 +2,7 @@
 (()=>{
  const find=id=>document.getElementById(id),view=find('networks-view');
  let host=window.reefHost||'local',epoch=0,rows=[],containers=[],selected=new Set(),busy=false,loading=false,loaded=false,hasSnapshot=false,loadError=false,timer,hostsReady=false;
+ const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('networks-v1');
  const candidates=()=>rows.filter(row=>row.removable);
  const target=row=>({id:row.id,fingerprint:row.fingerprint});
@@ -13,9 +14,9 @@
   find('networks-rows').setAttribute('aria-busy',String(pending));
   if(!hasSnapshot){find('networks-results').textContent='';find('networks-empty').hidden=false;find('networks-empty').textContent=pending?'Loading networks…':available()?'Inventory unavailable. Use Refresh to try again.':'Upgrade the agent to manage networks.';}
 
-  const disabled=!available()||busy||loading||!loaded;
+  const disabled=!canWrite()||!available()||busy||loading||!loaded;
   find('networks-refresh').disabled=!available()||loading;
-  find('networks-create-submit').disabled=!available()||busy;
+  find('networks-create-submit').disabled=!canWrite()||!available()||busy;
   find('networks-delete').disabled=disabled||!selected.size;
   find('networks-cleanup').disabled=disabled||!candidates().length;
   find('networks-select-all').disabled=disabled;
@@ -36,9 +37,9 @@
   find('networks-results').textContent=`${visible.length} shown · ${selected.size} selected`;
   const nodes=visible.map(row=>{
    const tr=document.createElement('tr'),selection=document.createElement('td'),title=document.createElement('td'),actions=document.createElement('td'),check=document.createElement('input');
-   check.type='checkbox';check.checked=selected.has(row.id);check.disabled=busy||loading||!loaded||!row.removable;check.title=row.retain_reason||'';check.setAttribute('aria-label',`Select ${row.name}`);check.dataset.focusKey='network-check-'+row.name;check.addEventListener('change',()=>{if(check.checked)selected.add(row.id);else selected.delete(row.id);render();});selection.append(check);
+   check.type='checkbox';check.checked=selected.has(row.id);check.disabled= !canWrite()||busy||loading||!loaded||!row.removable;check.title=row.retain_reason||'';check.setAttribute('aria-label',`Select ${row.name}`);check.dataset.focusKey='network-check-'+row.name;check.addEventListener('change',()=>{if(check.checked)selected.add(row.id);else selected.delete(row.id);render();});selection.append(check);
    const open=textNode('button',row.name,'text-button');open.type='button';open.dataset.focusKey='network-open-'+row.name;open.addEventListener('click',()=>details(row));title.append(open);
-   const remove=textNode('button','Delete','compact-button');remove.type='button';remove.disabled=busy||loading||!loaded||!row.removable;remove.title=row.retain_reason||'';remove.dataset.focusKey='network-delete-'+row.name;remove.setAttribute('aria-label',`Delete network ${row.name}`);remove.addEventListener('click',()=>removeNetworks([row],'remove'));actions.append(remove);
+   const remove=textNode('button','Delete','compact-button');remove.type='button';remove.disabled= !canWrite()||busy||loading||!loaded||!row.removable;remove.title=row.retain_reason||'';remove.dataset.focusKey='network-delete-'+row.name;remove.setAttribute('aria-label',`Delete network ${row.name}`);remove.addEventListener('click',()=>removeNetworks([row],'remove'));actions.append(remove);
    tr.append(selection,title,textNode('td',row.driver),textNode('td',row.project||'—'),textNode('td',row.containers.length?row.containers.join(', '):'Unused'),actions);return tr;
   });replaceKeepingFocus(find('networks-rows'),nodes);find('networks-empty').hidden=!!visible.length;find('networks-empty').textContent=hasSnapshot?'No networks match this selection.':'Loading networks…';
   const eligible=visible.filter(row=>row.removable);find('networks-select-all').checked=!!eligible.length&&eligible.every(row=>selected.has(row.id));controls();
@@ -73,10 +74,10 @@
  function details(row){
   const chosenEpoch=epoch,fields=find('network-detail-fields');fields.replaceChildren();
   for(const [label,value] of [['Name',row.name],['ID',row.id],['Driver',row.driver],['Scope',row.scope],['Created',row.created||'Not recorded'],['Internal',row.internal?'Yes':'No'],['IPv6',row.ipv6?'Yes':'No'],['Attachable',row.attachable?'Yes':'No'],['Subnets',(row.subnets||[]).join(', ')||'Automatic'],['Gateways',(row.gateways||[]).join(', ')||'None'],['Compose project',row.project||'None'],['Containers (including stopped)',row.containers.join(', ')||'None'],['Removal',row.removable?'Unused; eligible for explicit deletion':row.retain_reason]])fields.append(textNode('dt',label),textNode('dd',value));
-  const remove=find('network-detail-delete');remove.disabled=busy||loading||!loaded||!row.removable;remove.onclick=()=>{if(chosenEpoch!==epoch)return;find('network-details').close();removeNetworks([row],'remove');};
+  const remove=find('network-detail-delete');remove.disabled= !canWrite()||busy||loading||!loaded||!row.removable;remove.onclick=()=>{if(chosenEpoch!==epoch)return;find('network-details').close();removeNetworks([row],'remove');};
   const select=find('network-container');select.replaceChildren(new Option('Choose a running container',''),...containers.filter(eligibleContainer).map(c=>new Option(c.name,c.id)));
   const connect=find('network-connect'),disconnect=find('network-disconnect');
-  function connectionControls(){const c=containers.find(c=>c.id===select.value),connected=c&&Object.values(c.networks||{}).includes(row.id);const disabled=chosenEpoch!==epoch||!loaded||loading||busy||!row.mutable||!c||!eligibleContainer(c);connect.disabled=disabled||connected;disconnect.disabled=disabled||!connected;}
+  function connectionControls(){const c=containers.find(c=>c.id===select.value),connected=c&&Object.values(c.networks||{}).includes(row.id);const disabled=!canWrite()||chosenEpoch!==epoch||!loaded||loading||busy||!row.mutable||!c||!eligibleContainer(c);connect.disabled=disabled||connected;disconnect.disabled=disabled||!connected;}
   select.onchange=connectionControls;connectionControls();
   for(const [button,kind] of [[connect,'connect'],[disconnect,'disconnect']])button.onclick=()=>{const c=containers.find(c=>c.id===select.value);if(chosenEpoch!==epoch||!c||!eligibleContainer(c)||!row.mutable||busy||loading||!loaded)return;find('network-details').close();action(kind,[row],'',`${kind==='connect'?'Connect':'Disconnect'} ${c.name} ${kind==='connect'?'to':'from'} ${row.name} on ${window.reefHostName||'Local'}? This changes live connectivity and does not edit Compose files. A later Compose recreation may overwrite this change.`,c.id);};
   find('network-details').showModal();

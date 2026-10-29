@@ -39,3 +39,5 @@ test('successful cache cleanup hides its completed panel without resetting its f
 test('cache cleanup retains incomplete results until dismissed and later polls do not reopen them',async()=>{
  const cacheOperation={id:'cache-cleanup',action:'cache cleanup',running:false,total:2,results:[{id:'cachefixture001',ok:true,message:'Removed'}]},p=page({cacheOperation});await p.settle();await p.find('build-cache-refresh').fire('click');assert.equal(p.find('build-cache-operation').hidden,false);await p.find('build-cache-operation').children[0].children.at(-1).fire('click');await p.timers.at(-1)();assert.equal(p.find('build-cache-operation').hidden,true);
 });
+
+test('viewer can read build history and cache but cannot build or clear cache',async()=>{const p=page();p.window.reefAccess={canWrite:false};await p.settle();await p.select();assert.equal(p.find('build-submit').disabled,true);await p.find('build-cache-refresh').fire('click');assert.equal(p.find('build-cache-refresh').disabled,false);assert.equal(p.find('build-cache-cleanup').disabled,true);assert.equal(p.find('build-cache-rows').children[0].children[0].children[0].disabled,true)});

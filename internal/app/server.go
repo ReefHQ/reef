@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"reef/internal/accounts"
 	"reef/internal/agents"
 	"reef/internal/agentupdate"
 	"reef/internal/docker"
@@ -29,14 +30,18 @@ var webFiles = assets.Files
 
 const appName = "Reef" // Central display name.
 type session struct {
-	CSRF    string    `json:"csrf"`
-	Expires time.Time `json:"expires"`
+	UserID   string    `json:"user_id,omitempty"`
+	Revision uint64    `json:"revision,omitempty"`
+	CSRF     string    `json:"csrf"`
+	Expires  time.Time `json:"expires"`
 }
 type attempt struct {
 	Count int
 	Since time.Time
 }
 type Server struct {
+	accounts       *accounts.Store
+	loginSlots     chan struct{}
 	monitor        *monitoring.Store
 	history        *history.Store
 	stats          *statsSampler
@@ -57,7 +62,7 @@ type Server struct {
 }
 
 func newServer(m *Manager, c Config, password string) *Server {
-	return &Server{stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+	return &Server{loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	u, e := url.Parse(r.Header.Get("Origin"))
@@ -79,12 +84,17 @@ func (s *Server) getSession(r *http.Request) (session, bool) {
 		return session{}, false
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	key := sessionKey(c.Value)
 	v, ok := s.sessions[key]
 	if ok && time.Now().After(v.Expires) {
 		delete(s.sessions, key)
+		s.mu.Unlock()
 		return session{}, false
+	}
+	s.mu.Unlock()
+	if ok && s.accounts != nil {
+		u, exists := s.accounts.User(v.UserID)
+		ok = exists && !u.Disabled && u.Revision == v.Revision
 	}
 	return v, ok
 }
@@ -104,6 +114,9 @@ func (s *Server) Handler() http.Handler {
 			}
 			return
 		}
+		if s.accounts != nil {
+			w.Header().Set("X-Reef-User", sess.UserID)
+		}
 		if r.Method != "GET" {
 			if r.Method != "POST" || !s.originOK(r) {
 				http.Error(w, "Origin rejected", 403)
@@ -119,7 +132,17 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 		}
+		if !s.authorize(w, r, sess) {
+			return
+		}
+		if r.Method == "GET" || strings.HasPrefix(r.URL.Path, "/api/console/") {
+			w = &permissionWriter{ResponseWriter: w, allowed: func() bool { _, ok := s.getSession(r); return ok }}
+		}
 		host := r.URL.Query().Get("host")
+		if r.URL.Path == "/api/me" || r.URL.Path == "/api/users" {
+			s.userAccounts(w, r, sess)
+			return
+		}
 		if r.URL.Path == "/api/monitoring" {
 			s.monitoringSettings(w, r)
 			return
@@ -223,7 +246,7 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 			per, _ := s.cfg.consoleLimits()
-			s.render(w, "index.html", map[string]any{"Name": appName, "CSRF": sess.CSRF, "ConsoleSessionLimit": per})
+			s.render(w, "index.html", map[string]any{"Name": appName, "CSRF": sess.CSRF, "ConsoleSessionLimit": per, "User": s.principal(sess), "InitialHost": s.initialHost(s.principal(sess)), "InstanceAdmin": s.principal(sess).GlobalAdmin()})
 		case "/api/containers":
 			if r.Method != "GET" {
 				http.Error(w, "Method not allowed", 405)
@@ -396,12 +419,30 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid form", 400)
 		return
 	}
-	got := sha256.Sum256([]byte(r.Form.Get("password")))
-	if subtle.ConstantTimeCompare(got[:], s.password[:]) != 1 {
-		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": "Incorrect password"}, http.StatusUnauthorized)
+	var user accounts.User
+	authenticated := false
+	if s.accounts != nil {
+		select {
+		case s.loginSlots <- struct{}{}:
+		default:
+			http.Error(w, "Sign-in busy. Try again shortly.", 429)
+			return
+		}
+		user, authenticated = s.accounts.Authenticate(r.Form.Get("username"), r.Form.Get("password"))
+		<-s.loginSlots
+	} else {
+		got := sha256.Sum256([]byte(r.Form.Get("password")))
+		authenticated = subtle.ConstantTimeCompare(got[:], s.password[:]) == 1
+	}
+	if !authenticated {
+		message := "Incorrect username or password"
+		if s.accounts == nil {
+			message = "Incorrect password"
+		}
+		s.renderStatus(w, "login.html", map[string]any{"Name": appName, "Error": message, "Username": r.Form.Get("username")}, http.StatusUnauthorized)
 		return
 	}
-	id, e := s.createSession()
+	id, e := s.createUserSession(user)
 	if e != nil {
 		if e == errSessionLimit {
 			http.Error(w, "Too many sessions", 429)

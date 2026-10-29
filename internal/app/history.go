@@ -40,9 +40,33 @@ func (s *Server) actionHistory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	page, err := s.history.Query(history.Query{Host: r.URL.Query().Get("host"), Scope: r.URL.Query().Get("scope"), Status: r.URL.Query().Get("status"), Search: r.URL.Query().Get("search"), Cursor: r.URL.Query().Get("cursor"), Offset: offset})
+	u := s.requestUser(r)
+	allowed := map[string]bool(nil)
+	if !u.AllHosts {
+		allowed = map[string]bool{}
+		for _, id := range u.Hosts {
+			allowed[id] = true
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+	if cursor != "" {
+		cursor, err = s.historyCursor(cursor, u, false)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+	page, err := s.history.Query(history.Query{AllowedHosts: allowed, RestrictAdminEvents: !u.GlobalAdmin(), Host: r.URL.Query().Get("host"), Scope: r.URL.Query().Get("scope"), Status: r.URL.Query().Get("status"), Search: r.URL.Query().Get("search"), Cursor: cursor, Offset: offset})
 	if err != nil {
 		http.Error(w, err.Error(), 400)
+		return
+	}
+	if !u.Allows("local") {
+		page.Dropped = 0
+	}
+	page.Cursor, err = s.historyCursor(page.Cursor, u, true)
+	if err != nil {
+		http.Error(w, "History page unavailable", 503)
 		return
 	}
 	writeJSON(w, page)

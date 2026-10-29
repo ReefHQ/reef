@@ -23,8 +23,11 @@ terminal outcome. Started means no final event has been recorded, not proof of a
 active worker. On central restart, persisted Local starts without an outcome are
 shown as Unknown; completed/partial/failed/closed outcomes are preserved. Remote
 starts are not changed merely because central restarted or an agent disconnected.
-There is no user attribution under the current shared-password login. The future
-user/permission feature must deliberately extend/migrate this event model.
+From v0.17.0, history reads are restricted to the account’s assigned hosts, with
+filtering before grouping/counting/pagination and user-bound opaque cursors. The
+existing event schema does not claim actor attribution: automatic, legacy and
+remote events do not reliably identify a person. Individual login does not
+retroactively label those records or make this journal a complete user audit.
 
 ## Persistence and retention
 

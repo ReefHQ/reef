@@ -2,7 +2,8 @@
 // Only dismissal IDs are stored; operation output stays in memory.
 (()=>{
  const fallback=new Map();
- const key=(kind,host)=>`reef.operation-dismissal.v1.${kind}.${host}`;
+ const userId=typeof window==='object'?window.reefAccess?.userId||'':'';
+ const key=(kind,host)=>`reef.operation-dismissal.v1.${kind}.${host}${userId?"."+userId:""}`;
  function dismissed(kind,host,id){
   const name=key(kind,host);
   if(fallback.has(name))return fallback.get(name)===id;

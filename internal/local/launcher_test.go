@@ -252,3 +252,41 @@ func TestDockerDiagnosticsUseEnglishLocale(t *testing.T) {
 		t.Fatal("caller locale changed")
 	}
 }
+
+func TestOfflineRecoveryUsesExactExistingProjectAndDoesNotRestartOrRewrite(t *testing.T) {
+	l := fixture(t)
+	meta, err := l.initialize(engine{"local", "unix:///var/run/docker.sock", "engine"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(filepath.Join(l.runtime(), "compose.json"))
+	var calls [][]string
+	l.run = func(args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		if reflect.DeepEqual(args, []string{"context", "show"}) {
+			return []byte("local"), nil
+		}
+		if reflect.DeepEqual(args, []string{"context", "inspect", "local"}) {
+			return []byte(`[{"Endpoints":{"docker":{"Host":"unix:///var/run/docker.sock"}}}]`), nil
+		}
+		if len(args) > 2 && args[2] == "info" {
+			return []byte(`{"ID":"engine","OSType":"linux"}`), nil
+		}
+		return nil, nil
+	}
+	if err = l.Run("recover-admin", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--context", "local", "compose", "--project-name", meta.Prefix + "-ui", "-f", filepath.Join(l.runtime(), "compose.json"), "run", "--rm", "--no-deps", "reef", "-config", "/etc/reef/config.json", "-recover-admin", "admin"}
+	if !reflect.DeepEqual(calls[len(calls)-1], want) {
+		t.Fatal(calls)
+	}
+	after, _ := os.ReadFile(filepath.Join(l.runtime(), "compose.json"))
+	if string(before) != string(after) {
+		t.Fatal("recovery changed configuration")
+	}
+	calls = nil
+	if l.Run("recover-admin", "--other") == nil || len(calls) != 0 {
+		t.Fatal("invalid recovery username contacted Docker")
+	}
+}
