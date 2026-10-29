@@ -7,6 +7,10 @@ read the review/result; only admins can change containers.
 
 ## Review before acting
 
+The panel refreshes status in place, keeps unchanged details/results and preserves
+your scroll position. Loading feedback keeps a reserved space, including during
+background refreshes.
+
 The panel pins the host, full container ID and current configuration/state
 fingerprint. The server checks Docker again before work. The browser never sends
 environment variables, commands or a replacement Docker configuration.
