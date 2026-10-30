@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.25.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.25.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -91,6 +91,9 @@ hours. Reef does not update itself, and a tag may appear before its Docker image
 is ready. [Update checks](docs/REEF_UPDATES.md)
 
 The **Manage** panel refreshes container status without moving your reading position.
+Forms share control heights, action groups wrap on narrow screens and dialog close
+buttons stay within reach while you scroll. Loading, empty results and failed reads
+have distinct messages, including Builds and Schedules.
 
 [Explore the usage guide](docs/USER_GUIDE.md) · [Standalone containers and safe updates](docs/STANDALONE_CONTAINERS.md)
 

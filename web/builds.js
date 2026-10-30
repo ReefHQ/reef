@@ -1,15 +1,19 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),view=find('builds-view');
- let host=window.reefHost||'local',epoch=0,projects=[],selected='',detail=null,history=[],cache=[],cacheSelection=new Set(),cacheBusy=false,cacheLoading=false,cacheLoaded=false,stateLoading=false,stateLoaded=false,stateFailed=false,detailLoading=false,submitting=false,logID='',logProject='',timer,hostsReady=false;
+ let host=window.reefHost||'local',epoch=0,projects=[],selected='',detail=null,history=[],historyLoading=false,historyFailed=false,cache=[],cacheSelection=new Set(),cacheBusy=false,cacheLoading=false,cacheLoaded=false,stateLoading=false,stateLoaded=false,stateFailed=false,detailLoading=false,submitting=false,logID='',logProject='',timer,hostsReady=false;
  const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('builds-v1');
  const active=()=>projects.find(p=>p.id===selected);
  const bytes=n=>{const units=['B','KiB','MiB','GiB','TiB'];let i=0;while(n>=1024&&i<4){n/=1024;i++;}return `${n.toFixed(i?1:0)} ${units[i]}`;};
  function notice(text,error=false){find('builds-error').textContent=text;find('builds-error').hidden=!text;find('builds-error').className='notice'+(error?' error':'');}
  function controls(){
+  find('builds-empty').hidden=!!projects.length;find('builds-empty').textContent=!available()?'Upgrade this host’s agent to use Builds.':!stateLoaded?(stateFailed?'Builds unavailable. Use Refresh to try again.':'Loading managed projects…'):'Manage a Compose project first, then select it here.';
+  find('build-history-empty').hidden=!!history.length;find('build-history-empty').textContent=!selected?'Select a managed project to see its builds.':historyLoading?'Loading build history…':historyFailed?'Build history unavailable. Use Refresh to try again.':'No builds recorded for this project.';
+  if(!cache.length)find('build-cache-empty').hidden=false;find('build-cache-empty').textContent=cacheLoading&&!cache.length?'Reading default builder cache…':cacheLoaded?'No cache records match this selection.':'Use Refresh cache to read the default Docker builder.';
+
   const p=active();find('builds-refresh').disabled=!available()||stateLoading;find('build-submit').disabled=!canWrite()||!available()||!p||p.busy||!detail?.services?.length||detailLoading||submitting||cacheBusy;
-  find('builds-loading').hidden=!(stateLoading||detailLoading||(!stateLoaded&&!stateFailed&&available()));find('builds-rows').setAttribute('aria-busy',String(stateLoading));
+  find('builds-loading').hidden=!(stateLoading||detailLoading||historyLoading||(!stateLoaded&&!stateFailed&&available()));find('builds-rows').setAttribute('aria-busy',String(stateLoading||historyLoading));
   find('build-cache-refresh').disabled=!available()||cacheLoading;find('build-cache-delete').disabled=!canWrite()||!available()||cacheBusy||!cacheLoaded||!cacheSelection.size||projects.some(p=>p.busy);
   find('build-cache-cleanup').disabled=!canWrite()||!available()||cacheBusy||!cacheLoaded||!cache.some(row=>row.reclaimable&&!row.mutable)||projects.some(p=>p.busy);
   find('build-cache-loading').hidden=!cacheLoading;find('build-cache-rows').setAttribute('aria-busy',String(cacheLoading));
@@ -17,14 +21,12 @@
  function renderProjects(){
   const picker=find('build-project'),value=selected,signature=JSON.stringify(projects.map(p=>[p.id,p.name]));if(picker.dataset.signature!==signature){picker.replaceChildren(new Option('Choose a managed project',''),...projects.map(p=>new Option(p.name,p.id)));picker.dataset.signature=signature;}picker.value=projects.some(p=>p.id===value)?value:'';
   find('build-nav-count').textContent=available()&&stateLoaded?projects.length:'—';
-  find('builds-empty').hidden=!!projects.length;find('builds-empty').textContent=available()?'Manage a Compose project first, then select it here.':'Upgrade this host’s agent to use Builds.';
   const rows=history.map(op=>{const tr=document.createElement('tr'),actions=document.createElement('td'),open=textNode('button','View log','compact-button');open.type='button';open.dataset.focusKey='build-log-'+op.id;open.addEventListener('click',()=>showLog(op.id));actions.append(open);tr.append(textNode('td',op.build?.service||'All build services'),textNode('td',op.running?'Running':op.phase),textNode('td',new Date(op.started).toLocaleString()),textNode('td',op.result||op.phase),actions);return tr;});replaceKeepingFocus(find('builds-rows'),rows);
-  find('build-history-empty').hidden=!!history.length;find('build-history-empty').textContent=selected?'No builds recorded for this project.':'Select a managed project to see its builds.';
   find('build-project-state').textContent=active()?.busy?'A project operation is running.':detailLoading?'Reading saved Compose build services…':detail?`${detail.services.length} buildable service(s) in the saved Compose files.`:'';controls();
  }
  async function loadState(){
   if(!hostsReady||stateLoading||document.hidden)return;if(!available()){notice('Upgrade this host’s agent to use Builds.',true);window.reefBuildsReady=true;window.dispatchEvent(new CustomEvent('reef-builds-ready'));return;}const current=epoch;stateLoading=true;stateFailed=false;controls();
-  try{const data=await(await request('/api/builds',undefined,host)).json();if(current!==epoch)return;const wasBusy=active()?.busy;projects=data;stateLoaded=true;if(selected&&!active()){selected='';detail=null;history=[];}const op=active()?.operation;if(op?.id){const index=history.findIndex(h=>h.id===op.id);if(index<0)history.unshift(op);else history[index]=op;}renderProjects();if(wasBusy&&!active()?.busy){await loadHistory();await loadDetail();}if(active()?.persistence_error)notice(active().persistence_error,true);
+  try{const data=await(await request('/api/builds',undefined,host)).json();if(current!==epoch)return;const wasBusy=active()?.busy;projects=data;stateLoaded=true;if(selected&&!active()){selected='';detail=null;history=[];historyLoading=false;historyFailed=false;}const op=active()?.operation;if(op?.id){const index=history.findIndex(h=>h.id===op.id);if(index<0)history.unshift(op);else history[index]=op;}renderProjects();if(wasBusy&&!active()?.busy){await loadHistory();await loadDetail();}if(active()?.persistence_error)notice(active().persistence_error,true);
   }catch(error){if(current===epoch){stateFailed=true;notice(error.message,true);}}finally{if(current===epoch){stateLoading=false;controls();window.reefBuildsReady=true;window.dispatchEvent(new CustomEvent('reef-builds-ready'));}}
  }
  async function loadDetail(){
@@ -32,7 +34,7 @@
   try{const data=await(await request('/api/builds/project?id='+encodeURIComponent(id),undefined,host)).json();if(current!==epoch||id!==selected)return;detail=data;find('build-service').replaceChildren(new Option('All build services',''),...data.services.map(s=>new Option(s,s)));notice('');}
   catch(error){if(current===epoch&&id===selected)notice(error.message,true);}finally{if(current===epoch&&id===selected){detailLoading=false;renderProjects();}}
  }
- async function loadHistory(){const current=epoch,id=selected;if(!id)return;try{const data=await(await request('/api/builds/history?id='+encodeURIComponent(id),undefined,host)).json();if(current!==epoch||id!==selected)return;history=data;renderProjects();}catch(error){if(current===epoch&&id===selected)notice(error.message,true);}}
+ async function loadHistory(){const current=epoch,id=selected;if(!id||historyLoading)return;historyLoading=true;historyFailed=false;controls();try{const data=await(await request('/api/builds/history?id='+encodeURIComponent(id),undefined,host)).json();if(current!==epoch||id!==selected)return;history=data;renderProjects();}catch(error){if(current===epoch&&id===selected){historyFailed=true;notice(error.message,true);}}finally{if(current===epoch&&id===selected){historyLoading=false;controls();}}}
  async function logRefresh(){
   const current=epoch,id=logProject,op=logID;if(!find('build-log-dialog').open||!op)return;
   try{const data=await(await request('/api/builds/log?id='+encodeURIComponent(id)+'&operation='+encodeURIComponent(op),undefined,host)).json();if(current!==epoch||op!==logID||!find('build-log-dialog').open)return;const output=find('build-log-output'),atBottom=output.scrollHeight-output.scrollTop-output.clientHeight<35;output.textContent=data.log||'Waiting for build output…';if(atBottom)output.scrollTop=output.scrollHeight;find('build-log-state').textContent=data.running?`Running · ${data.phase}`:data.result||data.phase;}
@@ -65,7 +67,7 @@
   try{const body=new URLSearchParams({csrf,confirmed:'yes',targets:JSON.stringify(targets.map(row=>({id:row.id,fingerprint:row.fingerprint})))});const op=await(await request('/api/builds/cache/action',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},chosenHost)).json();if(current!==epoch)return;cacheStatus(op);cacheSelection.clear();renderCache();}
   catch(error){if(current===epoch){find('build-cache-error').textContent=`${error.message} Refresh cache before retrying; outcome may be unknown.`;find('build-cache-error').hidden=false;}}
  }
- find('build-project').addEventListener('change',async()=>{selected=find('build-project').value;detail=null;detailLoading=false;history=[];renderProjects();await Promise.all([loadDetail(),loadHistory()]);});
+ find('build-project').addEventListener('change',async()=>{selected=find('build-project').value;detail=null;detailLoading=false;history=[];historyLoading=false;historyFailed=false;renderProjects();await Promise.all([loadDetail(),loadHistory()]);});
  find('build-form').addEventListener('submit',async event=>{
   event.preventDefault();const current=epoch,id=selected,chosenHost=host,info=detail,service=find('build-service').value,noCache=find('build-no-cache').checked,pull=find('build-pull').checked;if(!available()||!info||!active()||active().busy||submitting)return;
   if(!await ask(`Build ${service||'all build services'} for ${active().name} on ${window.reefHostName||'Local'} from the saved Compose files? ${noCache?'Cache reuse disabled. ':''}${pull?'Base images will be refreshed. ':''}Containers will keep running. Unsaved editor changes are not included.`))return;
@@ -80,6 +82,6 @@
  async function poll(){clearTimeout(timer);const current=epoch;try{if(available()&&!document.hidden&&!view.hidden){await loadState();await logRefresh();{const op=await(await request('/api/builds/cache/operation',undefined,host)).json();if(current!==epoch)return;const wasBusy=cacheBusy;cacheStatus(op);if(wasBusy&&!cacheBusy)await loadCache();}}}catch(error){if(current===epoch)notice(error.message,true);}finally{if(current===epoch)timer=setTimeout(poll,2000);}}
  window.addEventListener('reef-state',event=>{if(view.hidden)find('build-nav-count').textContent=available()?event.detail.length:'—';});
  window.addEventListener('reef-view-changed',()=>{if(!view.hidden){if(!available()){notice('Upgrade this host’s agent to use Builds.',true);window.reefBuildsReady=true;window.dispatchEvent(new CustomEvent('reef-builds-ready'));}else loadState();}});
- window.addEventListener('reef-host-changed',()=>{epoch++;host=window.reefHost||'local';projects=[];selected='';history=[];detail=null;cache=[];cacheSelection.clear();cacheBusy=false;cacheLoading=false;cacheLoaded=false;stateLoading=false;stateLoaded=false;stateFailed=false;detailLoading=false;submitting=false;logID='';window.reefBuildsReady=false;if(find('build-log-dialog').open)find('build-log-dialog').close();find('build-cache-operation').hidden=true;find('build-cache-error').hidden=true;find('build-no-cache').checked=false;find('build-pull').checked=false;find('build-cache-search').value='';notice('');renderProjects();renderCache();if(!view.hidden)loadState();});
+ window.addEventListener('reef-host-changed',()=>{epoch++;host=window.reefHost||'local';projects=[];selected='';history=[];historyLoading=false;historyFailed=false;detail=null;cache=[];cacheSelection.clear();cacheBusy=false;cacheLoading=false;cacheLoaded=false;stateLoading=false;stateLoaded=false;stateFailed=false;detailLoading=false;submitting=false;logID='';window.reefBuildsReady=false;if(find('build-log-dialog').open)find('build-log-dialog').close();find('build-cache-operation').hidden=true;find('build-cache-error').hidden=true;find('build-no-cache').checked=false;find('build-pull').checked=false;find('build-cache-search').value='';notice('');renderProjects();renderCache();if(!view.hidden)loadState();});
  renderProjects();renderCache();(window.reefHostsReady||Promise.resolve()).then(()=>{hostsReady=true;if(!view.hidden)loadState();timer=setTimeout(poll,2000);});
 })();
