@@ -593,3 +593,10 @@ From central v0.20.0, **Manage hosts → Diagnostics** shows central observation
 for an assigned agent: freshness, version/protocol, current or historical feature
 reports and recent troubleshooting hints. It is read-only and requires no agent
 upgrade or probe; [interpret the results](AGENT_DIAGNOSTICS.md).
+
+## Reef updates
+
+The header shows when a newer stable Reef tag is available on GitHub. Open
+**Reef updates** for versions, changelog and the last check. Global administrators
+can select **Check now**; automatic checks run at startup and every six hours.
+This does not deploy anything. See [update notifications](REEF_UPDATES.md).

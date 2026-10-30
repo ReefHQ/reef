@@ -41,6 +41,8 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request, sess session)
 	switch path {
 	case "/", "/api/me", "/logout":
 		allowed = true
+	case "/api/reef-update":
+		allowed = r.Method == "GET" || (r.Method == "POST" && u.GlobalAdmin())
 	case "/api/users", "/api/webhook":
 		allowed = u.GlobalAdmin()
 	case "/api/agent-diagnostics":
