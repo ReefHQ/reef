@@ -84,6 +84,8 @@ type Manager struct {
 	config        Config
 	registered    []Project
 	registryHash  string
+	pathAliases   map[string]string
+	pathAliasHash string
 	Projects      map[string]*Managed
 	Order         []string
 	StateDir      string
@@ -111,6 +113,9 @@ func newManager(c Config, x Executor) (*Manager, error) {
 		return nil, e
 	}
 	m.registryHash = digest(raw)
+	if e := m.loadPathAliases(); e != nil {
+		return nil, e
+	}
 	for _, p := range append(append([]Project{}, c.Projects...), extra...) {
 		mp := &Managed{Project: p}
 		m.Projects[p.ID] = mp

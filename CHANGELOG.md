@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.22.3 — Unreleased
+## 0.23.0 — Unreleased
+
+- Resolve visible project folder aliases before review, show the physical folder and original alias, and persist only the confirmed canonical path.
+- Suggest plausible matches for host-only folder aliases and let administrators verify, confirm, persist and remove mappings directly in project setup, without JSON edits or a restart. Suggestions never activate themselves.
+- Keep configured `project_path_aliases` as an optional operator override, with authorized-root restrictions, private persistent UI mappings and host-local agent execution.
+
+## 0.22.3 — 2026-10-29
 
 - Keep Buildx client metadata in private temporary storage so cache inspection and Compose builds work with the read-only filesystem used by Reef and agents. Registry credentials remain read-only; upgrade affected agents as well as central Reef.
 

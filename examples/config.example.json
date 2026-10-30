@@ -6,5 +6,6 @@
   "console_sessions_per_login": 8,
   "console_sessions_total": 16,
   "installation_directory": "/CANONICAL_ABSOLUTE_PATH/reef",
+  "project_path_aliases": {},
   "projects": []
 }

@@ -13,17 +13,18 @@ import (
 )
 
 type Config struct {
-	VolumeBackupDirectory   string    `json:"volume_backup_directory,omitempty"`
-	VolumeBackupRetention   int       `json:"volume_backup_retention,omitempty"`
-	AgentsEnabled           bool      `json:"agents_enabled,omitempty"`
-	Listen                  string    `json:"listen"`
-	StateDir                string    `json:"state_dir"`
-	SecureCookie            bool      `json:"secure_cookie"`
-	Projects                []Project `json:"projects"`
-	AllowedProjectRoots     []string  `json:"allowed_project_roots"`
-	InstallationDirectory   string    `json:"installation_directory,omitempty"`
-	ConsoleSessionsPerLogin int       `json:"console_sessions_per_login,omitempty"`
-	ConsoleSessionsTotal    int       `json:"console_sessions_total,omitempty"`
+	VolumeBackupDirectory   string            `json:"volume_backup_directory,omitempty"`
+	VolumeBackupRetention   int               `json:"volume_backup_retention,omitempty"`
+	AgentsEnabled           bool              `json:"agents_enabled,omitempty"`
+	Listen                  string            `json:"listen"`
+	StateDir                string            `json:"state_dir"`
+	SecureCookie            bool              `json:"secure_cookie"`
+	Projects                []Project         `json:"projects"`
+	AllowedProjectRoots     []string          `json:"allowed_project_roots"`
+	ProjectPathAliases      map[string]string `json:"project_path_aliases,omitempty"`
+	InstallationDirectory   string            `json:"installation_directory,omitempty"`
+	ConsoleSessionsPerLogin int               `json:"console_sessions_per_login,omitempty"`
+	ConsoleSessionsTotal    int               `json:"console_sessions_total,omitempty"`
 }
 type Project struct {
 	ID           string   `json:"id"`
@@ -84,6 +85,9 @@ func finishConfig(c Config) (Config, error) {
 		}
 	}
 	if e := validateRoots(c.AllowedProjectRoots); e != nil {
+		return c, e
+	}
+	if e := validateProjectPathAliases(c); e != nil {
 		return c, e
 	}
 	if e := validateProjects(c.Projects); e != nil {

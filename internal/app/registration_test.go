@@ -330,3 +330,167 @@ func TestRegistrationErrorsIdentifyTheFieldWithoutAuthorizingFiles(t *testing.T)
 		t.Fatal("validation error partially registered a project")
 	}
 }
+
+func TestProjectDirectoryAliasResolutionRequiresAuthorizedPhysicalDestination(t *testing.T) {
+	c, p := adoptionFixture(t)
+	alias := filepath.Join(canonicalTemp(t), "share-alias")
+	if e := os.Symlink(c.AllowedProjectRoots[0], alias); e != nil {
+		t.Fatal(e)
+	}
+	candidate := filepath.Join(alias, "app")
+	physical, e := resolveProjectDirectory(c, candidate)
+	if e != nil || physical != p.Directory {
+		t.Fatal(physical, e)
+	}
+	for _, tc := range []struct {
+		name, dir string
+		cfg       Config
+	}{
+		{"outside", canonicalTemp(t), c},
+		{"missing alias", filepath.Join(alias, "absent"), c},
+		{"relative", "app", c},
+		{"traversal", alias + "/../app", c},
+		{"explicit deny", candidate, Config{AllowedProjectRoots: []string{}}},
+		{"installation", candidate, Config{AllowedProjectRoots: c.AllowedProjectRoots, InstallationDirectory: p.Directory}},
+		{"file", filepath.Join(candidate, "compose.yaml"), c},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got, e := resolveProjectDirectory(tc.cfg, tc.dir); e == nil || got != "" {
+				t.Fatal("unauthorized resolution disclosed", got, e)
+			}
+		})
+	}
+	// Resolving a preview does not authorize a later direct alias submission.
+	m, _ := newManager(c, &fakeExecutor{})
+	p.Directory = candidate
+	if _, e = m.registerProject(p); e == nil {
+		t.Fatal("unreviewed alias registered")
+	}
+	p.Directory = physical
+	saved, e := m.registerProject(p)
+	if e != nil || saved.Directory != physical {
+		t.Fatal(saved, e)
+	}
+	reloaded, e := newManager(c, &fakeExecutor{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got, ok := reloaded.get(saved.ID); !ok || got.Project.Directory != physical {
+		t.Fatal("canonical path not persisted")
+	}
+}
+
+func TestProjectProposalResolvesAliasWithoutRegisteringOrReadingCompose(t *testing.T) {
+	c, p := adoptionFixture(t)
+	alias := filepath.Join(canonicalTemp(t), "nas-share")
+	os.Symlink(c.AllowedProjectRoots[0], alias)
+	input := filepath.Join(alias, "app")
+	x := &fakeExecutor{}
+	m, _ := newManager(c, x)
+	s := newServer(m, c, "long-password-123456")
+	// Both alias-based and physical absolute file labels become relative paths.
+	s.discovery = &inventoryStub{rows: []docker.Container{{ComposeProject: p.ProjectName, WorkingDir: input, ConfigFiles: filepath.Join(input, "compose.yaml") + "," + filepath.Join(p.Directory, "override.yaml")}}}
+	s.sessions[sessionKey("preview")] = session{CSRF: "csrf", Expires: time.Now().Add(time.Hour)}
+	cookie := &http.Cookie{Name: "qcu_session", Value: "preview"}
+	route := "/api/projects/proposal?name=" + p.ProjectName
+	response := call(s.Handler(), "GET", route, "", "", cookie)
+	var data struct {
+		Directory string   `json:"directory"`
+		Resolved  string   `json:"resolved_directory"`
+		Files     []string `json:"compose_files"`
+	}
+	if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &data) != nil || data.Resolved != p.Directory || data.Directory != input || strings.Join(data.Files, ",") != "compose.yaml,override.yaml" {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	// Preview needs no Compose file contents or syntax, and never runs Compose.
+	os.Remove(filepath.Join(p.Directory, "compose.yaml"))
+	response = call(s.Handler(), "GET", route+"&directory="+url.QueryEscape(input), "", "", cookie)
+	if response.Code != 200 || len(x.calls) != 0 || len(m.snapshot()) != 0 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	outside := canonicalTemp(t)
+	os.Remove(alias)
+	os.Symlink(outside, alias)
+	response = call(s.Handler(), "GET", route+"&directory="+url.QueryEscape(alias), "", "", cookie)
+	if response.Code != 409 || response.Header().Get("X-Reef-Field") != "directory" || strings.Contains(response.Body.String(), outside) {
+		t.Fatal("unsafe alias exposed", response.Code, response.Body.String())
+	}
+}
+
+func TestUnavailableHostAliasUsesOnlyExplicitRootMapping(t *testing.T) {
+	c, p := adoptionFixture(t)
+	alias := filepath.Join(canonicalTemp(t), "not-mounted-share")
+	c.ProjectPathAliases = map[string]string{alias: c.AllowedProjectRoots[0]}
+	input := filepath.Join(alias, "app")
+	if _, e := os.Lstat(alias); !os.IsNotExist(e) {
+		t.Fatal("fixture alias exists")
+	}
+	physical, e := resolveProjectDirectory(c, input)
+	if e != nil || physical != p.Directory {
+		t.Fatal(physical, e)
+	}
+	if _, e = os.Lstat(alias); !os.IsNotExist(e) {
+		t.Fatal("resolution created host alias")
+	}
+	// No suffix guessing, sibling-prefix matching, traversal or target escape.
+	for _, bad := range []string{alias + "-sibling/app", alias + "/../app", filepath.Join(alias, "missing")} {
+		if got, e := resolveProjectDirectory(c, bad); e == nil || got != "" {
+			t.Fatal("unverified alias resolved", got, e)
+		}
+	}
+	os.Symlink(canonicalTemp(t), filepath.Join(c.AllowedProjectRoots[0], "escape"))
+	if got, e := resolveProjectDirectory(c, filepath.Join(alias, "escape")); e == nil || got != "" {
+		t.Fatal("mapped alias escaped root", got, e)
+	}
+	// A visible symlink pointing elsewhere must not be overridden by the mapping.
+	os.Symlink(canonicalTemp(t), alias)
+	if got, e := resolveProjectDirectory(c, alias); e == nil || got != "" {
+		t.Fatal("visible alias destination ignored", got, e)
+	}
+	os.Remove(alias)
+	m, _ := newManager(c, &fakeExecutor{})
+	s := newServer(m, c, "long-password-123456")
+	s.discovery = &inventoryStub{rows: []docker.Container{{ComposeProject: p.ProjectName, WorkingDir: input, ConfigFiles: filepath.Join(input, "compose.yaml")}}}
+	s.sessions[sessionKey("mapping")] = session{Expires: time.Now().Add(time.Hour)}
+	response := call(s.Handler(), "GET", "/api/projects/proposal?name="+p.ProjectName, "", "", &http.Cookie{Name: "qcu_session", Value: "mapping"})
+	var data struct {
+		Resolved string   `json:"resolved_directory"`
+		Files    []string `json:"compose_files"`
+	}
+	if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &data) != nil || data.Resolved != p.Directory || len(data.Files) != 1 || data.Files[0] != "compose.yaml" {
+		t.Fatal(response.Code, response.Body.String())
+	}
+}
+
+func TestProjectPathAliasConfigValidation(t *testing.T) {
+	for _, kind := range []string{"valid", "relative", "filesystem root", "unapproved target", "empty roots", "overlapping aliases", "overlapping root", "too many"} {
+		t.Run(kind, func(t *testing.T) {
+			c, _ := adoptionFixture(t)
+			alias := filepath.Join(canonicalTemp(t), "alias")
+			target := c.AllowedProjectRoots[0]
+			c.ProjectPathAliases = map[string]string{alias: target}
+			switch kind {
+			case "relative":
+				c.ProjectPathAliases = map[string]string{"relative": target}
+			case "filesystem root":
+				c.ProjectPathAliases = map[string]string{"/": target}
+			case "unapproved target":
+				c.ProjectPathAliases[alias] = canonicalTemp(t)
+			case "empty roots":
+				c.AllowedProjectRoots = []string{}
+			case "overlapping aliases":
+				c.ProjectPathAliases[filepath.Join(alias, "nested")] = target
+			case "overlapping root":
+				c.ProjectPathAliases = map[string]string{filepath.Dir(target): target}
+			case "too many":
+				for i := 0; i < 33; i++ {
+					c.ProjectPathAliases[filepath.Join(alias, strings.Repeat("a", i+1))] = target
+				}
+			}
+			_, e := finishConfig(c)
+			if (e == nil) != (kind == "valid") {
+				t.Fatal(kind, e)
+			}
+		})
+	}
+}

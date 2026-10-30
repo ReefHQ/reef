@@ -85,6 +85,10 @@ A validation failure before saving leaves the original intact. A pull failure le
 
 Operations continue after closing the tab and have a total timeout of 45 minutes. A project lock prevents editing and simultaneous operations on that project. A content hash covers configured Compose files, configured interpolation files and the default `.env`, rejecting outdated edits. SSH changes are detected at checkpoints, but Reef cannot lock an external editor: do not change these files while an operation is running. Files referenced through `include`, `extends`, service `env_file`, secrets, configs or build contexts are outside this revision hash.
 
+Folder aliases are checked against their physical destination during project
+connection review. A host-only alias needs a one-time administrator mapping; see
+[project folder aliases](CONFIGURATION.md#project-folder-aliases).
+
 ### Image update checks
 
 Managed projects are checked on their owning host at startup, after an Apply update and every

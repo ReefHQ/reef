@@ -303,7 +303,8 @@ func TestRemoteRegistrationAndRootsRemainOnAgent(t *testing.T) {
 	os.MkdirAll(installation, 0700)
 	os.MkdirAll(projectDir, 0700)
 	os.WriteFile(filepath.Join(projectDir, "compose.yaml"), []byte("services: {}\n"), 0600)
-	cfg := Config{StateDir: t.TempDir(), InstallationDirectory: installation, Projects: []Project{}}
+	alias := filepath.Join(t.TempDir(), "remote-alias")
+	cfg := Config{StateDir: t.TempDir(), InstallationDirectory: installation, Projects: []Project{}, ProjectPathAliases: map[string]string{alias: root}}
 	manager, err := newManager(cfg, &fakeExecutor{})
 	if err != nil {
 		t.Fatal(err)
@@ -315,6 +316,22 @@ func TestRemoteRegistrationAndRootsRemainOnAgent(t *testing.T) {
 	proposal := call(h, "GET", "/api/projects/proposal?host="+host+"&name=app", "", "", cookie)
 	if proposal.Code != 200 || !strings.Contains(proposal.Body.String(), projectDir) {
 		t.Fatal(proposal.Code, proposal.Body.String())
+	}
+	preview := call(h, "GET", "/api/projects/proposal?host="+host+"&name=app&directory="+url.QueryEscape(filepath.Join(alias, "app")), "", "", cookie)
+	var resolved struct {
+		Directory string `json:"resolved_directory"`
+	}
+	if preview.Code != 200 || json.Unmarshal(preview.Body.Bytes(), &resolved) != nil || resolved.Directory != projectDir {
+		t.Fatal(preview.Code, preview.Body.String())
+	}
+	runtimeAlias := filepath.Join(t.TempDir(), "saved-remote-alias")
+	aliasForm := url.Values{"csrf": {"csrf"}, "confirmed": {"yes"}, "action": {"save"}, "alias": {runtimeAlias}, "target": {root}, "directory": {filepath.Join(runtimeAlias, "app")}, "project_name": {"app"}, "compose_files": {"compose.yaml"}}
+	aliasResponse := call(h, "POST", "/api/projects/path-aliases?host="+host, aliasForm.Encode(), "http://reef.test", cookie)
+	if aliasResponse.Code != 200 || len(local.aliasList()) != 0 {
+		t.Fatal("alias mutation crossed hosts", aliasResponse.Code, aliasResponse.Body.String())
+	}
+	if value := manager.aliasConfig().ProjectPathAliases[runtimeAlias]; value != root {
+		t.Fatal("alias missing on agent")
 	}
 	form := url.Values{"csrf": {"csrf"}, "confirmed": {"yes"}, "project_name": {"app"}, "name": {"App"}, "directory": {projectDir}, "compose_files": {"compose.yaml"}}
 	form.Set("directory", t.TempDir())
