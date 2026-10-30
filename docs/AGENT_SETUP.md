@@ -82,7 +82,7 @@ secrets; keep it private. External credential helpers must also exist in the age
 image, or use credentials compatible with its Docker CLI. The central deployment
 webhook's login is not automatically available on remote hosts.
 
-For custom authorized roots/projects/console limits, mount a JSON configuration
+For custom authorized roots/projects/console limits or `project_path_aliases`, mount a JSON configuration
 and add `-config /etc/reef-agent/config.json` to the command. It uses Reef's config
 schema. An explicit `allowed_project_roots` replaces the installation-parent
 default (including `[]` to disable adoption); bind each root at its identical
@@ -310,3 +310,11 @@ features; central Reef rejects these new actions until the capability is reporte
 Private inspect/create data stays on the agent; only review/result metadata crosses
 the relay. Keep its private state for interrupted-operation review; see
 [recreation and recovery](STANDALONE_CONTAINERS.md).
+
+Project folder alias resolution and explicit host-only alias mappings require an
+agent **0.23.0+**. Manage saved mappings from project setup on the selected host,
+with targets matching its authorized roots. They persist in that agent's state
+without a restart. The agent's JSON configuration can also define optional
+read-only mappings. Central mappings do not apply remotely.
+Older agents keep manual canonical-path registration. See
+[project folder aliases](CONFIGURATION.md#project-folder-aliases).

@@ -12,6 +12,7 @@ Copy `examples/config.example.json` to your chosen configuration location and re
 - `env_files`: relative interpolation files, in their original order. An empty list uses Compose's normal project-directory `.env` behavior. This does not replace service-level `env_file` entries.
 - `installation_directory`: canonical absolute host folder of the Reef installation. The local launcher supplies it via `REEF_INSTALLATION_DIR`; manual installs supply this config field or that environment variable. Config takes priority over environment. When explicit roots are absent, its parent becomes the default authorized root. It is never inferred from a candidate or container cwd.
 - `allowed_project_roots`: optional canonical absolute directories allowed for UI registrations. Mount each at the identical absolute host/container path. Never `/`. An explicit list replaces the installation-parent default; explicit `[]` disables new registrations. Removing a root still used by a persisted registration blocks startup until the registration/root configuration is reconciled. This is an authorization allowlist, not a filesystem sandbox for external paths referenced inside Compose.
+- `project_path_aliases`: optional operator-defined map from unavailable host alias prefixes to exact authorized roots. See [project folder aliases](#project-folder-aliases).
 - `state_dir`: an absolute, private, persistent directory separate from application data.
 - `volume_backup_directory`: optional private persistent archive folder; defaults to `state_dir/volume-backups`.
 - `volume_backup_retention`: succeeded backups kept per volume identity, 1–100; omitted or 0 uses 7. See [Volume backups](VOLUME_BACKUPS.md) for mounts, limits and recovery.
@@ -42,19 +43,8 @@ The `Dockerfile` builds a static Go executable and adds it to the official **Doc
 Every project bind mount must use **the same canonical absolute source and destination path**. The host Docker daemon must recognize the paths resolved by Compose inside Reef. Mount each authorized project without exposing unrelated shares. Do not move or separate Compose and data directories to accommodate Reef. References outside these directories require additional mounts preserving their paths, after explicit review.
 
 If registration reports an unauthorized folder, open **Allowed folders & mounting
-help** and compare its roots with the physical folder on the Docker host:
-
-```sh
-(cd /absolute/project/folder && pwd -P)
-```
-
-Enter that physical path as **Project folder**. For example, a NAS share alias
-may resolve to a directory under a different volume prefix; an alias is not an
-authorized root merely because it reaches the same files on the host. The physical
-parent must also be explicitly authorized (or be the installation-parent default)
-and mounted at the identical path inside Reef/the agent. An explicit
-`allowed_project_roots` list overrides that default; `[]` disables registrations.
-Do not change roots or mounts until the host path and displayed policy are checked.
+help** and compare its roots with the physical folder on the Docker host. See
+[project folder aliases](#project-folder-aliases) below for NAS share names.
 
 After adapting and checking the paths, and **only after installation is authorized**, the reference commands are:
 
@@ -82,3 +72,72 @@ Sessions expire 12 hours after sign-in and survive Reef restarts/rebuilds withou
 - Private registries: Reef does not manage credentials. Mount appropriate private Docker configuration at `/root/.docker` if required, accounting for credential helpers that may be absent. Do not place these secrets in the displayed Compose file.
 - Local build contexts: Dockerfiles and contexts must remain accessible at the same paths. `pull` may fail if an image does not exist in a registry; Reef then stops before downtime. Use the [Builds view](USER_GUIDE.md#builds-and-builder-cache) to build saved project definitions separately. Apply update still pulls before recreation; test locally built-only workflows before relying on that action.
 - `include`, `extends`, nested environment files and advanced features depend on the selected plugin. Custom CLI options and profiles are not configurable; services under profiles are not enabled automatically.
+
+## Project folder aliases
+
+When opening **Manage this project**, Reef resolves visible directory aliases and
+prefills their authorized physical destination. **Review connection** checks the
+current field again and shows **Folder** plus **Resolved from** when applicable.
+Only the physical path is submitted/persisted; registration revalidates roots,
+files and permissions. Compose/env file symlinks remain unsupported.
+
+If an alias exists only on the Docker host, open **Allowed folders & mounting
+help → Add an alias**. Choose its prefix and an existing authorized destination.
+Reef may prefill a single plausible match using a shared multi-component path
+suffix and existing project files. **A suggestion is a hypothesis, not proof of
+alias equivalence.** Multiple candidates are never selected automatically. The
+search is bounded (64 roots/path components, up to 16 suggestions); absence of a
+suggestion does not establish that a manual mapping is invalid.
+
+Check the host correspondence before confirming, for example:
+
+```sh
+(cd /absolute/host/project/folder && pwd -P)
+```
+
+For the verified NAS example, the alias prefix is
+`/share/Container/container-station-data/application` and its destination is
+`/share/CACHEDEV1_DATA/Container/container-station-data/application`.
+Check **I confirm this host alias refers to the selected authorized folder**, then
+**Verify and remember alias**. Reef checks the destination and current project's
+regular Compose/env files before saving. It neither registers nor starts that
+project: review/confirm the project connection separately.
+
+The correspondence applies immediately to descendant projects on that host,
+without JSON edits or a restart. Administrators can remove saved aliases here;
+existing registered projects retain their canonical paths. Changes require
+assigned-host admin access, CSRF/origin and explicit confirmation. Remote mappings
+are stored/executed by that agent; upgrade it to 0.23.0+. Older agents retain
+manual-path setup and do not offer alias controls.
+
+Saved UI mappings live in private `state_dir/project-path-aliases.json` (0600),
+separate from configuration. Keep it with the persistent state/backups. Corrupt,
+symlinked, overly public or conflicting state is rejected; external edits block
+new edits until reconciliation/restart. Removing an authorized root still used
+by a saved alias requires reconciling that mapping before restart.
+
+The optional operator-defined `project_path_aliases` config map remains supported:
+
+```json
+"project_path_aliases": {
+  "/share/Container/container-station-data/application": "/share/CACHEDEV1_DATA/Container/container-station-data/application"
+}
+```
+
+Merge this optional field into existing configuration, never replace the whole
+file. Config-defined aliases are read-only in the UI and require restart to edit;
+they cannot conflict/overlap with UI mappings. Most installations can use the UI.
+
+Targets must exactly match existing authorized roots (explicit allowlist or
+installation-parent default) and already be mounted at identical absolute paths.
+The alias need not be mounted. At most 32 mappings total; clean absolute non-root
+paths only, with no overlapping aliases/roots or aliases/other aliases. Explicit
+empty roots still deny registration. No new mount/authorization/folder is created.
+
+Mappings apply only when the original path is unavailable. A visible alias is
+resolved normally, never overridden to conceal another destination. The physical
+destination is resolved/authorized again, with traversal and escapes refused.
+Compose contents/external absolute paths are not rewritten and still need their
+original mounts. Suggestions and alias edits do not execute Compose or read its
+contents, and they cannot prove this is the intended application: review the host,
+project identity, paths and environment options before managing any project.

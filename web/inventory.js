@@ -3,6 +3,7 @@
  const find=selector=>document.querySelector(selector);
  let snapshot=[],managed=window.reefProjects||[],hasSnapshot=false,busy=false,managing=false,currentView='containers',access=null,inventoryFailed=false;
  const dialog=find('#manage-project'),form=find('#manage-form');
+ let aliasRows=[],aliasRoots=[],aliasBusy=false,aliasSupported=false;
  const saved=ReefNavigation.read();let restoring=true,restoringProject=false,hostsReady=false,managedReady=Array.isArray(window.reefProjects),restoreInFlight=false,scrollTimer;
  if('scrollRestoration' in history)history.scrollRestoration='manual';
  function remember(){
@@ -130,18 +131,76 @@
  find('#project-console-open').addEventListener('click',()=>{const p=current();if(p)window.openProjectConsole({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
  find('#project-container-logs').addEventListener('click',()=>{const p=current();if(p)window.openContainerLogs({containers:snapshot.filter(c=>c.compose_project===p.project_name),project:p.name});});
  for(const [id,event] of [['#project-search','input'],['#project-access','change']])find(id).addEventListener(event,()=>{userNavigation();renderProjects();remember();});find('#refresh-containers').addEventListener('click',refresh);find('#refresh-projects').addEventListener('click',refresh);
+ function aliasExample(){
+  find('#manage-alias-confirm').checked=false;
+  const source=find('#manage-alias-source').value,target=find('#manage-alias-target').value,dir=find('#manage-directory').value;
+  find('#manage-alias-example').textContent=source&&target?(dir===source||dir.startsWith(source+'/')?`${dir} → ${target+dir.slice(source.length)}`:`${source} → ${target}`):'';
+ }
+ function renderAliases(){
+  find('#manage-alias-settings').hidden=!aliasSupported;
+  const rows=aliasRows.map(row=>{const line=textNode('p','');line.append(textNode('span',`${row.alias} → ${row.target}`,'path'));if(row.editable){const remove=textNode('button','Remove','compact-button');remove.type='button';remove.disabled=aliasBusy;remove.addEventListener('click',async()=>{
+   const epoch=hostEpoch,chosenHost=host;
+   if(!await ask(`Remove the saved alias ${row.alias} on ${window.reefHostName||'Local'}? Existing registered projects keep their physical paths.`)||epoch!==hostEpoch||!dialog.open||aliasBusy)return;
+   await saveAlias('remove',row.alias,'',epoch,chosenHost);
+  });line.append(remove);}else line.append(textNode('small','Defined in configuration','muted'));return line;});
+  find('#manage-alias-list').replaceChildren(...rows);find('#manage-alias-add').disabled=aliasBusy||!aliasRoots.length;find('#manage-alias-save').disabled=aliasBusy||!aliasRoots.length;
+ }
+ function openAliasEditor(suggestion){
+  find('#manage-alias-editor').hidden=false;find('#manage-access-details').open=true;
+  find('#manage-alias-source').value=suggestion?.alias||'';find('#manage-alias-target').value=suggestion?.target||aliasRoots[0]||'';
+  find('#manage-alias-hint').textContent=suggestion?'Possible matching folder found. Verify the alias on the Docker host before remembering it.':'Confirm this correspondence on the Docker host. No destination is authorized by its folder name alone.';
+  aliasExample();
+ }
+ function configureAliases(result){
+  aliasSupported=result.alias_management===true;aliasRows=result.path_aliases||[];aliasRoots=result.allowed_roots||[];aliasBusy=false;
+  find('#manage-alias-target').replaceChildren(...aliasRoots.map(root=>new Option(root,root)));find('#manage-alias-editor').hidden=true;find('#manage-alias-status').hidden=true;find('#manage-alias-confirm').checked=false;renderAliases();
+  if(aliasSupported&&result.alias_suggestions?.length===1)openAliasEditor(result.alias_suggestions[0]);
+  else if(aliasSupported&&result.alias_suggestions?.length>1){find('#manage-access-details').open=true;find('#manage-alias-status').textContent='Several matching folders are possible. Add an alias and choose the correct destination.';find('#manage-alias-status').hidden=false;}
+ }
+ async function saveAlias(action,source,target,epoch=hostEpoch,chosenHost=host){
+  if(aliasBusy)return;aliasBusy=true;managing=true;renderAliases();find('#manage-alias-status').textContent=action==='save'?'Verifying and saving alias…':'Removing saved alias…';find('#manage-alias-status').hidden=false;
+  const requested=find('#manage-directory').value;
+  const snapshot=JSON.stringify([requested,find('#manage-identity').value,find('#manage-files').value,find('#manage-env').value]);
+  try{
+   const body=new URLSearchParams({csrf,confirmed:'yes',action,alias:source,target,directory:requested,project_name:find('#manage-identity').value,compose_files:find('#manage-files').value,env_files:find('#manage-env').value});
+   const result=await(await request('/api/projects/path-aliases',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},chosenHost)).json();
+   if(epoch!==hostEpoch||!dialog.open)return;aliasRows=result.path_aliases;
+   if(action==='save'&&snapshot===JSON.stringify([find('#manage-directory').value,find('#manage-identity').value,find('#manage-files').value,find('#manage-env').value])){find('#manage-directory').value=result.resolved_directory;find('#manage-directory').dataset.alias=requested;find('#manage-directory').removeAttribute('aria-invalid');find('#manage-directory-error').hidden=true;}
+   find('#manage-alias-editor').hidden=true;find('#manage-alias-confirm').checked=false;find('#manage-confirm').checked=false;
+   find('#manage-alias-status').textContent=action==='save'?'Alias verified and remembered for this host. Review the project connection next.':'Saved alias removed. Existing project paths are unchanged.';find('#manage-alias-status').hidden=false;
+  }catch(error){if(epoch===hostEpoch&&dialog.open){find('#manage-alias-status').textContent=error.message;find('#manage-alias-status').hidden=false;}}
+  finally{if(epoch===hostEpoch){aliasBusy=false;managing=false;renderAliases();}}
+ }
+ find('#manage-alias-add').addEventListener('click',()=>openAliasEditor());
+ for(const id of ['#manage-alias-source','#manage-alias-target'])find(id).addEventListener(id.endsWith('target')?'change':'input',aliasExample);
+ find('#manage-alias-save').addEventListener('click',async()=>{if(!aliasSupported||aliasBusy)return;if(!find('#manage-alias-confirm').checked){find('#manage-alias-status').textContent='Confirm that the alias and destination refer to the same host folder.';find('#manage-alias-status').hidden=false;return;}await saveAlias('save',find('#manage-alias-source').value,find('#manage-alias-target').value);});
  function setupStep(review){find('#manage-confirm').disabled=!review;find('#manage-confirm').required=review;find('#manage-files-step').hidden=review;find('#manage-review-step').hidden=!review;find('#manage-back').hidden=!review;find('#manage-next').hidden=review;find('#manage-submit').hidden=!review;find('#manage-step-label').textContent=review?'2 of 2 · Review connection':'1 of 2 · Project files';if(!review)find('#manage-confirm').checked=false;dialog.scrollTop=0;}
  async function openManage(name){
   if(managing||dialog.open)return;const epoch=hostEpoch;managing=true;
-  try{const result=await(await request('/api/projects/proposal?name='+encodeURIComponent(name))).json();if(epoch!==hostEpoch)return;form.reset();form.querySelectorAll('[aria-invalid]').forEach(n=>n.removeAttribute('aria-invalid'));form.querySelectorAll('.field-error').forEach(n=>n.hidden=true);find('#manage-error').hidden=true;find('#manage-identity').value=result.project_name;find('#manage-project-name').textContent=result.project_name;find('#manage-name').value=result.project_name;find('#manage-directory').value=result.directory;find('#manage-files').value=result.compose_files.join('\n');find('#manage-notice').textContent=result.directory&&result.compose_files.length?'Detected from Docker labels. Check the original folder and file order.':'Some details are missing from Docker labels. Enter the original folder and Compose files.';find('#manage-root-source').textContent=rootDescription(result.project_access);find('#manage-roots').textContent=result.allowed_roots.length?result.allowed_roots.join('\n'):'No allowed folder is configured. Set the installation directory or explicit roots, with the matching mount.';find('#manage-access-details').open=!result.allowed_roots.length;find('#manage-env-options').open=false;find('#manage-next').disabled=!result.allowed_roots.length;setupStep(false);dialog.showModal();}
+  try{const result=await(await request('/api/projects/proposal?name='+encodeURIComponent(name))).json();if(epoch!==hostEpoch)return;form.reset();form.querySelectorAll('[aria-invalid]').forEach(n=>n.removeAttribute('aria-invalid'));form.querySelectorAll('.field-error').forEach(n=>n.hidden=true);find('#manage-error').hidden=true;find('#manage-identity').value=result.project_name;find('#manage-project-name').textContent=result.project_name;find('#manage-name').value=result.project_name;find('#manage-directory').value=result.resolved_directory||result.directory;find('#manage-directory').dataset.alias=result.resolved_directory&&result.resolved_directory!==result.directory?result.directory:'';find('#manage-files').value=result.compose_files.join('\n');find('#manage-notice').textContent=result.directory&&result.compose_files.length?'Detected from Docker labels. Check the original folder and file order.':'Some details are missing from Docker labels. Enter the original folder and Compose files.';find('#manage-root-source').textContent=rootDescription(result.project_access);find('#manage-roots').textContent=result.allowed_roots.length?result.allowed_roots.join('\n'):'No allowed folder is configured. Set the installation directory or explicit roots, with the matching mount.';find('#manage-access-details').open=!result.allowed_roots.length;find('#manage-env-options').open=false;find('#manage-next').disabled=!result.allowed_roots.length;setupStep(false);configureAliases(result);dialog.showModal();}
   catch(error){if(epoch!==hostEpoch)return;find('#inventory-error').textContent=error.message;find('#inventory-error').hidden=false;}finally{managing=false;}
  }
- find('#manage-next').addEventListener('click',()=>{
-  for(const id of ['#manage-name','#manage-directory','#manage-files'])if(!find(id).reportValidity())return;
-  const summary=find('#manage-review');summary.replaceChildren();for(const [label,value] of [['Host',window.reefHostName||'Local'],['Project',find('#manage-identity').value],['Display name',find('#manage-name').value],['Folder',find('#manage-directory').value],['Compose files',find('#manage-files').value],['Environment',find('#manage-env').value.trim()||'Default .env behavior']])summary.append(textNode('dt',label),textNode('dd',value));setupStep(true);find('#manage-confirm').focus();
+ find('#manage-next').addEventListener('click',async()=>{
+  if(aliasBusy)return;for(const id of ['#manage-name','#manage-directory','#manage-files'])if(!find(id).reportValidity())return;
+  const epoch=hostEpoch,fields=['#manage-identity','#manage-name','#manage-directory','#manage-files','#manage-env'],snapshot=()=>JSON.stringify(fields.map(id=>find(id).value)),before=snapshot(),requested=find('#manage-directory').value;
+  find('#manage-next').disabled=true;find('#manage-next').textContent='Checking folder…';find('#manage-error').hidden=true;find('#manage-directory').removeAttribute('aria-invalid');find('#manage-directory-error').hidden=true;
+  try{
+   const result=await(await request('/api/projects/proposal?'+new URLSearchParams({name:find('#manage-identity').value,directory:requested}))).json();
+   if(epoch!==hostEpoch||!dialog.open||snapshot()!==before)return;
+   // Older agents retain the existing manual-path workflow; never claim resolution.
+   const physical=result.resolved_directory||requested;
+   if(physical!==requested)find('#manage-directory').dataset.alias=requested;
+   find('#manage-directory').value=physical;
+   const summary=find('#manage-review');summary.replaceChildren();
+   const rows=[['Host',window.reefHostName||'Local'],['Project',find('#manage-identity').value],['Display name',find('#manage-name').value],['Folder',physical]];
+   if(find('#manage-directory').dataset.alias)rows.push(['Resolved from',find('#manage-directory').dataset.alias]);
+   rows.push(['Compose files',find('#manage-files').value],['Environment',find('#manage-env').value.trim()||'Default .env behavior']);
+   for(const [label,value] of rows)summary.append(textNode('dt',label),textNode('dd',value));setupStep(true);find('#manage-confirm').focus();
+  }catch(error){if(epoch===hostEpoch&&dialog.open&&snapshot()===before){setupStep(false);find('#manage-access-details').open=true;find('#manage-directory').setAttribute('aria-invalid','true');find('#manage-directory-error').textContent=error.message;find('#manage-directory-error').hidden=false;find('#manage-directory').focus();}}
+  finally{if(epoch===hostEpoch){find('#manage-next').disabled=false;find('#manage-next').textContent='Review connection →';}}
  });
  find('#manage-back').addEventListener('click',()=>setupStep(false));find('#manage-cancel').addEventListener('click',()=>{if(!managing)dialog.close();});dialog.addEventListener('cancel',event=>{if(managing)event.preventDefault();});
- form.addEventListener('input',event=>{if(event.target.id!=='manage-confirm')find('#manage-confirm').checked=false;event.target.removeAttribute('aria-invalid');const errorNode=find('#'+event.target.id+'-error');if(errorNode)errorNode.hidden=true;});
+ form.addEventListener('input',event=>{if(event.target.id!=='manage-confirm')find('#manage-confirm').checked=false;if(['manage-directory','manage-files','manage-env'].includes(event.target.id))find('#manage-alias-confirm').checked=false;if(event.target.id==='manage-directory')event.target.dataset.alias='';event.target.removeAttribute('aria-invalid');const errorNode=find('#'+event.target.id+'-error');if(errorNode)errorNode.hidden=true;});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(managing)return;const epoch=hostEpoch;if(find('#manage-review-step').hidden){find('#manage-next').click();return;}if(!form.reportValidity())return;managing=true;find('#manage-submit').disabled=true;find('#manage-submit').textContent='Connecting…';find('#manage-cancel').disabled=true;find('#manage-back').disabled=true;find('#manage-error').hidden=true;
   try{const body=new URLSearchParams({csrf,confirmed:'yes',project_name:find('#manage-identity').value,name:find('#manage-name').value,directory:find('#manage-directory').value,compose_files:find('#manage-files').value,env_files:find('#manage-env').value});const project=await(await request('/api/projects/register',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body})).json();if(epoch!==hostEpoch)return;dialog.close();window.dispatchEvent(new CustomEvent('reef-projects-changed',{detail:{id:project.id}}));await refresh();}
@@ -150,7 +209,7 @@
  });
  window.addEventListener('reef-host-changed',event=>{
   const view=event.detail.restoring?saved.view:currentView,keepDetail=host===event.detail.id&&document.body.dataset.detail==='true';
-  if(!event.detail.restoring)userNavigation();hostEpoch++;host=event.detail.id;managed=window.reefProjects||[];managedReady=false;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;inventoryFailed=false;inventoryLoading();
+  if(!event.detail.restoring)userNavigation();hostEpoch++;aliasBusy=false;managing=false;aliasSupported=false;host=event.detail.id;managed=window.reefProjects||[];managedReady=false;controls();hostName=event.detail.name;busy=false;snapshot=[];hasSnapshot=false;access=null;inventoryFailed=false;inventoryLoading();
   for(const id of ['#container-details','#project-console','#container-logs','#manage-project']){const d=find(id);if(d?.open)d.close();}
   find('#connection-status').textContent=`${hostName} · connecting…`;find('#updated-at').textContent='';find('#inventory-error').hidden=true;
   for(const id of ['#container-search','#container-state','#container-project','#container-access','#project-search','#project-access'])find(id).value='';

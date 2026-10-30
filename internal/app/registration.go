@@ -34,6 +34,28 @@ func validateRoots(roots []string) error {
 	return nil
 }
 
+func validateProjectPathAliases(c Config) error {
+	if len(c.ProjectPathAliases) > 32 {
+		return errors.New("At most 32 project_path_aliases are supported")
+	}
+	for alias, target := range c.ProjectPathAliases {
+		if len(alias) > 4096 || len(target) > 4096 || validateRoots([]string{alias, target}) != nil || alias == target || !slices.Contains(allowedRoots(c), target) {
+			return errors.New("Each project_path_aliases entry must map a clean absolute alias to an existing authorized root")
+		}
+		for _, root := range allowedRoots(c) {
+			if within(alias, root) || within(root, alias) {
+				return errors.New("Project aliases must not overlap authorized roots")
+			}
+		}
+		for other := range c.ProjectPathAliases {
+			if other != alias && (within(alias, other) || within(other, alias)) {
+				return errors.New("Project aliases must not overlap each other")
+			}
+		}
+	}
+	return nil
+}
+
 // The installation is the canonical host folder containing Reef's launcher/source.
 // Never infer this path from cwd, candidate projects or Docker labels.
 // A non-nil explicit list (including []) always takes precedence.
@@ -80,6 +102,41 @@ func authorizedDirectory(c Config, dir string) error {
 		}
 	}
 	return errors.New("Directory is outside Reef's authorized project roots. An administrator must explicitly authorize and mount a parent at the identical absolute host path; this form cannot add mounts")
+}
+
+// Resolve only directory metadata, then authorize the physical destination.
+// Never infer an alias from a matching basename/suffix or broaden configured roots.
+// Registration still accepts only the reviewed canonical path and revalidates it.
+func resolveProjectDirectory(c Config, dir string) (string, error) {
+	if !filepath.IsAbs(dir) || filepath.Clean(dir) != dir || len(dir) > 4096 {
+		return "", errors.New("Use a clean absolute project directory")
+	}
+	physical, e := filepath.EvalSymlinks(dir)
+	if os.IsNotExist(e) {
+		// A host alias need not be mounted into the container. Only a mapping
+		// explicitly supplied by the operator can replace an unavailable prefix.
+		if err := validateProjectPathAliases(c); err != nil {
+			return "", err
+		}
+		for alias, target := range c.ProjectPathAliases {
+			if within(alias, dir) {
+				rel, _ := filepath.Rel(alias, dir)
+				physical, e = filepath.EvalSymlinks(filepath.Join(target, rel))
+				break
+			}
+		}
+	}
+	if e != nil {
+		return "", errors.New("Project folder or alias is unavailable inside Reef. Use the physical host path and mount its authorized parent at the identical absolute path")
+	}
+	if e = authorizedDirectory(c, physical); e != nil {
+		return "", e
+	}
+	info, e := os.Stat(physical)
+	if e != nil || !info.IsDir() {
+		return "", errors.New("Project folder is unavailable or is not a directory")
+	}
+	return physical, nil
 }
 func registryBytes(c Config) ([]byte, error) {
 	path := filepath.Join(c.StateDir, "registered-projects.json")
@@ -276,7 +333,8 @@ func (s *Server) proposal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, e.Error(), 409)
 		return
 	}
-	// No filesystem calls: labels may refer to another machine, a missing mount, or hostile paths.
+	// Labels remain untrusted suggestions. Only resolve directory metadata here;
+	// project files are not opened and the physical destination must be authorized.
 	dir, files := rows[0].WorkingDir, rows[0].ConfigFiles
 	for _, c := range rows[1:] {
 		if c.WorkingDir != dir {
@@ -297,7 +355,24 @@ func (s *Server) proposal(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, map[string]any{"project_name": name, "directory": dir, "compose_files": paths, "allowed_roots": allowedRoots(s.cfg), "project_access": projectAccess(s.cfg), "notice": "Docker labels are untrusted suggestions. Confirm the exact existing project identity, directory, ordered Compose files and environment options. Custom env files, profiles and original CLI options cannot be reliably recovered. Registration only records access; it does not run Compose or validate Compose syntax."})
+	if r.URL.Query().Has("directory") {
+		dir = r.URL.Query().Get("directory")
+	}
+	cfg := s.m.aliasConfig()
+	resolved, resolveErr := resolveProjectDirectory(cfg, dir)
+	if resolveErr != nil && r.URL.Query().Has("directory") {
+		w.Header().Set("X-Reef-Field", "directory")
+		http.Error(w, resolveErr.Error(), http.StatusConflict)
+		return
+	}
+	if resolved != "" && !r.URL.Query().Has("directory") {
+		for i, f := range paths {
+			if filepath.IsAbs(f) && within(resolved, f) {
+				paths[i], _ = filepath.Rel(resolved, f)
+			}
+		}
+	}
+	writeJSON(w, map[string]any{"project_name": name, "directory": dir, "resolved_directory": resolved, "alias_management": true, "path_aliases": s.m.aliasList(), "alias_suggestions": suggestProjectAliases(cfg, dir, paths), "compose_files": paths, "allowed_roots": allowedRoots(s.cfg), "project_access": projectAccess(s.cfg), "notice": "Docker labels are untrusted suggestions. Confirm the exact existing project identity, directory, ordered Compose files and environment options. Custom env files, profiles and original CLI options cannot be reliably recovered. Registration only records access; it does not run Compose or validate Compose syntax."})
 }
 func formLines(s string) []string {
 	rows := []string{}

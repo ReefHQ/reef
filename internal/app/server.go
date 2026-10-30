@@ -305,6 +305,12 @@ func (s *Server) Handler() http.Handler {
 				return
 			}
 			s.proposal(w, r)
+		case "/api/projects/path-aliases":
+			if r.Method != "POST" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.projectPathAliases(w, r)
 		case "/api/projects/register":
 			if r.Method != "POST" {
 				http.Error(w, "Method not allowed", 405)

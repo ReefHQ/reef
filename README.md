@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.22.3** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.23.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -95,11 +95,15 @@ permission to manage it.**
 
 1. Open **Projects**, then **Manage this project** beside the Compose project.
 2. Check its existing folder, Compose file order and any interpolation env files.
+   Reef resolves visible folder aliases and shows the physical path before confirmation.
 3. Review and confirm. Its editor and Compose actions become available.
 
 Your files stay where they are. Project mounts must preserve the same absolute
 paths on the host and inside Reef. Registration uses configured authorized roots;
 by default, these come from the parent of the Reef installation directory.
+If a NAS alias exists only on the host, **Allowed folders & mounting help** can
+propose a matching folder. Confirm the correspondence once; Reef remembers it
+without editing JSON or restarting. [Folder aliases](docs/CONFIGURATION.md#project-folder-aliases).
 
 **Save file** validates and saves without restarting services. **Apply update**
 pulls and recreates the project, checks running/healthcheck state and removes
