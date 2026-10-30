@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
  const find=s=>document.querySelector(s),button=find('#check-image-updates');
- const labels={current:'Up to date',available:'Update available',unknown:'Unable to check',pinned:'Digest pinned',local:'Local build',not_deployed:'Not deployed'};
+ const labels={current:'Up to date for this tag',available:'Update available',unknown:'Unable to check',pinned:'Digest pinned',local:'Local build',not_deployed:'Not deployed'};
  const checking=new Set();
  const key=id=>(window.reefHost||'local')+':'+id;
  function render(p){
@@ -13,6 +13,11 @@
    const item=document.createElement('li'),name=document.createElement('strong'),state=document.createElement('span'),image=document.createElement('span');
    name.textContent=service.service;state.textContent=labels[service.status]||labels.unknown;state.className='tag '+(service.status==='available'?'update-available':'neutral-tag');image.textContent=service.image;image.className='muted image-update-reference';item.append(name,state,image);
    if(service.message){const note=document.createElement('small');note.textContent=service.message;note.className='muted';item.append(note);}
+   if(service.version_message){const version=document.createElement('small');version.textContent=service.version_message;version.className='muted';item.append(version);}
+   if(service.candidate&&service.version_status==='available'){
+    const candidate=document.createElement('span');candidate.textContent='Patch available: '+service.candidate;candidate.className='image-update-reference';item.append(candidate);
+    const prepare=document.createElement('button');prepare.type='button';prepare.textContent='Review tag change';prepare.disabled=window.reefAccess?.canWrite===false||p.busy||report.checking||window.ReefCanPrepareImageVersion?.()===false;prepare.addEventListener('click',()=>window.ReefPrepareImageVersion?.(service.service));item.append(prepare);
+   }
    return item;
   });find('#image-update-services').replaceChildren(...nodes);
  }

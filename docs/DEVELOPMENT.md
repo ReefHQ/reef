@@ -116,3 +116,19 @@ Mount the binary and a **synthetic** `/root/.docker/config.json` read-only, plus
 the test engine socket. The test reads cache metadata and Compose configuration;
 it performs no build, pull or cleanup. It checks registry configuration preservation
 and removal of per-command private Buildx metadata. Never mount real credentials.
+
+
+Image patch-version integration checks are opt-in and separate from socket-free CI:
+
+- `REEF_TEST_HUB_TAGS=1 go test ./internal/app -run TestLivePublicGitlabPatchTags -v`
+  reads public Docker Hub metadata only; no Docker engine or credentials are used.
+- Compile the Linux app test binary with CGO disabled and run
+  `TestComposeImageVersionProposalIntegration` in the release Docker CLI image
+  with `REEF_TEST_IMAGE_PROPOSAL=1`, `--network none` and no engine socket. It uses
+  private disposable Compose fixtures to check literal edits, shared anchors,
+  overrides and variables. Source files stay unchanged; temporary candidates are
+  removed. No build, pull, container start or image removal occurs.
+
+The tag API uses the fixed Docker Hub namespace/repository endpoint. See
+[Docker Hub tags](https://docs.docker.com/reference/api/hub/latest/operations/ListRepositoryTags/).
+Pagination is constructed locally and incomplete scans cannot establish currentness.

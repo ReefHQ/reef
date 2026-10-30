@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.23.0 — Unreleased
+## 0.24.0 — Unreleased
+
+- Discover newer patch tags in the same major/minor series and exact variant for public Docker Hub images, independently of configured-tag digest comparison. Verify the proposed manifest for deployed platforms and report unsupported or incomplete searches explicitly.
+- Prepare confirmed literal image changes as unsaved editor drafts after checking that normalized Compose settings change only the selected service image. Preserve manual Save/Apply confirmation and all project files during preparation.
+- Clarify configured-tag status instead of claiming every image version is current.
+
+## 0.23.0 — 2026-10-30
 
 - Resolve visible project folder aliases before review, show the physical folder and original alias, and persist only the confirmed canonical path.
 - Suggest plausible matches for host-only folder aliases and let administrators verify, confirm, persist and remove mappings directly in project setup, without JSON edits or a restart. Suggestions never activate themselves.

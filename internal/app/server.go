@@ -372,6 +372,12 @@ func (s *Server) Handler() http.Handler {
 			}
 			w.WriteHeader(202)
 			fmt.Fprint(w, "Operation started")
+		case "/api/image-updates/prepare":
+			if r.Method != "POST" {
+				http.Error(w, "Method not allowed", 405)
+				return
+			}
+			s.prepareImageVersion(w, r)
 		case "/api/image-updates":
 			s.imageUpdates(w, r)
 		case "/logout":

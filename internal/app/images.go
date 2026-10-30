@@ -18,10 +18,13 @@ import (
 
 // These checks read registry manifests; they never pull an image or run Compose up.
 type ImageUpdate struct {
-	Service string `json:"service"`
-	Image   string `json:"image"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
+	Candidate      string `json:"candidate,omitempty"`
+	VersionStatus  string `json:"version_status,omitempty"`
+	VersionMessage string `json:"version_message,omitempty"`
+	Service        string `json:"service"`
+	Image          string `json:"image"`
+	Status         string `json:"status"`
+	Message        string `json:"message,omitempty"`
 }
 type ImageUpdates struct {
 	Checking  bool          `json:"checking"`
@@ -55,6 +58,8 @@ type manifestCache struct {
 	Manifests []registryManifest
 }
 type ImageService struct {
+	ListTags  func(context.Context, string, string) ([]string, error)
+	tagCache  map[string]patchTagsCache
 	catalogMu sync.Mutex
 	catalogOp CatalogOperation
 	volumeOp  CatalogOperation
@@ -227,7 +232,7 @@ func (s *ImageService) check(ctx context.Context, p Project) ([]ImageUpdate, err
 	result := make([]ImageUpdate, 0, len(services))
 	for _, name := range services {
 		service := config.Services[name]
-		row := ImageUpdate{Service: name, Image: service.Image, Status: "current"}
+		row := ImageUpdate{Service: name, Image: service.Image, Status: "current", VersionStatus: "not_checked"}
 		switch {
 		case service.Image == "" || imageIDPattern.MatchString(service.Image) || len(service.Build) > 0 && string(service.Build) != "null":
 			row.Status = "local"
@@ -257,6 +262,7 @@ func (s *ImageService) check(ctx context.Context, p Project) ([]ImageUpdate, err
 				row.Message = e.Error()
 				break
 			}
+			platforms := []imagePlatform{}
 			for _, c := range deployed {
 				image, e := s.image(ctx, p, c.ImageID)
 				if e != nil {
@@ -264,6 +270,7 @@ func (s *ImageService) check(ctx context.Context, p Project) ([]ImageUpdate, err
 					row.Message = "Cannot read the deployed image"
 					break
 				}
+				platforms = append(platforms, image.imagePlatform)
 				id, e := remoteImageID(manifests, image.imagePlatform)
 				if e != nil {
 					row.Status = "unknown"
@@ -273,6 +280,9 @@ func (s *ImageService) check(ctx context.Context, p Project) ([]ImageUpdate, err
 				if id != c.ImageID {
 					row.Status = "available"
 				}
+			}
+			if row.Status != "unknown" {
+				s.checkPatchVersion(ctx, p, &row, platforms)
 			}
 		}
 		result = append(result, row)
