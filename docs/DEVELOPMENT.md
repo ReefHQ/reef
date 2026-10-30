@@ -141,3 +141,10 @@ Central Reef update checks use a fixed public GitHub tags endpoint with no token
 `reef_updates_test.go` uses an injected HTTP transport (no network); browser
 coverage lives in `tests/reef-updates.test.cjs`. See [update checks](REEF_UPDATES.md)
 for cadence, stable-tag policy and limits. Agents do not perform these checks.
+
+## Shared interface conventions
+
+Use [the UI conventions](UI_CONVENTIONS.md) when adding or changing a screen.
+Reuse the shared control height, page actions and sticky dialog heading instead
+of adding one-off sizes. Keep loading, empty and unavailable states distinct;
+refreshes must preserve drafts and clearly identify stale data.

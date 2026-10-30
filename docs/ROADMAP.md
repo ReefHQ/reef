@@ -39,4 +39,8 @@ between features.
 
 ## Reef updates
 
-[#37](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/37) — **Update notification in Reef — implemented, awaiting review and publication (0.25.0).** Detect newer stable public GitHub tags centrally, show a header notification and changelog, and let global administrators check manually. No automatic deployment. See [update notifications](REEF_UPDATES.md).
+[#37](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/37) — **Update notification in Reef — merged and published (0.25.0).** Detect newer stable public GitHub tags centrally, show a header notification and changelog, and let global administrators check manually. No automatic deployment. See [update notifications](REEF_UPDATES.md).
+
+## Interface consistency
+
+[#39](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/39) — **UX/UI consistency — implemented, awaiting review and publication (0.25.1).** Shared action sizing, responsive action groups, accessible scrollable dialog headings, and explicit loading/empty/error states in Builds and Schedules.

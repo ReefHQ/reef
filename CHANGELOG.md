@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.25.0 — Unreleased
+## 0.25.1 — Unreleased
+
+- Align full-size toolbar/form buttons with input and select heights; use a consistent Refresh button and wrap action groups on narrow screens.
+- Keep dialog titles and close buttons accessible while scrolling, using shared spacing across settings and details panels.
+- Distinguish loading, failed reads and successful empty results in Builds, build history/cache and Schedules; retain and mark stale schedules after a failed refresh.
+
+## 0.25.0 — 2026-10-30
 
 - Notify signed-in users in the header when a newer stable Reef tag is available on GitHub, with changelog, current/latest versions and last-check status. Check centrally at startup and every six hours; global administrators can check manually. No automatic deployment or agent update.
 - Report unavailable or incomplete checks explicitly and preserve a previously detected update during a network failure.
