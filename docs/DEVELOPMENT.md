@@ -84,6 +84,10 @@ GitLab is the source of truth. The GitHub mirror rewrites public history to
 remove private development notes and session identifiers; its commit IDs differ.
 Do not push unsanitized source history directly to the public mirror.
 
+The public GitHub workflow audit uses a pinned Plumber release, with advisory
+findings and explicit runtime failures. Its triggers, reports, permissions and
+validation are documented in [GitHub CI](GITHUB_CI.md).
+
 ## Keep the README useful
 
 Update the README as user-facing features and setup behavior change. Keep it in

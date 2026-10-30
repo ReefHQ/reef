@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.24.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.24.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -176,6 +176,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Remote hosts and agent upgrades | [Agent setup](docs/AGENT_SETUP.md) |
 | Architecture of remote operations | [Multi-host agents](docs/MULTI_HOST_AGENTS.md) |
 | Development checks and versioning | [Development](docs/DEVELOPMENT.md) |
+| Public GitHub workflow audits and reports | [Plumber audit](docs/GITHUB_CI.md) |
 | Changes and upcoming work | [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) |
 
 Made by **ReefLabs** · Public mirror: [ReefHQ/reef](https://github.com/ReefHQ/reef).

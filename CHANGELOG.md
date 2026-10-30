@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.24.0 — Unreleased
+## 0.24.1 — Unreleased
+
+- Add a commit-pinned Plumber audit to the public GitHub mirror, with downloadable reports and trusted-context Code Scanning uploads. Run on workflow/config changes, weekly and manually; findings are advisory while runtime failures remain errors.
+- Preserve the public workflow through the historical mirror privacy rewrite.
+
+## 0.24.0 — 2026-10-30
 
 - Discover newer patch tags in the same major/minor series and exact variant for public Docker Hub images, independently of configured-tag digest comparison. Verify the proposed manifest for deployed platforms and report unsupported or incomplete searches explicitly.
 - Prepare confirmed literal image changes as unsaved editor drafts after checking that normalized Compose settings change only the selected service image. Preserve manual Save/Apply confirmation and all project files during preparation.
