@@ -102,6 +102,7 @@ func Run() {
 	go func() { defer close(historyStopped); s.history.Run(webhookContext) }()
 	go func() { defer close(webhookStopped); s.webhooks.Run(webhookContext) }()
 	m.startImageChecks(checksContext)
+	s.runReefUpdateChecks(checksContext)
 	s.agents, e = agents.Open(c.StateDir)
 	if e != nil {
 		log.Fatal(e)

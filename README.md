@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.24.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.25.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -83,6 +83,12 @@ Switch servers and keep your current section; Reef loads the new host’s data.
 In Builds, choose a managed project for its Reef build history; **Refresh cache**
 reads the selected host’s default builder.
 Light, dark or system theme? Your choice.
+
+**A newer Reef on the horizon?** The header lets you know when a newer stable
+version is tagged on GitHub. Open **Reef updates** for the changelog and last check;
+global administrators can also **Check now**. Checks run at startup and every six
+hours. Reef does not update itself, and a tag may appear before its Docker image
+is ready. [Update checks](docs/REEF_UPDATES.md)
 
 The **Manage** panel refreshes container status without moving your reading position.
 

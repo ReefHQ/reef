@@ -41,6 +41,7 @@ type attempt struct {
 	Since time.Time
 }
 type Server struct {
+	reefUpdates    *reefUpdateChecker
 	schedules      *schedules.Store
 	scheduleMu     sync.Mutex
 	scheduleActive map[string]bool
@@ -76,7 +77,7 @@ func newServer(m *Manager, c Config, password string) *Server {
 			m.storageBusy = true
 		}
 	}
-	return &Server{scheduleActive: map[string]bool{}, loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
+	return &Server{reefUpdates: newReefUpdateChecker(), scheduleActive: map[string]bool{}, loginSlots: make(chan struct{}, 4), stats: newStatsSampler(), relay: agents.NewRelay(), discovery: docker.NewClient("/var/run/docker.sock"), m: m, cfg: c, password: sha256.Sum256([]byte(password)), sessions: map[string]session{}, attempts: map[string]attempt{}}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	u, e := url.Parse(r.Header.Get("Origin"))
@@ -157,6 +158,10 @@ func (s *Server) Handler() http.Handler {
 		}
 		if r.Method == "GET" || strings.HasPrefix(r.URL.Path, "/api/console/") {
 			w = &permissionWriter{ResponseWriter: w, allowed: func() bool { _, ok := s.getSession(r); return ok }}
+		}
+		if r.URL.Path == "/api/reef-update" {
+			s.reefUpdateAPI(w, r)
+			return
 		}
 		host := r.URL.Query().Get("host")
 		if r.URL.Path == "/api/me" || r.URL.Path == "/api/users" {

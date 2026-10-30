@@ -136,3 +136,8 @@ Image patch-version integration checks are opt-in and separate from socket-free 
 The tag API uses the fixed Docker Hub namespace/repository endpoint. See
 [Docker Hub tags](https://docs.docker.com/reference/api/hub/latest/operations/ListRepositoryTags/).
 Pagination is constructed locally and incomplete scans cannot establish currentness.
+
+Central Reef update checks use a fixed public GitHub tags endpoint with no token.
+`reef_updates_test.go` uses an injected HTTP transport (no network); browser
+coverage lives in `tests/reef-updates.test.cjs`. See [update checks](REEF_UPDATES.md)
+for cadence, stable-tag policy and limits. Agents do not perform these checks.

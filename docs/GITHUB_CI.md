@@ -81,3 +81,8 @@ API availability. No agent upgrade is needed for this CI-only change.
 
 References: [official Plumber action](https://github.com/getplumber/plumber/blob/e9ad2dc6d6faa2dfd84395aac18e461284062640/action.yml),
 [GitHub SARIF uploads](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/integrate-with-existing-tools/upload-sarif-file).
+
+The public mirror's default branch is protected by a GitHub ruleset against
+updates, force pushes and deletion. Repository deploy keys bypass these rules so
+the GitLab mirror can publish its rewritten history. GitHub applies this bypass
+to the deploy-key category; review this exception when adding writable keys.

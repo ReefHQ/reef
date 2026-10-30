@@ -246,3 +246,6 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 #container-management{width:min(760px,calc(100vw - 28px))}#cm-operation{overflow-wrap:anywhere}#cm-actions{margin-block:18px}
 
 #cm-loading[hidden]{display:flex;visibility:hidden}
+
+.header-actions .update-available { color: var(--primary); font-weight: 700; }
+@media(max-width:760px){.app-shell>header{flex-wrap:wrap}.app-shell .header-actions{flex-wrap:wrap;justify-content:flex-end;flex:1;min-width:0}#open-reef-update{overflow-wrap:anywhere;max-width:170px}}
