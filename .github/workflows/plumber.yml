@@ -1,0 +1,60 @@
+name: Plumber
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.plumber.yaml'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.plumber.yaml'
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: plumber-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit public GitHub workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - name: Check out the public mirror
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Analyze workflows and repository settings
+        uses: getplumber/plumber@e9ad2dc6d6faa2dfd84395aac18e461284062640 # v0.7.16
+        with:
+          version: v0.7.16
+          verify-attestation: 'true'
+          min-score: A
+          score: 'true'
+          # Findings are advisory during baseline review; runtime errors still fail.
+          soft-fail: 'true'
+          score-push: 'false'
+          upload-artifacts: 'true'
+          # Publish security alerts only after a complete successful scan step.
+          upload-sarif: 'false'
+          artifact-name: plumber-report
+
+      - name: Upload complete results to Code Scanning
+        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('plumber.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: plumber.sarif
+          category: plumber
