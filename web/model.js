@@ -32,10 +32,10 @@
   if(report?.checking)return 'Checking image updates…';
   if(report?.error)return report.error;
   if(!report?.checked_at||report.checked_at.startsWith('0001-'))return 'Not checked yet';
-  const services=report.services||[],available=services.filter(s=>s.status==='available').length,unknown=services.filter(s=>s.status==='unknown').length;
+  const services=report.services||[],available=services.filter(s=>s.status==='available'||s.version_status==='available').length,unknown=services.filter(s=>s.status==='unknown'||s.version_status==='unknown').length;
   if(available)return available+' image update'+(available===1?'':'s')+' available'+(unknown?' · '+unknown+' unable to check':'');
   if(unknown)return unknown+' image'+(unknown===1?'':'s')+' unable to check';
-  return services.some(s=>s.status==='current')?'Images are up to date':'No deployed tagged images to check';
+  return services.some(s=>s.status==='current')?'Images match the configured tags':'No deployed tagged images to check';
  }
  const api={filterContainers,projectRows,operationSteps,imageUpdateSummary};root.ReefUI=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -67,7 +67,7 @@ func TestUserPermissionMatrixDeniesEveryMutationAndForeignHostBeforeDispatch(t *
 			t.Fatal("foreign Local access", path, w.Code, w.Body.String())
 		}
 	}
-	mutations := []string{"/api/container-management/action", "/api/container-management/acknowledge", "/api/action", "/api/image-updates", "/api/projects/path-aliases", "/api/projects/register", "/api/projects/unmanage", "/api/images/action", "/api/volumes/action", "/api/volume-backups", "/api/schedules", "/api/agent-diagnostics", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close", "/api/console/stream", "/api/agent-update", "/api/hosts", "/api/webhook", "/api/users", "/api/monitoring"}
+	mutations := []string{"/api/container-management/action", "/api/container-management/acknowledge", "/api/action", "/api/image-updates", "/api/image-updates/prepare", "/api/projects/path-aliases", "/api/projects/register", "/api/projects/unmanage", "/api/images/action", "/api/volumes/action", "/api/volume-backups", "/api/schedules", "/api/agent-diagnostics", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close", "/api/console/stream", "/api/agent-update", "/api/hosts", "/api/webhook", "/api/users", "/api/monitoring"}
 	for _, path := range mutations {
 		w := call(h, "POST", path+"?host="+remote, "csrf="+csrf+"&confirmed=yes", "http://reef.test", cookie)
 		if w.Code != 403 {

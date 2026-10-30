@@ -17,7 +17,7 @@ test('summary distinguishes partial errors, available updates and no comparison 
  const report={checked_at:'2026-10-27T12:00:00Z',services:[{status:'available'},{status:'unknown'}]};
  assert.equal(imageUpdateSummary(report),'1 image update available · 1 unable to check');
  assert.equal(imageUpdateSummary({...report,checking:true}),'Checking image updates…');
- assert.equal(imageUpdateSummary({...report,services:[{status:'current'}]}),'Images are up to date');
+ assert.equal(imageUpdateSummary({...report,services:[{status:'current'}]}),'Images match the configured tags');
  assert.equal(imageUpdateSummary({...report,services:[{status:'pinned'}]}),'No deployed tagged images to check');
  assert.equal(imageUpdateSummary({...report,error:'Check failed'}),'Check failed');
  assert.equal(imageUpdateSummary({checked_at:'0001-01-01T00:00:00Z'}),'Not checked yet');
@@ -45,3 +45,8 @@ test('upgraded remote hosts can run manual image checks',async()=>{
 });
 
 test('viewer can read update status but cannot start a manual registry check',async()=>{const p=page();p.window.reefAccess={canWrite:false};p.window.ReefImageUpdates.render(p.project);assert.equal(p.nodes.get('#check-image-updates').disabled,true);await p.check();assert.equal(p.requests.length,0)});
+
+test('a newer patch counts as an update even when the configured tag matches, and tag lookup failures remain visible',()=>{
+ const report={checked_at:'2026-10-30T00:00:00Z',services:[{status:'current',version_status:'available'}]};assert.equal(imageUpdateSummary(report),'1 image update available');assert.equal(imageUpdateSummary({...report,services:[{status:'current',version_status:'unknown'}]}),'1 image unable to check');
+ const p=page({report:{...report,services:[{service:'web',image:'old',status:'current',version_status:'available',candidate:'new',version_message:'Review this patch'}]}});const children=p.nodes.get('#image-update-services').children[0].children;assert.equal(children[1].textContent,'Up to date for this tag');assert.ok(children.some(n=>n.textContent==='Patch available: new'));assert.ok(children.some(n=>n.textContent==='Review tag change'));
+});

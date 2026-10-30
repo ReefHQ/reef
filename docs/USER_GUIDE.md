@@ -98,15 +98,47 @@ for a manual check (limited to once per minute). The projects overview shows its
 latest summary. Checks continue without an open browser, are serialized and
 exclude simultaneous Compose operations on that project.
 
-Reef reads the saved Compose configuration and registry manifests; it does not
-pull or recreate containers during a check. It compares the deployed image's
-configuration digest for its OS/architecture/variant, including tags such as
-`latest` whose contents can change. It does not search for newer tag names or
-edit Compose versions. Missing/unreachable/private registries show an unknown
-status, never an assumed update. Locally built services, digest-pinned images
-and services without deployed containers have explicit separate statuses.
-Checks use the Docker CLI's existing registry credentials in Reef's own runtime
-(`HOME/.docker`), not the deployment webhook's credentials or the browser's.
+Reef reads the saved Compose configuration and registry manifests; checks do not
+pull or recreate containers. **Up to date for this tag** means the deployed image
+matches the configured tag's content for its OS/architecture/variant. A version
+such as `19.5.1-ce.0` can match that tag while a different patch tag exists.
+Configured-tag manifest checks use the Docker CLI's existing registry credentials.
+Missing/unreachable/private registries are not assumed current. Local builds,
+digest-pinned images and undeployed services retain their separate statuses.
+
+**New patch tags** are checked independently for **public Docker Hub** repositories.
+Reef supports full three-component numeric tags, with an optional `v` prefix and
+an identical variant suffix. For `gitlab/gitlab-ce:19.5.1-ce.0`, only higher
+`19.5.x-ce.0` tags qualify: no major/minor, edition, base-OS suffix or prefix changes.
+Recognized alpha/beta/RC/development tags are excluded. This is a version policy,
+not a guarantee of compatibility; review application release notes and required
+upgrade steps even for a patch update. The highest matching tag's manifest must
+support every deployed platform before it is proposed.
+
+New-tag searches use anonymous HTTPS to a fixed Docker Hub endpoint; Docker login
+credentials are never sent to that API. Other/private registries, unsupported tag
+formats, rate limits, partial results and platform failures are explicit. A failed
+new-tag search does not erase the separate configured-tag result. Searches are
+cached for ten minutes, limited to five pages/500 tags and bounded response/time
+limits. Returned pagination URLs and redirects are not followed. Checks run on
+the selected host; upgrade relevant agents to **0.24.0+** for new-tag discovery.
+Older agents continue configured-tag comparison.
+
+When a patch is offered, **Review tag change** asks confirmation and prepares an
+**unsaved editor draft**. Existing dirty drafts are preserved: save/discard them
+first. Preparation requires a single literal `image:` line in the main Compose
+file, then uses Compose to verify that normalized settings change only the chosen
+service image. Ambiguous anchors, duplicate references, overrides, variables and
+complex file layouts require a manual edit of the relevant Compose/env file.
+Copy the displayed candidate reference for that case. Saved-file revision and
+exact confirmed candidate are rechecked; changed reports/files require a fresh
+review. Private temporary validation files are removed. Source Compose files,
+containers and image tags are not modified by preparation.
+
+Review the draft, then choose **Save file** or **Apply update** separately. Save
+alone does not deploy; Apply retains its explicit downtime confirmation and
+existing pull-before-stop workflow. No automatic version upgrade or rollback is
+introduced. A reviewed tag can still move or disappear before a later pull.
 
 Reports are transient and refreshed after restart. A check of saved files can
 differ from an unsaved editor draft. There is no automatic application update;

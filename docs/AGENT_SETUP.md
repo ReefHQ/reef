@@ -318,3 +318,11 @@ without a restart. The agent's JSON configuration can also define optional
 read-only mappings. Central mappings do not apply remotely.
 Older agents keep manual canonical-path registration. See
 [project folder aliases](CONFIGURATION.md#project-folder-aliases).
+
+
+Public Docker Hub patch-tag discovery and unsaved Compose proposals require an
+agent **0.24.0+**. Registry tag searches and proposal validation run on that agent,
+using its project mounts and platform metadata. No additional enrollment, mount
+or incoming port is needed; outbound HTTPS to Docker Hub must be available.
+Older agents retain configured-tag checks and do not report patch candidates.
+Preparing a candidate edits only the browser draft; deployment remains separate.

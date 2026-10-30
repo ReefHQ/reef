@@ -30,6 +30,7 @@ function controls(){
  $('#unmanage-current').disabled=window.reefAccess?.canWrite===false||!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
  $('#edit-state').textContent=p?.busy||inFlight||pendingEdits.has(selected)?'Operation in progress':loading?'Loading file…':!loaded?'File unavailable':dirty?'Unsaved changes':'Saved';
  $('#edit-state').className='save-status'+(dirty?' unsaved':'');
+ window.ReefImageUpdates?.render(p);
  $('#chars').textContent=`${$('#editor').value.split('\n').length} lines · ${$('#editor').value.length.toLocaleString('en-GB')} characters`;
 }
 async function loadDocument(){
@@ -114,5 +115,22 @@ async function settleEdit(p){
 }
 window.addEventListener('reef-projects-changed',async event=>{const epoch=editorEpoch;try{const state=await(await request('/api/state')).json();if(epoch!==editorEpoch)return;projects=state;window.reefProjects=projects;render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));if(event.detail.id)await selectProject(event.detail.id);}catch(error){if(epoch===editorEpoch)message(error.message,true);}});
 window.addEventListener('keydown',event=>{if(!document.querySelector('dialog[open]')&&(event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='s'&&!$('#project-detail').hidden&&!$('#projects-view').hidden){event.preventDefault();if(!$('#save').disabled)runAction('save');}});
+window.ReefCanPrepareImageVersion=()=>!dirty&&loaded&&!loading&&!inFlight&&!pendingEdits.has(selected);
+window.ReefPrepareImageVersion=async service=>{
+ const epoch=editorEpoch,host=editorHost,p=current();
+ if(!p||p.busy||p.image_updates?.checking||dirty||!loaded||loading||inFlight||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false){message('Save or discard existing edits and wait for current operations before preparing a tag change.',true);return;}
+ const row=p.image_updates?.services?.find(row=>row.service===service&&row.version_status==='available');if(!row||!row.candidate)return;
+ const checkedRevision=p.image_updates.revision;
+ if(!await ask(`Prepare ${row.image} → ${row.candidate} for ${service} on ${window.reefHostName||'Local'}? Review release notes and upgrade requirements. This only fills the editor; Save or Apply update remains a separate action.`))return;
+ if(epoch!==editorEpoch||current()?.id!==p.id||dirty||inFlight||p.busy)return;
+ inFlight=true;controls();message('Preparing and validating tag change…');
+ try{
+  const body=new URLSearchParams({csrf,confirmed:'yes',id:p.id,service,revision:checkedRevision,candidate:row.candidate});
+  const doc=await(await request('/api/image-updates/prepare',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},host)).json();
+  if(epoch!==editorEpoch||current()?.id!==p.id||dirty)return;
+  $('#editor').value=doc.content;revision=doc.revision;dirty=true;loaded=true;message('Tag change prepared as unsaved edits. Review it, then Save file or Apply update when ready.');
+ }catch(error){if(epoch===editorEpoch)message(error.message,true);}
+ finally{if(epoch===editorEpoch){inFlight=false;controls();}}
+};
 window.addEventListener('beforeunload',event=>{if(dirty||[...pendingEdits.values()].some(p=>p.dirty)||[...hostEditors.entries()].some(([host,state])=>host!==editorHost&&(state.dirty||[...state.pendingEdits.values()].some(p=>p.dirty)))){event.preventDefault();event.returnValue='';}});
 poll();
