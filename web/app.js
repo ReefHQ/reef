@@ -87,11 +87,12 @@ $('#managed-project-select').addEventListener('change',event=>{if(event.target.v
 document.addEventListener('click',event=>{if(!event.target.closest('.project-tools'))document.querySelector('.project-tools').open=false;});
 $('#editor').addEventListener('input',()=>{dirty=true;controls();});
 $('#reload').addEventListener('click',async()=>{const epoch=editorEpoch;if(!dirty||await ask('Reload the file and discard your unsaved changes?')){if(epoch!==editorEpoch)return;message('');await loadDocument();}});
-async function runAction(action){
- const epoch=editorEpoch,host=editorHost,p=current();if(!p||p.busy||p.image_updates?.checking||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
+async function runAction(action,{imageUpdate=false}={}){
+ const epoch=editorEpoch,host=editorHost,p=current();if(window.reefAccess?.canWrite===false||!canManageHost()||!p||p.busy||p.image_updates?.checking||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
+ if(imageUpdate&&!window.ReefCanApplyImageUpdate?.())return;
  if(['start','stop'].includes(action)&&dirty)return;
  if(['apply','stop'].includes(action)&&!await ask(action==='apply'?`Apply update to ${p.name} on ${window.reefHostName||'Local'}? Reef will validate and save, pull images, then stop and recreate this project. Downtime is expected. Replaced images will be removed only if untagged, unused and the updated containers are running (and healthy when a healthcheck exists).`:`Stop ${p.name} on ${window.reefHostName||'Local'}? Reef will run Compose down without deleting named volumes.`))return;
- if(epoch!==editorEpoch)return;
+ if(epoch!==editorEpoch||current()?.id!==p.id||current()?.busy||current()?.image_updates?.checking||inFlight||loading||!loaded||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false||(imageUpdate&&!window.ReefCanApplyImageUpdate?.()))return;
  inFlight=true;controls();message('');
  const submitted={content:$('#editor').value,revision,dirty,previousOpID:p.operation.id};
  try{await request('/api/action',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,id:p.id,action,revision,content:$('#editor').value})},host);if(epoch!==editorEpoch){const cached=hostEditors.get(host);if(cached){cached.loaded=false;cached.inFlight=false;if(['save','apply'].includes(action))cached.pendingEdits.set(p.id,submitted);}return;}if(['save','apply'].includes(action))pendingEdits.set(p.id,submitted);else loaded=false;p.busy=true;message('Operation started. It will continue if you close this tab.');document.querySelector('.project-tools').open=false;}
@@ -115,20 +116,24 @@ async function settleEdit(p){
 }
 window.addEventListener('reef-projects-changed',async event=>{const epoch=editorEpoch;try{const state=await(await request('/api/state')).json();if(epoch!==editorEpoch)return;projects=state;window.reefProjects=projects;render();window.dispatchEvent(new CustomEvent('reef-state',{detail:projects}));if(event.detail.id)await selectProject(event.detail.id);}catch(error){if(epoch===editorEpoch)message(error.message,true);}});
 window.addEventListener('keydown',event=>{if(!document.querySelector('dialog[open]')&&(event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='s'&&!$('#project-detail').hidden&&!$('#projects-view').hidden){event.preventDefault();if(!$('#save').disabled)runAction('save');}});
+window.ReefImageTagContext=()=>{const p=current();return p&&loaded&&!loading?{id:p.id,revision,dirty,busy:!!p.busy||!!p.image_updates?.checking||inFlight||pendingEdits.has(p.id)}:null;};
+window.ReefCanApplyImageUpdate=()=>{const p=current();return window.reefAccess?.canWrite!==false&&canManageHost()&&!!p&&!p.busy&&!p.image_updates?.checking&&!dirty&&loaded&&!loading&&!inFlight&&!pendingEdits.has(p.id)&&!p.image_updates?.error&&!!p.image_updates?.services?.some(s=>s.status==='available');};
+window.ReefApplyImageUpdate=()=>runAction('apply',{imageUpdate:true});
 window.ReefCanPrepareImageVersion=()=>!dirty&&loaded&&!loading&&!inFlight&&!pendingEdits.has(selected);
-window.ReefPrepareImageVersion=async service=>{
+window.ReefPrepareImageVersion=async (service,choice=null)=>{
  const epoch=editorEpoch,host=editorHost,p=current();
  if(!p||p.busy||p.image_updates?.checking||dirty||!loaded||loading||inFlight||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false){message('Save or discard existing edits and wait for current operations before preparing a tag change.',true);return;}
- const row=p.image_updates?.services?.find(row=>row.service===service&&row.version_status==='available');if(!row||!row.candidate)return;
- const checkedRevision=p.image_updates.revision;
- if(!await ask(`Prepare ${row.image} → ${row.candidate} for ${service} on ${window.reefHostName||'Local'}? Review release notes and upgrade requirements. This only fills the editor; Save or Apply update remains a separate action.`))return;
- if(epoch!==editorEpoch||current()?.id!==p.id||dirty||inFlight||p.busy)return;
+ const row=choice?{image:choice.image,candidate:choice.candidate}:p.image_updates?.services?.find(row=>row.service===service&&row.version_status==='available');if(!row||!row.candidate)return;
+ const checkedRevision=choice?choice.revision:p.image_updates.revision;
+ if(choice&&(choice.id!==p.id||choice.host!==host||choice.revision!==revision||window.ReefImageTags?.isCurrent(choice)!==true))return;
+ if(!await ask(`Prepare ${row.image} → ${row.candidate} for ${service} on ${window.reefHostName||'Local'}? Review release notes and upgrade requirements${choice?' — this can cross major/minor versions, change variants or downgrade':''}. This only fills the editor; Save or Apply update remains a separate action.`))return;
+ if(epoch!==editorEpoch||current()?.id!==p.id||dirty||inFlight||current()?.busy||current()?.image_updates?.checking||!loaded||loading||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false||choice&&(choice.revision!==revision||choice.host!==editorHost||window.ReefImageTags?.isCurrent(choice)!==true))return;
  inFlight=true;controls();message('Preparing and validating tag change…');
  try{
   const body=new URLSearchParams({csrf,confirmed:'yes',id:p.id,service,revision:checkedRevision,candidate:row.candidate});
-  const doc=await(await request('/api/image-updates/prepare',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},host)).json();
-  if(epoch!==editorEpoch||current()?.id!==p.id||dirty)return;
-  $('#editor').value=doc.content;revision=doc.revision;dirty=true;loaded=true;message('Tag change prepared as unsaved edits. Review it, then Save file or Apply update when ready.');
+  const doc=await(await request(choice?'/api/image-tags/prepare':'/api/image-updates/prepare',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},host)).json();
+  if(epoch!==editorEpoch||current()?.id!==p.id||dirty||choice&&window.ReefImageTags?.isCurrent(choice)!==true)return;
+  $('#editor').value=doc.content;revision=doc.revision;dirty=true;loaded=true;window.ReefImageTags?.close();message('Tag change prepared as unsaved edits. Review it, then Save file or Apply update when ready.');
  }catch(error){if(epoch===editorEpoch)message(error.message,true);}
  finally{if(epoch===editorEpoch){inFlight=false;controls();}}
 };

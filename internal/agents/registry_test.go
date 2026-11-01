@@ -468,3 +468,54 @@ func TestVolumeBackupCapabilityIsConnectionScoped(t *testing.T) {
 		t.Fatal("disabled control retained capability")
 	}
 }
+
+func TestImageTagCapabilityIsExplicitAndResetOnReconnect(t *testing.T) {
+	r, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, key := enrolled(t, r, "Tag host")
+	g, err := r.Begin(id, key, "0.26.0", Protocol)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.CanImageTags(id) {
+		t.Fatal("Capability inferred from version")
+	}
+	r.Control(id, g, true)
+	if r.CanImageTags(id) {
+		t.Fatal("Control alone enabled tags")
+	}
+	r.ImageTags(id, g, true)
+	if !r.CanImageTags(id) {
+		t.Fatal("Negotiated tags unavailable")
+	}
+	found := false
+	for _, view := range r.Views() {
+		for _, cap := range view.Capabilities {
+			if cap == ImageTagsCapability {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("Capability missing from host view")
+	}
+	g, err = r.Begin(id, key, "0.26.0", Protocol)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Control(id, g, true)
+	if r.CanImageTags(id) {
+		t.Fatal("Reconnect retained tags")
+	}
+	r.ImageTags(id, g, true)
+	r.Control(id, g, false)
+	r.Control(id, g, true)
+	if r.CanImageTags(id) {
+		t.Fatal("Control disable retained tags")
+	}
+	if !AllowedCommand("GET", "/api/image-tags") || AllowedCommand("POST", "/api/image-tags") || !AllowedCommand("POST", "/api/image-tags/prepare") || AllowedCommand("GET", "/api/image-tags/prepare") {
+		t.Fatal("Incorrect tag command allowlist")
+	}
+}

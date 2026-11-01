@@ -106,6 +106,50 @@ Configured-tag manifest checks use the Docker CLI's existing registry credential
 Missing/unreachable/private registries are not assumed current. Local builds,
 digest-pinned images and undeployed services retain their separate statuses.
 
+The panel labels these independently:
+
+- **New image for current tag:** the registry has different content under the
+  configured tag (including `latest` or a republished numbered tag).
+- **New version available:** a newer supported patch tag was found. **Review tag
+  change** still prepares an unsaved draft; it does not deploy it.
+
+When at least one current tag has an image update, **Update project** is available
+in the panel for admins. It reuses the existing **Apply update** confirmation and
+operation: validate/save the current file, pull, stop/recreate the **whole project**
+and apply existing health/cleanup rules. Downtime is expected. This shortcut is
+disabled until the editor is loaded and saved, checks/actions finish and the host
+supports project management. Save or discard drafts first; **Apply update** beside
+the editor remains the reviewed way to save and deploy an intentional draft.
+A new tag alone does not enable Update project: review/save that tag separately.
+
+Registry and new-tag lookup explanations are available under **Check details**.
+An open explanation stays open during polling. Summary counts refer to services,
+so a service with both kinds of update is counted once.
+
+**Browse tags** opens a searchable list for the service's public Docker Hub
+repository, with 50 tags per page and Previous/Next navigation. This manual list
+can include floating tags, major/minor changes, prereleases and other variants;
+registry order is not a recommendation or SemVer ranking. The current reference
+is shown above the list. Private/custom registries, local builds and digest pins
+are outside this first tag browser.
+
+Choose a different tag, then **Review tag change**. Administrators must confirm
+the exact reference and possible major/minor/variant change or downgrade. Reef
+checks the selected manifest against every deployed container platform, changes
+one literal image line in a private candidate and verifies that normalized Compose
+settings differ only in that service's image. It returns an unsaved editor draft;
+it does not pull, save, restart or deploy. Save/discard any earlier draft first.
+Ambiguous variables/anchors/overrides and services without a deployed platform
+require manual editing instead. Viewers can browse assigned hosts but cannot
+prepare changes.
+
+The browser reads one bounded anonymous Docker Hub page per explicit action.
+It does not forward registry credentials or follow API pagination/redirect URLs;
+errors and rate limits are explicit. Older agents retain their existing checks
+and Update project flow, but need **0.26.0+** with `image-tags-v1` for browsing
+and choosing tags. Opening, searching or preparing briefly reserves the project
+to prevent concurrent Compose changes. Late/closed/changed-host results are ignored.
+
 **New patch tags** are checked independently for **public Docker Hub** repositories.
 Reef supports full three-component numeric tags, with an optional `v` prefix and
 an identical variant suffix. For `gitlab/gitlab-ce:19.5.1-ce.0`, only higher

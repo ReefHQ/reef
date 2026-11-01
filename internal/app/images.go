@@ -58,6 +58,7 @@ type manifestCache struct {
 	Manifests []registryManifest
 }
 type ImageService struct {
+	TagPage   func(context.Context, string, string, int) (imageTagPage, error)
 	ListTags  func(context.Context, string, string) ([]string, error)
 	tagCache  map[string]patchTagsCache
 	catalogMu sync.Mutex

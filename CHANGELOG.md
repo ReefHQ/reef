@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.25.1 — Unreleased
+## 0.26.0 — Unreleased
+
+- Browse and search public Docker Hub tags in pages of 50; choose a tag to prepare a reviewed unsaved Compose draft after verifying deployed platforms and that only the selected service image changes. Remote hosts negotiate image-tags-v1 (agent 0.26.0+).
+- Distinguish changed images behind current tags from newer patch tags in the Image updates panel; group technical notes under expandable Check details.
+- Add Update project beside detected configured-tag image updates, reusing Apply update confirmation and safety checks. The shortcut requires a saved Compose editor and clearly announces whole-project downtime.
+- Preserve expanded check details across polling and revalidate host/project, editor state and permissions before dispatching a confirmed action.
+
+## 0.25.1 — 2026-10-30
 
 - Align full-size toolbar/form buttons with input and select heights; use a consistent Refresh button and wrap action groups on narrow screens.
 - Keep dialog titles and close buttons accessible while scrolling, using shared spacing across settings and details panels.

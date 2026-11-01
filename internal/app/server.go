@@ -164,6 +164,10 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/image-tags") && (s.agents == nil || !s.agents.CanImageTags(host)) {
+			http.Error(w, "Upgrade the remote agent to 0.26.0 or later to browse and choose image tags", 409)
+			return
+		}
 		if r.URL.Path == "/api/me" || r.URL.Path == "/api/users" {
 			s.userAccounts(w, r, sess)
 			return
@@ -377,6 +381,8 @@ func (s *Server) Handler() http.Handler {
 			}
 			w.WriteHeader(202)
 			fmt.Fprint(w, "Operation started")
+		case "/api/image-tags", "/api/image-tags/prepare":
+			s.imageTags(w, r)
 		case "/api/image-updates/prepare":
 			if r.Method != "POST" {
 				http.Error(w, "Method not allowed", 405)

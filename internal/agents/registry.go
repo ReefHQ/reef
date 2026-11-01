@@ -49,6 +49,7 @@ type snapshot struct {
 	Events             bool
 	Updates            bool
 	Builds             bool
+	ImageTags          bool
 	ImageBatch         bool
 	Backups            bool
 	Volumes            bool
@@ -296,6 +297,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.Events = false
 	v.Updates = false
 	v.Builds = false
+	v.ImageTags = false
 	v.Control = false
 	v.Backups = false
 	v.Volumes = false
@@ -455,6 +457,9 @@ func (r *Registry) viewAt(h Host, now time.Time) View {
 		status = "revoked"
 	}
 	capabilities := []string{}
+	if v.ImageTags && v.Control {
+		capabilities = append(capabilities, ImageTagsCapability)
+	}
 	if v.ManageContainers {
 		capabilities = append(capabilities, ContainersCapability)
 	}
@@ -535,6 +540,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 		v.Events = false
 		v.Updates = false
 		v.Builds = false
+		v.ImageTags = false
 		v.Backups = false
 		v.Volumes = false
 		v.ManageContainers = false
@@ -552,6 +558,25 @@ func (r *Registry) CanControl(id, generation string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && time.Since(v.Contact) < 45*time.Second && (generation == "" || generation == v.Generation)
+}
+
+func (r *Registry) ImageTags(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.ImageTags = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanImageTags(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.ImageTags && time.Since(v.Contact) < 45*time.Second
 }
 
 func (r *Registry) Images(id, generation string, enabled bool) error {
