@@ -148,3 +148,11 @@ Use [the UI conventions](UI_CONVENTIONS.md) when adding or changing a screen.
 Reuse the shared control height, page actions and sticky dialog heading instead
 of adding one-off sizes. Keep loading, empty and unavailable states distinct;
 refreshes must preserve drafts and clearly identify stale data.
+
+The manual project tag browser uses GET `/api/image-tags` and POST
+`/api/image-tags/prepare`, negotiated remotely with `image-tags-v1`. Anonymous
+Docker Hub pages are fixed-origin, at most 50 tags/2 MiB/10 seconds each; no
+registry credentials, redirects or response URLs are forwarded. Preparation has
+a 90-second overall limit, revalidates saved revision and deployed platforms,
+and reuses the literal-edit and normalized Compose comparison checks. See
+`image_tags_test.go`, `tests/image-tags.test.cjs` and project-selection regressions.

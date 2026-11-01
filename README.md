@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.25.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.26.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -120,7 +120,11 @@ eligible replaced images. Expect downtime during recreation. Image-update checks
 also run automatically, with a manual check available. For public Docker Hub
 images, Reef can suggest a newer patch tag in the same version series and variant.
 **Review tag change** prepares an unsaved editor draft; saving and deploying stay
-your decision.
+your decision. The **Image updates** panel distinguishes a **new image for the
+current tag** from a **new version**. **Update project** applies current-tag image
+updates after confirmation; it updates the whole project and can interrupt services.
+**Browse tags** searches public Docker Hub tags and lets you prepare a chosen tag
+as an unsaved draft. Saving and deploying remain separate.
 
 [Project workflow and recovery](docs/USER_GUIDE.md#working-with-existing-projects) · [Paths and configuration](docs/CONFIGURATION.md)
 

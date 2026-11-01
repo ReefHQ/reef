@@ -326,3 +326,13 @@ using its project mounts and platform metadata. No additional enrollment, mount
 or incoming port is needed; outbound HTTPS to Docker Hub must be available.
 Older agents retain configured-tag checks and do not report patch candidates.
 Preparing a candidate edits only the browser draft; deployment remains separate.
+
+## Browse and choose project image tags (v0.26.0)
+
+Upgrade central first, then the affected agent to 0.26.0+ for `image-tags-v1`.
+**Image updates → Browse tags** reads public Docker Hub pages on the owning host.
+Viewers may browse assigned hosts; admins may prepare a chosen tag as an unsaved
+Compose draft. The agent validates the repository, saved revision, deployed
+platforms and image-only configuration change. Nothing is downloaded or deployed
+until the ordinary explicit project action. Old agents keep checks/Apply update
+and show upgrade guidance for the browser. No new port or enrollment is needed.

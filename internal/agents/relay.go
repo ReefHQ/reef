@@ -16,6 +16,7 @@ const EventsCapability = "action-events-v1"
 const UpdatesCapability = "agent-update-v1"
 const BuildsCapability = "builds-v1"
 const ControlCapability = "control-v1"
+const ImageTagsCapability = "image-tags-v1"
 const ImagesCapability = "images-v1"
 const ImageBatchCapability = "images-batch-v1"
 const StatsCapability = "stats-v1"
@@ -35,9 +36,9 @@ func AllowedCommand(method, path string) bool {
 		return method == "GET" || method == "POST"
 	}
 	switch path {
-	case "/api/container-management", "/api/container-management/operation", "/api/stats", "/api/networks", "/api/networks/operation", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/api/builds/cache/operation", "/api/volumes", "/api/volumes/operation", "/api/images", "/api/images/operation", "/api/state", "/api/document", "/api/containers", "/api/container-logs", "/api/projects/proposal":
+	case "/api/image-tags", "/api/container-management", "/api/container-management/operation", "/api/stats", "/api/networks", "/api/networks/operation", "/api/builds", "/api/builds/project", "/api/builds/history", "/api/builds/log", "/api/builds/cache", "/api/builds/cache/operation", "/api/volumes", "/api/volumes/operation", "/api/images", "/api/images/operation", "/api/state", "/api/document", "/api/containers", "/api/container-logs", "/api/projects/proposal":
 		return method == "GET"
-	case "/api/container-management/action", "/api/container-management/acknowledge", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/volumes/action", "/api/images/action", "/api/action", "/api/image-updates", "/api/image-updates/prepare", "/api/projects/path-aliases", "/api/projects/register", "/api/projects/unmanage", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close":
+	case "/api/image-tags/prepare", "/api/container-management/action", "/api/container-management/acknowledge", "/api/networks/action", "/api/builds/action", "/api/builds/cache/action", "/api/volumes/action", "/api/images/action", "/api/action", "/api/image-updates", "/api/image-updates/prepare", "/api/projects/path-aliases", "/api/projects/register", "/api/projects/unmanage", "/api/console/open", "/api/console/input", "/api/console/resize", "/api/console/close":
 		return method == "POST"
 	}
 	return false

@@ -195,3 +195,11 @@ or arbitrary user-supplied identity claims. Existing protocol agents need no new
 capability for this central policy. Revocation blocks subsequent dispatch and
 delayed output and closes active consoles; already admitted detached operations
 are left to finish, without replay or an unsafe interruption. See [Users](USERS.md).
+
+## Manual image-tag browsing (v0.26.0)
+
+`image-tags-v1` carries bounded public Docker Hub tag pages and confirmed
+image-only unsaved draft preparation through the existing command relay.
+Selection stays bound to the project, saved revision and owning host; the central
+service rejects this feature for older/disconnected agents before forwarding.
+Existing image update and tag-proposal flows remain compatible.
