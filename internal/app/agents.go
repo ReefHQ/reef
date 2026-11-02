@@ -101,6 +101,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			if capability == agents.MonitoringCapability {
 				_ = s.agents.Monitoring(host, generation, true)
 			}
+			if capability == agents.UpdateNoticesCapability {
+				_ = s.agents.UpdateNotices(host, generation, true)
+			}
 			if capability == agents.EventsCapability {
 				_ = s.agents.Events(host, generation, true)
 			}

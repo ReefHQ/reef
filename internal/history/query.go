@@ -14,7 +14,7 @@ import (
 
 const PageSize = 50
 
-var scopes = map[string]bool{"container": true, "schedule": true, "project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true, "monitor": true}
+var scopes = map[string]bool{"update": true, "container": true, "schedule": true, "project": true, "image": true, "volume": true, "network": true, "build": true, "agent": true, "console": true, "webhook": true, "monitor": true}
 var statuses = map[string]bool{"started": true, "completed": true, "failed": true, "partial": true, "closed": true, "unknown": true}
 
 type Query struct {
@@ -24,6 +24,7 @@ type Query struct {
 	Offset                              int
 }
 type Row struct {
+	Update    notifications.UpdateDetails `json:"update,omitzero"`
 	sequence  uint64
 	ID        string    `json:"id"`
 	HostID    string    `json:"host_id"`
@@ -127,6 +128,9 @@ func (s *Store) Query(q Query) (Page, error) {
 	for id, item := range groups {
 		e := item.Event
 		status, note := e.Status, ""
+		if e.Scope == "update" {
+			note = "Availability observed; no update was applied."
+		}
 		if e.Status == "started" {
 			note = "Last recorded start; no final outcome received"
 			if item.Recovered {
@@ -147,10 +151,10 @@ func (s *Store) Query(q Query) (Page, error) {
 		if (q.Scope != "" && q.Scope != e.Scope) || (q.Status != "" && q.Status != status) {
 			continue
 		}
-		if search != "" && !strings.Contains(strings.ToLower(e.Host+" "+e.Target+" "+e.Scope+" "+e.Action+" "+e.Operation), search) {
+		if search != "" && !strings.Contains(strings.ToLower(e.Host+" "+e.Target+" "+e.Scope+" "+e.Action+" "+e.Operation+" "+e.Update.Image+" "+e.Update.Candidate+" "+e.Update.Latest), search) {
 			continue
 		}
-		rows = append(rows, Row{sequence: item.Sequence, ID: id, HostID: e.HostID, Host: e.Host, Scope: e.Scope, Action: e.Action, Status: status, Operation: e.Operation, Target: e.Target, Started: started[id], Time: e.Time, Recorded: item.Recorded, Count: e.Count, Succeeded: e.Succeeded, Failed: e.Failed, Skipped: e.Skipped, Note: note})
+		rows = append(rows, Row{Update: e.Update, sequence: item.Sequence, ID: id, HostID: e.HostID, Host: e.Host, Scope: e.Scope, Action: e.Action, Status: status, Operation: e.Operation, Target: e.Target, Started: started[id], Time: e.Time, Recorded: item.Recorded, Count: e.Count, Succeeded: e.Succeeded, Failed: e.Failed, Skipped: e.Skipped, Note: note})
 	}
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Recorded.Equal(rows[j].Recorded) {

@@ -119,11 +119,11 @@ func (c *reefUpdateChecker) latest(ctx context.Context) (string, error) {
 	}
 	return "", errors.New("GitHub tag search exceeded its limit")
 }
-func (c *reefUpdateChecker) check(ctx context.Context) {
+func (c *reefUpdateChecker) check(ctx context.Context) bool {
 	c.mu.Lock()
 	if c.status.Checking || (!c.attempted.IsZero() && time.Since(c.attempted) < time.Minute) {
 		c.mu.Unlock()
-		return
+		return false
 	}
 	c.attempted = time.Now()
 	c.status.Checking = true
@@ -139,7 +139,7 @@ func (c *reefUpdateChecker) check(ctx context.Context) {
 		// Keep an already discovered update visible, but mark the observation stale.
 		c.status.Status = "unknown"
 		c.status.Message = "Could not check GitHub. Any previously detected version is from an earlier check."
-		return
+		return true
 	}
 	c.status.Latest = strings.TrimPrefix(latest, "v")
 	c.status.URL = "https://github.com/ReefHQ/reef/blob/" + latest + "/CHANGELOG.md"
@@ -159,10 +159,11 @@ func (c *reefUpdateChecker) check(ctx context.Context) {
 		c.status.Status = "current"
 		c.status.Message = "You are running the latest public stable version."
 	}
+	return true
 }
 func (s *Server) runReefUpdateChecks(ctx context.Context) {
 	go func() {
-		s.reefUpdates.check(ctx)
+		s.checkReefAndNotify(ctx)
 		ticker := time.NewTicker(reefUpdateInterval)
 		defer ticker.Stop()
 		for {
@@ -170,14 +171,14 @@ func (s *Server) runReefUpdateChecks(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				s.reefUpdates.check(ctx)
+				s.checkReefAndNotify(ctx)
 			}
 		}
 	}()
 }
 func (s *Server) reefUpdateAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		s.reefUpdates.check(r.Context())
+		s.checkReefAndNotify(r.Context())
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")

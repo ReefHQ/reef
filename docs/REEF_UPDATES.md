@@ -31,3 +31,15 @@ the changelog at the discovered tag. A tag can appear before the release pipelin
 finishes building its container images. Check your deployment pipeline before
 upgrading. This feature never pulls an image, updates Reef or updates an agent.
 It requires only an upgrade of central Reef; agents need no change.
+
+## Background webhook notices (v0.31.0)
+
+Enable Webhooks and its **Updates available** category to hear about a newer stable
+Reef tag with the browser closed. Fresh startup/six-hour/manual checks feed the
+shared Discord/JSON card, with installed/available versions and the fixed GitHub
+changelog link. Unknown or stale checks do not send notices. Persistent target
+tracking avoids repeating an unchanged accepted notice after checks/restarts;
+failed/cancelled delivery can be retried after a later fresh observation. A tag does
+not guarantee its Docker image is published yet. No automatic Reef upgrade occurs.
+Only central Reef needs this part; [project image notices](WEBHOOKS.md#updates-available-v0310)
+additionally need compatible agents on remote hosts.

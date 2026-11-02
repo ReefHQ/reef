@@ -15,6 +15,7 @@ type eventPresentation struct {
 	Author struct {
 		Name string `json:"name"`
 	} `json:"author"`
+	URL         string              `json:"url,omitempty"`
 	Title       string              `json:"title"`
 	Description string              `json:"description"`
 	Color       int                 `json:"color"`
@@ -25,8 +26,9 @@ type eventPresentation struct {
 	Timestamp string `json:"timestamp"`
 }
 
-var presentationScopes = map[string]string{"container": "Containers", "project": "Projects", "image": "Images", "volume": "Volumes", "network": "Networks", "build": "Builds", "agent": "Hosts", "console": "Consoles", "webhook": "Webhooks", "monitor": "Alerts", "schedule": "Schedules"}
+var presentationScopes = map[string]string{"update": "Updates available", "container": "Containers", "project": "Projects", "image": "Images", "volume": "Volumes", "network": "Networks", "build": "Builds", "agent": "Hosts", "console": "Consoles", "webhook": "Webhooks", "monitor": "Alerts", "schedule": "Schedules"}
 var presentationTitles = map[string]string{
+	"update.image_available": "Project image update available", "update.reef_available": "Reef update available",
 	"container.start": "Container start", "container.stop": "Container stop", "container.restart": "Container restart", "container.update": "Container image update", "container.remove": "Container deletion",
 	"project.save": "Compose file save", "project.apply": "Project update", "project.start": "Project start", "project.stop": "Project stop", "project.restart": "Project restart", "project.register": "Project connected", "project.unmanage": "Project management removed",
 	"image.pull": "Image pull", "image.tag": "Image tagging", "image.untag": "Image tag removal", "image.remove": "Image deletion", "image.cleanup": "Image cleanup", "image.check": "Image update check",
@@ -90,6 +92,27 @@ func presentEvent(e Event) eventPresentation {
 	if e.Target != "" {
 		card.Fields = append(card.Fields, presentationField{Name: "Target", Value: presentationValue(e.Target, 300)})
 	}
+	if e.Scope == "update" && e.validUpdate() {
+		card.Color = 0x3b82f6
+		card.Fields = []presentationField{{Name: "Status", Value: "Update available", Inline: true}, {Name: "Host", Value: presentationValue(e.Host, 200), Inline: true}}
+		if e.Update.Kind == "reef" {
+			card.Description = "A newer stable Reef version is tagged on GitHub. Its release image may still be publishing."
+			card.URL = "https://github.com/ReefHQ/reef/blob/v" + strings.TrimPrefix(e.Update.Latest, "v") + "/CHANGELOG.md"
+			card.Fields = append(card.Fields, presentationField{Name: "Installed version", Value: presentationValue(e.Update.Current, 128), Inline: true}, presentationField{Name: "Available version", Value: presentationValue(e.Update.Latest, 128), Inline: true})
+		} else {
+			card.Description = "New image content is available for the configured tag. Open Reef to review and apply the update."
+			if e.Update.Kind == "image_tag" {
+				card.Description = "A newer patch tag is available for this service. Open Reef to review the tag change before deployment."
+				if e.Update.ConfiguredTagChanged {
+					card.Description = "New image content is available for the configured tag, and a newer patch tag is available. Open Reef to review your options."
+				}
+			}
+			card.Fields = append(card.Fields, presentationField{Name: "Project", Value: presentationValue(e.Update.Project, 120), Inline: true}, presentationField{Name: "Service", Value: presentationValue(e.Update.Service, 128), Inline: true}, presentationField{Name: "Configured image", Value: presentationValue(e.Update.Image, 512)})
+			if e.Update.Candidate != "" {
+				card.Fields = append(card.Fields, presentationField{Name: "Available image", Value: presentationValue(e.Update.Candidate, 512)})
+			}
+		}
+	}
 	if e.Count > 0 {
 		card.Fields = append(card.Fields, presentationField{Name: "Items", Value: fmt.Sprint(e.Count), Inline: true})
 		if e.Status != "started" {
@@ -99,6 +122,9 @@ func presentEvent(e Event) eventPresentation {
 	card.Footer.Text = "Action notifications"
 	if e.Operation != "" {
 		card.Footer.Text = "Operation · " + e.Operation
+		if e.Scope == "update" {
+			card.Footer.Text = "Update · " + e.Operation
+		}
 	}
 	return card
 }

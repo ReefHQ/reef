@@ -131,6 +131,16 @@ func TestExportWebhookDesignSamples(t *testing.T) {
 		}
 		events = append(events, e)
 	}
+	digest := imageNotice("a")
+	tag := imageNotice("b")
+	tag.Update.Kind = "image_tag"
+	tag.Update.Image = "example/app:1.2.0"
+	tag.Update.Candidate = "example/app:1.2.1"
+	tag = NewUpdate(tag.Update)
+	events = append(events, digest, tag, ReefUpdate("0.31.0", "0.32.0"))
+	for i := range events {
+		events[i].Time = time.Date(2026, 11, 2, 14, 30, 0, 0, time.UTC)
+	}
 	cards := []eventPresentation{}
 	for _, e := range events {
 		cards = append(cards, presentEvent(e))

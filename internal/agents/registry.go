@@ -50,6 +50,7 @@ type snapshot struct {
 	Updates                 bool
 	Builds                  bool
 	ComposeContainerRestart bool
+	UpdateNotices           bool
 	ProjectRestart          bool
 	ImageTagRegistries      bool
 	ImageTags               bool
@@ -302,6 +303,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.Builds = false
 	v.ImageTags = false
 	v.ComposeContainerRestart = false
+	v.UpdateNotices = false
 	v.ProjectRestart = false
 	v.ImageTagRegistries = false
 	v.Control = false
@@ -463,6 +465,9 @@ func (r *Registry) viewAt(h Host, now time.Time) View {
 		status = "revoked"
 	}
 	capabilities := []string{}
+	if v.UpdateNotices && v.Events && v.Control {
+		capabilities = append(capabilities, UpdateNoticesCapability)
+	}
 	if v.ComposeContainerRestart && v.Control && v.ManageContainers {
 		capabilities = append(capabilities, ComposeContainerRestartCapability)
 	}
@@ -557,6 +562,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 		v.Builds = false
 		v.ImageTags = false
 		v.ComposeContainerRestart = false
+		v.UpdateNotices = false
 		v.ProjectRestart = false
 		v.ImageTagRegistries = false
 		v.Backups = false
@@ -595,6 +601,25 @@ func (r *Registry) CanComposeContainerRestart(id string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && v.ManageContainers && v.ComposeContainerRestart && time.Since(v.Contact) < 45*time.Second
+}
+
+func (r *Registry) UpdateNotices(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.UpdateNotices = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanUpdateNotices(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.Events && v.UpdateNotices && time.Since(v.Contact) < 45*time.Second
 }
 
 func (r *Registry) ProjectRestart(id, generation string, enabled bool) error {

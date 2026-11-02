@@ -620,3 +620,32 @@ func TestComposeContainerRestartRequiresNegotiation(t *testing.T) {
 		t.Fatal("Project restart capability retained across reconnect")
 	}
 }
+func TestUpdateNoticesRequireNegotiationAndResetAfterReconnect(t *testing.T) {
+	r, e := Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	id, key := enrolled(t, r, "Updates host")
+	g, e := r.Begin(id, key, "0.31.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.Events(id, g, true)
+	if r.CanUpdateNotices(id) {
+		t.Fatal("Capability inferred from version")
+	}
+	r.UpdateNotices(id, g, true)
+	if !r.CanUpdateNotices(id) {
+		t.Fatal("Negotiated capability missing")
+	}
+	g, e = r.Begin(id, key, "0.31.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.Events(id, g, true)
+	if r.CanUpdateNotices(id) {
+		t.Fatal("Capability survived reconnect")
+	}
+}

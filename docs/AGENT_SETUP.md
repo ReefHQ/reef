@@ -368,3 +368,14 @@ existing container-management review, exact fingerprint/full ID, host resource
 lock and interrupted-outcome acknowledgement. It does not run Compose or restart
 sibling services; all non-restart Compose actions remain project-owned. Old agents
 keep standalone Restart and show upgrade guidance for individual Compose Restart.
+
+## Project image update notices (v0.31.0)
+
+Upgrade central first, then affected agents to0.31.0+ for `update-notices-v1`
+alongside `action-events-v1`/control. Existing background image checks emit bounded
+availability metadata through the private action outbox, without an open browser.
+Only central Reef filters/sends external notices and persistently deduplicates their
+targets. Older agents retain checks/UI reports but do not announce availability.
+No port, enrollment, webhook URL or new credential mount. Outbox batches are also
+bounded by encoded bytes to preserve the existing event request limit. Remote agents
+cannot publish central Reef version availability. See [Webhooks](WEBHOOKS.md).

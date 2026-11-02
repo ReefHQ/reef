@@ -15,6 +15,7 @@ const MaxPending = 512
 
 var eventID = regexp.MustCompile(`^[0-9a-f]{48}$`)
 var actions = map[string]string{
+	"update":    " image_available reef_available ",
 	"container": " start stop restart update remove ",
 	"schedule":  " configure remove run ",
 	"monitor":   " disconnected unhealthy restart_loop ",
@@ -29,19 +30,20 @@ var actions = map[string]string{
 }
 
 type Event struct {
-	ID        string    `json:"id"`
-	Time      time.Time `json:"time"`
-	HostID    string    `json:"host_id"`
-	Host      string    `json:"host"`
-	Scope     string    `json:"scope"`
-	Action    string    `json:"action"`
-	Status    string    `json:"status"`
-	Operation string    `json:"operation_id,omitempty"`
-	Target    string    `json:"target,omitempty"`
-	Count     int       `json:"count,omitempty"`
-	Succeeded int       `json:"succeeded,omitempty"`
-	Failed    int       `json:"failed,omitempty"`
-	Skipped   int       `json:"skipped,omitempty"`
+	Update    UpdateDetails `json:"update,omitzero"`
+	ID        string        `json:"id"`
+	Time      time.Time     `json:"time"`
+	HostID    string        `json:"host_id"`
+	Host      string        `json:"host"`
+	Scope     string        `json:"scope"`
+	Action    string        `json:"action"`
+	Status    string        `json:"status"`
+	Operation string        `json:"operation_id,omitempty"`
+	Target    string        `json:"target,omitempty"`
+	Count     int           `json:"count,omitempty"`
+	Succeeded int           `json:"succeeded,omitempty"`
+	Failed    int           `json:"failed,omitempty"`
+	Skipped   int           `json:"skipped,omitempty"`
 }
 
 func New(scope, action, status, operation, target string) Event {
@@ -65,6 +67,9 @@ func Text(s string, limit int) string {
 	return s
 }
 func (e Event) Valid() bool {
+	if !e.validUpdate() {
+		return false
+	}
 	if !eventID.MatchString(e.ID) || e.Time.IsZero() || e.Time.After(time.Now().Add(5*time.Minute)) || len(e.Target) > 640 || len(e.Host) > 800 || len(e.HostID) > 100 {
 		return false
 	}

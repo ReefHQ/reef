@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.30.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.31.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -87,7 +87,9 @@ Light, dark or system theme? Your choice.
 **Keep your channel in the loop.** Discord webhooks show clear action cards with
 status colors, host, target and batch results. JSON receivers get the same card in a `presentation` block alongside the original
 event, ready for your own display. Choose the notification categories you want
-in Webhooks; your full action History stays available in Reef. [Webhook setup](docs/WEBHOOKS.md)
+in Webhooks; your full action History stays available in Reef. **Updates available**
+can notify you about project images and newer Reef versions while the interface is
+closed. Each unchanged update is remembered across restarts. [Webhook setup](docs/WEBHOOKS.md)
 
 **A newer Reef on the horizon?** The header lets you know when a newer stable
 version is tagged on GitHub. Open **Reef updates** for the changelog and last check;
