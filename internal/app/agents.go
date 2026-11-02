@@ -107,6 +107,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			if capability == agents.UpdatesCapability {
 				_ = s.agents.Updates(host, generation, true)
 			}
+			if capability == agents.ComposeContainerRestartCapability {
+				_ = s.agents.ComposeContainerRestart(host, generation, true)
+			}
 			if capability == agents.ProjectRestartCapability {
 				_ = s.agents.ProjectRestart(host, generation, true)
 			}

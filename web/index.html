@@ -238,7 +238,7 @@
  <div class="list-loading-slot"><p id="cm-loading" class="list-loading" role="status" hidden><span class="loading-spinner" aria-hidden="true"></span>Reading container configuration…</p></div>
  <dl id="cm-fields" class="container-detail-fields"></dl><p id="cm-reason" class="notice" hidden></p>
  <p class="notice">Updates recreate this container with its current configuration and existing mounts. The writable container layer is not copied. Volumes and images are retained, including on deletion. A successful startup check does not verify application data compatibility.</p>
- <label class="confirm-paths"><input id="cm-data" type="checkbox">I have reviewed downtime, volume backups and the writable-layer loss for updates or deletion.</label>
+ <label id="cm-data-review" class="confirm-paths"><input id="cm-data" type="checkbox">I have reviewed downtime, volume backups and the writable-layer loss for updates or deletion.</label>
  <div id="cm-actions" class="image-batch-actions"><button type="button" id="cm-start">Start</button><button type="button" id="cm-stop">Stop</button><button type="button" id="cm-restart">Restart</button><button type="button" id="cm-update">Update image</button><button type="button" id="cm-remove" class="danger">Delete container</button></div>
  <div id="cm-operation" class="notice" role="status" hidden></div><button type="button" id="cm-acknowledge" hidden>I reviewed the interrupted operation</button><button type="button" id="cm-refresh">Refresh</button>
 </dialog>

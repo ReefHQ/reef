@@ -222,3 +222,11 @@ remote `/api/action` restart requests before dispatch when it is missing; both
 central and backend require explicit confirmation, normal write/host permissions
 and CSRF/origin checks. No fallback to Local. New agents use the existing command
 route, operation persistence, project locks and metadata-only project restart events.
+
+`compose-container-restart-v1` (0.28.0+) extends container-management review with
+compose_project and restart_allowed, while allowed remains false for Compose
+start/stop/update/remove. UI sends compose_restart=yes for individual Compose
+restart; central checks this capability before forwarding. The backend independently
+reinspects identity, fingerprint and eligibility under the host operation lock.
+Only one Docker restart request targets the exact container ID. New optional review
+fields remain compatible with old agents/standalone management; no new route/port.

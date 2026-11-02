@@ -583,3 +583,40 @@ func TestProjectRestartRequiresNegotiationAndResetsOnReconnect(t *testing.T) {
 		t.Fatal("Project restart capability retained across reconnect")
 	}
 }
+
+func TestComposeContainerRestartRequiresNegotiation(t *testing.T) {
+	r, e := Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	id, key := enrolled(t, r, "restart host")
+	g, e := r.Begin(id, key, "0.28.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.Containers(id, g, true)
+	if r.CanComposeContainerRestart(id) {
+		t.Fatal("Project restart capability inferred from version")
+	}
+	r.ComposeContainerRestart(id, g, true)
+	if !r.CanComposeContainerRestart(id) {
+		t.Fatal("Negotiated restart capability missing")
+	}
+	r.Control(id, g, false)
+	r.Control(id, g, true)
+	r.Containers(id, g, true)
+	if r.CanComposeContainerRestart(id) {
+		t.Fatal("Restart capability retained after disabling control")
+	}
+	r.ComposeContainerRestart(id, g, true)
+	g, e = r.Begin(id, key, "0.28.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.Containers(id, g, true)
+	if r.CanComposeContainerRestart(id) {
+		t.Fatal("Project restart capability retained across reconnect")
+	}
+}

@@ -64,7 +64,7 @@ Reef itself, so let active operations finish first.
 
 | In Reef | What you can do |
 | --- | --- |
-| **Containers** | Inspect containers, read logs, open consoles and start, stop, update or delete standalone containers. |
+| **Containers** | Inspect containers, read logs, open consoles, restart an individual Compose container and manage standalone containers. |
 | **Projects** | Connect existing Compose projects, edit and validate their main file, save backups, start, restart, stop and apply updates. |
 | **Images** | Inspect usage, pull images, manage tags and review unused-image cleanup. |
 | **Volumes** | Inspect references, create volumes, back up their data, restore into a new volume and review cleanup. |
@@ -125,7 +125,9 @@ current tag** from a **new version**. **Update project** applies current-tag ima
 updates after confirmation; it updates the whole project and can interrupt services.
 Need a quick restart? Open a managed project and choose **More actions → Restart
 project**. Reef asks before interrupting its existing containers. Use **Apply
-update** when you want new images or Compose changes.
+update** when you want new images or Compose changes. To restart just one running
+Compose container, use its **Restart** button in Containers, review its identity
+and confirm in the container panel.
 
 **Browse tags** searches Docker Hub, LinuxServer (`lscr.io`) and compatible
 Registry V2 repositories,

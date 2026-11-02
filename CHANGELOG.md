@@ -3,6 +3,7 @@
 ## 0.28.0 — Unreleased
 
 - Add Restart project to More actions, with host/project confirmation and downtime notice; run Compose restart on existing containers without pulling images, recreating containers or saving a draft.
+- Restart a single running Compose container by exact ID from Containers, with an isolated restart review, unchanged sibling containers and existing administration/dependency protections. Remote hosts negotiate compose-container-restart-v1.
 - Preserve revision checks, operation locks, recovery guidance, progress and History/webhook events for restarts. Require negotiated project-restart-v1 on remote agents (0.28.0+).
 
 ## 0.27.0 — 2026-11-02

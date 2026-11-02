@@ -361,3 +361,10 @@ The owning agent validates its saved files/revision and performs Compose restart
 with its exact project name, file order, directory and interpolation files.
 No pull, recreation or draft save occurs. Operation locking, interruption recovery,
 History and webhooks use the existing pipeline.
+
+Individual running Compose-container restart additionally negotiates
+`compose-container-restart-v1` (0.28.0+), alongside `containers-v1`. It uses the
+existing container-management review, exact fingerprint/full ID, host resource
+lock and interrupted-outcome acknowledgement. It does not run Compose or restart
+sibling services; all non-restart Compose actions remain project-owned. Old agents
+keep standalone Restart and show upgrade guidance for individual Compose Restart.

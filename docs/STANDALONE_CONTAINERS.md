@@ -56,7 +56,11 @@ then permanently discards it. No volume/image prune or old-image cleanup runs.
 
 ## Configurations left to their owner
 
-Compose/Swarm containers stay with their project/orchestrator. Reef protects itself
+Compose containers keep start/stop/update/delete under their project. From0.28.0,
+**Restart** in their row/details opens a review for just that running container.
+The exact ID is restarted without a Compose command or sibling-service restart;
+no adoption is required. Remote hosts need compose-container-restart-v1. All
+protection checks below still apply. Swarm stays with its orchestrator. Reef protects itself
 and Docker administration containers mounting the Docker socket. Auto-remove,
 paused/transient states, shared container network/PID/IPC namespaces and targets
 with dependent namespace/volume consumers are rejected. Dependency inspection is

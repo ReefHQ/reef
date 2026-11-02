@@ -79,6 +79,9 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 	}
 	central.agents.Control(id, gen, true)
 	for _, capability := range capabilities {
+		if capability == agents.ComposeContainerRestartCapability {
+			central.agents.ComposeContainerRestart(id, gen, true)
+		}
 		if capability == agents.ProjectRestartCapability {
 			central.agents.ProjectRestart(id, gen, true)
 		}

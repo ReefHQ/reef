@@ -97,6 +97,19 @@ operation panel, History and enabled webhooks. Remote restart requires central a
 agent **0.28.0+**, with negotiated `project-restart-v1`; older agents retain their
 existing actions and show upgrade guidance for Restart.
 
+**Restart one Compose container:** in Containers (or a project's container list),
+choose **Restart**, review the exact host/name/full ID, then confirm **Restart**
+in the container panel. Only that running container is restarted through Docker;
+sibling services are not restarted and no Compose command, image pull or recreation
+runs. This also works for discovered Compose containers without adopting their
+project. Other Compose container actions stay with the project. Swarm, Reef/Docker
+administration, auto-remove, paused/transient and namespace/volume-dependent
+containers remain protected. Host operations and image checks must finish first.
+Remote individual restart requires `compose-container-restart-v1` (agent0.28.0+).
+Interrupted outcomes use the container operation review block; inspect host state
+before acknowledging, with no automatic retry. Container restart events appear in
+History and enabled webhooks.
+
 Operations continue after closing the tab and have a total timeout of 45 minutes. A project lock prevents editing and simultaneous operations on that project. A content hash covers configured Compose files, configured interpolation files and the default `.env`, rejecting outdated edits. SSH changes are detected at checkpoints, but Reef cannot lock an external editor: do not change these files while an operation is running. Files referenced through `include`, `extends`, service `env_file`, secrets, configs or build contexts are outside this revision hash.
 
 Folder aliases are checked against their physical destination during project

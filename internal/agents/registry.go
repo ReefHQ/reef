@@ -40,35 +40,36 @@ type disk struct {
 	Tokens  map[string]enrollment
 }
 type snapshot struct {
-	MonitorEnabled     bool
-	MonitorMaintenance bool
-	Monitor            *monitoring.Sample
-	MonitorSource      uint64
-	MonitorSerial      uint64
-	MonitorReceived    time.Time
-	Events             bool
-	Updates            bool
-	Builds             bool
-	ProjectRestart     bool
-	ImageTagRegistries bool
-	ImageTags          bool
-	ImageBatch         bool
-	Backups            bool
-	Volumes            bool
-	ManageContainers   bool
-	Networks           bool
-	Stats              bool
-	Images             bool
-	Control            bool
-	Notice             string
-	Bytes              int
-	Generation         string
-	Sequence           uint64
-	Contact            time.Time
-	Checked            time.Time
-	Containers         []docker.Container
-	Error              string
-	Version            string
+	MonitorEnabled          bool
+	MonitorMaintenance      bool
+	Monitor                 *monitoring.Sample
+	MonitorSource           uint64
+	MonitorSerial           uint64
+	MonitorReceived         time.Time
+	Events                  bool
+	Updates                 bool
+	Builds                  bool
+	ComposeContainerRestart bool
+	ProjectRestart          bool
+	ImageTagRegistries      bool
+	ImageTags               bool
+	ImageBatch              bool
+	Backups                 bool
+	Volumes                 bool
+	ManageContainers        bool
+	Networks                bool
+	Stats                   bool
+	Images                  bool
+	Control                 bool
+	Notice                  string
+	Bytes                   int
+	Generation              string
+	Sequence                uint64
+	Contact                 time.Time
+	Checked                 time.Time
+	Containers              []docker.Container
+	Error                   string
+	Version                 string
 }
 type View struct {
 	Capabilities []string  `json:"capabilities"`
@@ -300,6 +301,7 @@ func (r *Registry) Begin(id, key, version string, protocol int) (string, error) 
 	v.Updates = false
 	v.Builds = false
 	v.ImageTags = false
+	v.ComposeContainerRestart = false
 	v.ProjectRestart = false
 	v.ImageTagRegistries = false
 	v.Control = false
@@ -461,6 +463,9 @@ func (r *Registry) viewAt(h Host, now time.Time) View {
 		status = "revoked"
 	}
 	capabilities := []string{}
+	if v.ComposeContainerRestart && v.Control && v.ManageContainers {
+		capabilities = append(capabilities, ComposeContainerRestartCapability)
+	}
 	if v.ProjectRestart && v.Control {
 		capabilities = append(capabilities, ProjectRestartCapability)
 	}
@@ -551,6 +556,7 @@ func (r *Registry) Control(id, generation string, enabled bool) error {
 		v.Updates = false
 		v.Builds = false
 		v.ImageTags = false
+		v.ComposeContainerRestart = false
 		v.ProjectRestart = false
 		v.ImageTagRegistries = false
 		v.Backups = false
@@ -570,6 +576,25 @@ func (r *Registry) CanControl(id, generation string) bool {
 	h, ok := r.data.Hosts[id]
 	v := r.live[id]
 	return ok && !h.Revoked && v.Control && time.Since(v.Contact) < 45*time.Second && (generation == "" || generation == v.Generation)
+}
+
+func (r *Registry) ComposeContainerRestart(id, generation string, enabled bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.live[id]
+	if !ok || r.data.Hosts[id].Revoked || v.Generation != generation {
+		return ErrInvalid
+	}
+	v.ComposeContainerRestart = enabled && v.Control
+	r.live[id] = v
+	return nil
+}
+func (r *Registry) CanComposeContainerRestart(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.data.Hosts[id]
+	v := r.live[id]
+	return ok && !h.Revoked && v.Control && v.ManageContainers && v.ComposeContainerRestart && time.Since(v.Contact) < 45*time.Second
 }
 
 func (r *Registry) ProjectRestart(id, generation string, enabled bool) error {
