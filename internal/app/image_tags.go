@@ -15,12 +15,13 @@ import (
 )
 
 type imageTagPage struct {
-	Tags     []string `json:"tags"`
-	Total    int      `json:"total"`
-	Page     int      `json:"page"`
-	More     bool     `json:"more"`
-	Image    string   `json:"image"`
-	Revision string   `json:"revision"`
+	NextCursor string   `json:"next_cursor,omitempty"`
+	Tags       []string `json:"tags"`
+	Total      int      `json:"total"`
+	Page       int      `json:"page"`
+	More       bool     `json:"more"`
+	Image      string   `json:"image"`
+	Revision   string   `json:"revision"`
 }
 
 // A manual page request never follows the registry's pagination URL or sends credentials.
@@ -36,6 +37,7 @@ func publicHubTagPage(ctx context.Context, repo, search string, page int, client
 		client = &http.Client{Transport: transport}
 	}
 	safe := *client
+	safe.Jar = nil
 	safe.Timeout = 10 * time.Second
 	safe.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -45,12 +47,15 @@ func publicHubTagPage(ctx context.Context, repo, search string, page int, client
 	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	resp, err := safe.Do(req)
 	if err != nil {
-		return result, errors.New("Docker Hub tags unavailable")
+		return result, tagError("registry_unavailable", "Docker Hub tags unavailable")
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, (2<<20)+1))
-	if err != nil || len(raw) > 2<<20 || resp.StatusCode != 200 {
-		return result, errors.New("Docker Hub tags unavailable, private or rate limited")
+	if err != nil || len(raw) > 2<<20 {
+		return result, tagError("registry_unavailable", "Docker Hub response unavailable or too large")
+	}
+	if resp.StatusCode != 200 {
+		return result, registryResponseError(resp.StatusCode)
 	}
 	var data struct {
 		Count   *int    `json:"count"`
@@ -114,8 +119,8 @@ func (m *Manager) withImageTagProject(ctx context.Context, id, service, rev stri
 	if !ok || len(target.Build) > 0 && string(target.Build) != "null" {
 		return nil, errors.New("Choose a saved service using a registry image")
 	}
-	if _, _, ok := hubVersionReference(target.Image); !ok {
-		return nil, errors.New("Tag browsing supports explicit tags in public Docker Hub repositories only")
+	if _, _, _, ok := browserImageReference(target.Image); !ok {
+		return nil, errors.New("Unsupported image reference for registry tag browsing")
 	}
 	result, err := run(p.Project, target.Image)
 	if err != nil {
@@ -135,7 +140,7 @@ func (s *Server) imageTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := s.m.withImageTagProject(ctx, id, service, rev, func(p Project, old string) (any, error) {
-		repo, _, _ := hubVersionReference(old)
+		provider, repo, oldTag, _ := browserImageReference(old)
 		if r.URL.Path == "/api/image-tags" {
 			page := 1
 			if value := r.URL.Query().Get("page"); value != "" {
@@ -145,24 +150,58 @@ func (s *Server) imageTags(w http.ResponseWriter, r *http.Request) {
 				}
 				page = n
 			}
+			if strings.HasPrefix(provider, "v2:") {
+				lookup := s.m.Images.V2TagPage
+				if lookup == nil {
+					lookup = func(ctx context.Context, host, repo, search, cursor string, page int) (imageTagPage, error) {
+						return genericRegistryTagPage(ctx, s.cfg, host, repo, search, cursor, page, nil, nil)
+					}
+				}
+				result, e := lookup(ctx, strings.TrimPrefix(provider, "v2:"), repo, r.URL.Query().Get("search"), r.URL.Query().Get("cursor"), page)
+				result.Image = old
+				result.Revision = rev
+				return result, e
+			}
+			if provider == "lscr" {
+				lookup := s.m.Images.RegistryTagPage
+				if lookup == nil {
+					lookup = func(ctx context.Context, repo, search, cursor string, page int) (imageTagPage, error) {
+						return publicLSCRTagPage(ctx, repo, search, cursor, page, nil)
+					}
+				}
+				result, e := lookup(ctx, repo, r.URL.Query().Get("search"), r.URL.Query().Get("cursor"), page)
+				result.Image = old
+				result.Revision = rev
+				return result, e
+			}
 			lookup := s.m.Images.TagPage
 			if lookup == nil {
 				lookup = func(ctx context.Context, repo, query string, page int) (imageTagPage, error) {
 					return publicHubTagPage(ctx, repo, query, page, nil)
 				}
 			}
-			result, e := lookup(ctx, repo, r.URL.Query().Get("search"), page)
+			var result imageTagPage
+			var e error
+			if r.URL.Query().Get("cursor") == "" || s.m.Images.TagPage != nil {
+				result, e = lookup(ctx, repo, r.URL.Query().Get("search"), page)
+			}
+			var classified *registryTagError
+			fallback := errors.As(e, &classified) && (classified.Code == "authentication_required" || classified.Code == "unsupported_registry")
+			if (fallback || r.URL.Query().Get("cursor") != "") && s.m.Images.TagPage == nil {
+				result, e = genericRegistryTagPage(ctx, s.cfg, "registry-1.docker.io", repo, r.URL.Query().Get("search"), r.URL.Query().Get("cursor"), page, nil, nil)
+			}
 			result.Image = old
 			result.Revision = rev
 			return result, e
 		}
 		next := r.FormValue("candidate")
-		nextRepo, nextTag, ok := hubVersionReference(next)
-		if !ok || nextRepo != repo || nextTag == tagFromImage(old) {
-			return nil, errors.New("Choose a different tag in the same Docker Hub repository")
+		nextProvider, nextRepo, nextTag, ok := browserImageReference(next)
+		if !ok || nextProvider != provider || nextRepo != repo || nextTag == oldTag {
+			return nil, errors.New("Choose a different tag in the same registry and repository")
 		}
 		// Preserve the original repository spelling; never redirect registry credentials.
-		next = old[:strings.LastIndex(old, ":")+1] + nextTag
+		base, _ := imageTagParts(old)
+		next = base + ":" + nextTag
 		containers, e := s.m.Images.containers(ctx, p)
 		if e != nil {
 			return nil, e
@@ -205,6 +244,10 @@ func (s *Server) imageTags(w http.ResponseWriter, r *http.Request) {
 		return map[string]string{"content": content, "revision": rev}, nil
 	})
 	if err != nil {
+		var classified *registryTagError
+		if errors.As(err, &classified) {
+			w.Header().Set("X-Reef-Registry-Error", classified.Code)
+		}
 		http.Error(w, err.Error(), 409)
 		return
 	}

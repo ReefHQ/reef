@@ -56,6 +56,9 @@ func (s *Server) remoteHTTP(w http.ResponseWriter, r *http.Request, sess session
 		return
 	}
 	w.Header().Set("Content-Type", response.Header.Get("Content-Type"))
+	if code := response.Header.Get("X-Reef-Registry-Error"); code != "" {
+		w.Header().Set("X-Reef-Registry-Error", code)
+	}
 	if field := response.Header.Get("X-Reef-Field"); field != "" {
 		w.Header().Set("X-Reef-Field", field)
 	}

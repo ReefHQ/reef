@@ -141,3 +141,55 @@ Compose contents/external absolute paths are not rewritten and still need their
 original mounts. Suggestions and alias edits do not execute Compose or read its
 contents, and they cannot prove this is the intended application: review the host,
 project identity, paths and environment options before managing any project.
+
+## Registry tag browsing
+
+From 0.27.0, **Browse tags** supports HTTPS registries exposing
+`GET /v2/<repository>/tags/list`, in addition to the Docker Hub and public LSCR
+adapters. Registry V2 support is not a guarantee that every provider exposes this
+API to every account. A missing repository and an unavailable API can both return
+404; Reef explains that ambiguity. Empty successful lists, authentication errors,
+rate limits and connectivity errors have separate messages.
+
+The owning Reef/agent process resolves a matching Docker login from its
+`$HOME/.docker/config.json` only after an authentication challenge. It supports
+Docker `auths` username/password or username/access-token entries and configured
+`credHelpers`/`credsStore` helpers available in that runtime's PATH. Helpers are
+called with `get` only, with bounded output/time; nothing runs `docker login` or
+changes stored credentials. A host keychain helper may not be available inside a
+container. Identity-token/refresh-token OAuth flows are not supported; use a scoped
+username/access-token login. File-stored credentials must be private (0600), in a
+regular file, at most 1 MiB. The inherited `DOCKER_CONFIG` is not used, matching
+Reef's sanitized Docker subprocess environment. Mount the appropriate Docker HOME
+read-only, never copy credentials into a Compose editor or issue.
+
+HTTPS certificate verification is mandatory. Public addresses work by default;
+private/LAN/loopback destinations require an explicit exact `host[:port]` entry
+in `registry_tag_hosts`. DNS answers are checked and connections pinned to the
+checked addresses. Reef does not use an HTTP proxy, follow redirects or trust
+pagination URLs. HTTP-only and IPv6-literal image references are not supported.
+A token challenge can use the registry's own HTTPS origin. Docker Hub's fixed
+auth endpoint and the public LSCR/GHCR adapter are known exceptions. Any other
+cross-origin token endpoint needs an exact registry-to-endpoint mapping in
+`registry_tag_auth_realms`; it must contain no credentials, query or fragment.
+This mapping authorizes sending that registry's credentials to that endpoint,
+and explicitly permits its network destination as well.
+
+Example **operator configuration**, adapted to your own registry:
+
+```json
+{
+  "registry_tag_hosts": ["registry.example.internal:5443"],
+  "registry_tag_auth_realms": {
+    "registry.example.internal:5443": "https://auth.example.internal/token"
+  }
+}
+```
+
+These are optional additions to the existing configuration, not a complete config.
+Both settings are limited to 64 entries. Configuration changes require a restart.
+On a remote host, place them in the agent's optional `-config` file and retain the
+existing mounts/project roots. Central settings are not propagated to agents.
+No new port, credential transfer through Reef, enrollment or state migration is
+required. The selected image keeps its registry and repository. Automatic patch
+discovery remains limited to supported public Docker Hub version tags.

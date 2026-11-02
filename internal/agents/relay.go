@@ -16,6 +16,7 @@ const EventsCapability = "action-events-v1"
 const UpdatesCapability = "agent-update-v1"
 const BuildsCapability = "builds-v1"
 const ControlCapability = "control-v1"
+const ImageTagRegistriesCapability = "image-tag-registries-v1"
 const ImageTagsCapability = "image-tags-v1"
 const ImagesCapability = "images-v1"
 const ImageBatchCapability = "images-batch-v1"
@@ -54,13 +55,14 @@ type Command struct {
 	Form    url.Values `json:"form,omitempty"`
 }
 type Frame struct {
-	ID          string `json:"id"`
-	Sequence    uint64 `json:"sequence"`
-	Status      int    `json:"status,omitempty"`
-	ContentType string `json:"content_type,omitempty"`
-	Field       string `json:"field,omitempty"`
-	Data        []byte `json:"data,omitempty"`
-	Done        bool   `json:"done,omitempty"`
+	ID            string `json:"id"`
+	Sequence      uint64 `json:"sequence"`
+	Status        int    `json:"status,omitempty"`
+	ContentType   string `json:"content_type,omitempty"`
+	Field         string `json:"field,omitempty"`
+	RegistryError string `json:"registry_error,omitempty"`
+	Data          []byte `json:"data,omitempty"`
+	Done          bool   `json:"done,omitempty"`
 }
 type Commands struct {
 	Commands []Command `json:"commands"`
@@ -205,6 +207,9 @@ func (r *Relay) Do(ctx context.Context, host string, command Command) (*http.Res
 		contentType = first.ContentType
 	}
 	header.Set("Content-Type", contentType)
+	if first.RegistryError != "" {
+		header.Set("X-Reef-Registry-Error", first.RegistryError)
+	}
 	if first.Field != "" {
 		header.Set("X-Reef-Field", first.Field)
 	}
@@ -292,7 +297,7 @@ func (r *Relay) Results(host, generation string, frames []Frame) error {
 		if j == nil {
 			continue
 		}
-		if j.finished || !j.delivered || len(frame.Data) > MaxFrameBytes || frame.Sequence != j.seq+1 || len(frame.ContentType) > 100 || len(frame.Field) > 100 || j.seq == 0 && (frame.Status < 100 || frame.Status > 599) || j.seq > 0 && frame.Status != 0 {
+		if j.finished || !j.delivered || len(frame.Data) > MaxFrameBytes || frame.Sequence != j.seq+1 || len(frame.ContentType) > 100 || len(frame.Field) > 100 || len(frame.RegistryError) > 64 || j.seq == 0 && (frame.Status < 100 || frame.Status > 599) || j.seq > 0 && frame.Status != 0 {
 			return ErrInvalid
 		}
 		j.seq++

@@ -16,7 +16,7 @@ function message(text,error=false){$('#message').textContent=text;$('#message').
 async function request(path,opts,host=window.reefHost||'local'){
  if(host==='none'&&!path.startsWith('/api/hosts'))throw Error('No Docker host is assigned to your account. Ask an administrator to grant access.');
  if(host!=='local'&&path.startsWith('/api/')&&!path.startsWith('/api/hosts')&&!/[?&]host=/.test(path))path+=(path.includes('?')?'&':'?')+'host='+encodeURIComponent(host);
- const response=await fetch(path,opts);const responseUser=response.headers?.get('X-Reef-User');if(responseUser&&window.reefAccess?.userId&&responseUser!==window.reefAccess.userId){location.href='/';throw Error('Signed-in account changed; reloading Reef.');}if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');throw error;}return response;
+ const response=await fetch(path,opts);const responseUser=response.headers?.get('X-Reef-User');if(responseUser&&window.reefAccess?.userId&&responseUser!==window.reefAccess.userId){location.href='/';throw Error('Signed-in account changed; reloading Reef.');}if(response.status===401){location.href='/login';throw Error('Sign-in required');}if(!response.ok){const error=Error(await response.text());error.field=response.headers.get('X-Reef-Field');error.code=response.headers.get('X-Reef-Registry-Error');throw error;}return response;
 }
 function ask(text){const dialog=$('#confirmation');if(dialog.open)return Promise.resolve(false);$('#confirm-message').textContent=text;dialog.returnValue='cancel';return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true});dialog.showModal();});}
 function current(){return projects.find(p=>p.id===selected);}
@@ -130,7 +130,7 @@ window.ReefPrepareImageVersion=async (service,choice=null)=>{
  if(epoch!==editorEpoch||current()?.id!==p.id||dirty||inFlight||current()?.busy||current()?.image_updates?.checking||!loaded||loading||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false||choice&&(choice.revision!==revision||choice.host!==editorHost||window.ReefImageTags?.isCurrent(choice)!==true))return;
  inFlight=true;controls();message('Preparing and validating tag change…');
  try{
-  const body=new URLSearchParams({csrf,confirmed:'yes',id:p.id,service,revision:checkedRevision,candidate:row.candidate});
+  const body=new URLSearchParams({csrf,confirmed:'yes',id:p.id,service,revision:checkedRevision,candidate:row.candidate,extended:choice?.extended?'yes':'no'});
   const doc=await(await request(choice?'/api/image-tags/prepare':'/api/image-updates/prepare',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body},host)).json();
   if(epoch!==editorEpoch||current()?.id!==p.id||dirty||choice&&window.ReefImageTags?.isCurrent(choice)!==true)return;
   $('#editor').value=doc.content;revision=doc.revision;dirty=true;loaded=true;window.ReefImageTags?.close();message('Tag change prepared as unsaved edits. Review it, then Save file or Apply update when ready.');

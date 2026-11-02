@@ -190,7 +190,7 @@ func (w *agentWriter) WriteHeader(status int) {
 		return
 	}
 	w.status = status
-	_ = w.send(agents.Frame{Status: status, ContentType: w.header.Get("Content-Type"), Field: w.header.Get("X-Reef-Field")})
+	_ = w.send(agents.Frame{Status: status, ContentType: w.header.Get("Content-Type"), Field: w.header.Get("X-Reef-Field"), RegistryError: w.header.Get("X-Reef-Registry-Error")})
 }
 func (w *agentWriter) Write(data []byte) (int, error) {
 	if w.status == 0 {

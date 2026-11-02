@@ -58,17 +58,19 @@ type manifestCache struct {
 	Manifests []registryManifest
 }
 type ImageService struct {
-	TagPage   func(context.Context, string, string, int) (imageTagPage, error)
-	ListTags  func(context.Context, string, string) ([]string, error)
-	tagCache  map[string]patchTagsCache
-	catalogMu sync.Mutex
-	catalogOp CatalogOperation
-	volumeOp  CatalogOperation
-	networkOp CatalogOperation
-	cacheOp   CatalogOperation
-	Exec      Executor
-	mu        sync.Mutex
-	cache     map[string]manifestCache
+	V2TagPage       func(context.Context, string, string, string, string, int) (imageTagPage, error)
+	RegistryTagPage func(context.Context, string, string, string, int) (imageTagPage, error)
+	TagPage         func(context.Context, string, string, int) (imageTagPage, error)
+	ListTags        func(context.Context, string, string) ([]string, error)
+	tagCache        map[string]patchTagsCache
+	catalogMu       sync.Mutex
+	catalogOp       CatalogOperation
+	volumeOp        CatalogOperation
+	networkOp       CatalogOperation
+	cacheOp         CatalogOperation
+	Exec            Executor
+	mu              sync.Mutex
+	cache           map[string]manifestCache
 }
 
 var imageIDPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
