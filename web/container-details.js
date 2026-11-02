@@ -11,12 +11,13 @@
    const console=node('button','Console','compact-button');console.type='button';console.dataset.focusKey='container-console-'+c.id;console.setAttribute('aria-label',`Console for ${c.name}`);console.addEventListener('click',()=>{if(dialog.open)dialog.close();window.openContainerConsole(c);});group.append(console);
   }else{const console=node('button','Console','compact-button');console.type='button';console.disabled=true;console.title=window.reefAccess?.canWrite===false?'Console access requires an admin account':c.inventory_only?'Remote consoles are not available yet':'Console access requires a running container';group.append(console);}
   if(!c.compose_project&&!c.is_reef&&window.reefAccess?.canWrite!==false){const manage=node('button','Manage','compact-button');manage.type='button';manage.dataset.focusKey='container-manage-'+c.id;manage.setAttribute('aria-label',`Manage ${c.name}`);const host=c.host_id||window.reefHost||'local';manage.disabled=!!c.inventory_only||(host!=='local'&&!window.reefCapabilities?.includes('containers-v1'));if(manage.disabled)manage.title='Upgrade the agent to 0.22.0 or later for standalone container management';manage.addEventListener('click',()=>{if(dialog.open)dialog.close();window.ReefContainerManagement?.open(c);});group.append(manage);}
+  if(c.compose_project&&!c.is_reef&&window.reefAccess?.canWrite!==false){const restart=node('button','Restart','compact-button');restart.type='button';restart.dataset.focusKey='container-restart-'+c.id;restart.setAttribute('aria-label',`Restart ${c.name}`);const host=c.host_id||window.reefHost||'local';restart.disabled=!!c.inventory_only||c.state!=='running'||host!=='local'&&!window.reefCapabilities?.includes('compose-container-restart-v1');restart.title=c.state!=='running'?'Individual restart requires a running container':host!=='local'&&!window.reefCapabilities?.includes('compose-container-restart-v1')?'Upgrade the agent to 0.28.0 or later to restart individual Compose containers':'Review an individual restart; other project containers stay in place';restart.addEventListener('click',()=>{if(restart.disabled)return;if(dialog.open)dialog.close();window.ReefContainerManagement?.open(c);});group.append(restart);}
   return group;
  }
  function render(c){
   find('#container-detail-error').hidden=!!c;
   if(!c){find('#container-detail-actions').replaceChildren();signature='';return;}
-  const next=JSON.stringify(c);if(signature===next)return;signature=next;
+  const next=JSON.stringify([c,window.reefCapabilities,window.reefAccess?.canWrite]);if(signature===next)return;signature=next;
   find('#container-detail-title').textContent=c.name;
   const fields=[];
   for(const [label,value] of [['Host',c.host_name||'Local'],['Container ID',c.id],['Image',c.image],['State',c.state],['Status',c.status],['Compose project',c.compose_project||'—'],['Service',c.compose_service||'—']])fields.push(node('dt',label),node('dd',value));

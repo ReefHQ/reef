@@ -27,3 +27,6 @@ test('save progress does not imply that services were restarted',()=>{
 test('build progress never claims a container start phase',()=>{
  const steps=operationSteps({id:'build',action:'build',running:true,phase:'build --builder default',log:'> docker compose config --quiet\n> docker compose build --builder default -- web\n'});assert.deepEqual(steps.map(s=>s.label),['Validate saved files','Build images']);assert.equal(steps[1].state,'active');
 });
+test('restart progress distinguishes validation and restart without implying recreation',()=>{
+ const op={id:'restart',action:'restart',phase:'restart',running:true,log:'> docker compose config --quiet\n> docker compose restart\n'};const steps=operationSteps(op);assert.deepEqual(steps.map(s=>s.label),['Validate','Restart']);assert.deepEqual(steps.map(s=>s.state),['done','active']);assert.deepEqual(operationSteps({...op,running:false,phase:'failed'}).map(s=>s.state),['done','failed']);assert.ok(operationSteps({...op,running:false,phase:'completed'}).every(s=>s.state==='done'));
+});

@@ -83,6 +83,33 @@ A validation failure before saving leaves the original intact. A pull failure le
 
 **More actions → Stop project** validates, then runs `down`, without deleting named volumes. A down/up cycle can remove and recreate containers and networks; anonymous volumes may not be reattached as before. Prefer existing bind mounts or named volumes. **Save file** stops after validation, backup and saving; it does not restart services. Compose action requests cannot provide arbitrary commands: the server constructs their arguments using `exec.CommandContext`, without a host shell. The separately authorized container console uses Docker exec.
 
+**More actions → Restart project** validates the saved Compose configuration and
+runs `docker compose restart` for the whole managed project. Confirm the project,
+host and expected downtime first. Compose restarts existing stopped and running
+containers; it does not recreate missing containers, pull images or apply Compose
+changes ([Docker behavior](https://docs.docker.com/reference/cli/docker/compose/restart/)).
+Save or discard editor changes before restarting. To apply saved configuration or
+new images, use **Apply update** instead. After **Stop project** (which removes
+containers), or when recovery is required, use **Start / retry** first; Restart is
+unavailable until that recovery block is cleared. Failed/interrupted restarts are
+never replayed automatically. Results and command logs appear in the existing
+operation panel, History and enabled webhooks. Remote restart requires central and
+agent **0.28.0+**, with negotiated `project-restart-v1`; older agents retain their
+existing actions and show upgrade guidance for Restart.
+
+**Restart one Compose container:** in Containers (or a project's container list),
+choose **Restart**, review the exact host/name/full ID, then confirm **Restart**
+in the container panel. Only that running container is restarted through Docker;
+sibling services are not restarted and no Compose command, image pull or recreation
+runs. This also works for discovered Compose containers without adopting their
+project. Other Compose container actions stay with the project. Swarm, Reef/Docker
+administration, auto-remove, paused/transient and namespace/volume-dependent
+containers remain protected. Host operations and image checks must finish first.
+Remote individual restart requires `compose-container-restart-v1` (agent0.28.0+).
+Interrupted outcomes use the container operation review block; inspect host state
+before acknowledging, with no automatic retry. Container restart events appear in
+History and enabled webhooks.
+
 Operations continue after closing the tab and have a total timeout of 45 minutes. A project lock prevents editing and simultaneous operations on that project. A content hash covers configured Compose files, configured interpolation files and the default `.env`, rejecting outdated edits. SSH changes are detected at checkpoints, but Reef cannot lock an external editor: do not change these files while an operation is running. Files referenced through `include`, `extends`, service `env_file`, secrets, configs or build contexts are outside this revision hash.
 
 Folder aliases are checked against their physical destination during project

@@ -164,6 +164,20 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && r.URL.Path == "/api/container-management/action" && r.Form.Get("action") == "restart" && r.Form.Get("compose_restart") == "yes" && (s.agents == nil || !s.agents.CanComposeContainerRestart(host)) {
+			http.Error(w, "Upgrade the agent to 0.28.0 or later to restart individual Compose containers", 409)
+			return
+		}
+		if r.URL.Path == "/api/action" && r.Method == "POST" && r.Form.Get("action") == "restart" {
+			if r.Form.Get("confirmed") != "yes" {
+				http.Error(w, "Explicit project restart confirmation required", 400)
+				return
+			}
+			if host != "" && host != "local" && (s.agents == nil || !s.agents.CanProjectRestart(host)) {
+				http.Error(w, "Upgrade the agent to 0.28.0 or later to restart projects", 409)
+				return
+			}
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/image-tags") && r.FormValue("extended") == "yes" && (s.agents == nil || !s.agents.CanImageTagRegistries(host)) {
 			http.Error(w, "Upgrade the agent to 0.27.0 or later for LSCR and implicit latest tags", 409)
 			return

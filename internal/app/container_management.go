@@ -99,19 +99,21 @@ func inspectFingerprint(c inspectedContainer) string {
 }
 
 type containerReview struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Image         string   `json:"image"`
-	ImageID       string   `json:"image_id"`
-	State         string   `json:"state"`
-	Fingerprint   string   `json:"fingerprint"`
-	Allowed       bool     `json:"allowed"`
-	Reason        string   `json:"reason"`
-	UpdateAllowed bool     `json:"update_allowed"`
-	UpdateReason  string   `json:"update_reason"`
-	MountCount    int      `json:"mount_count"`
-	Networks      []string `json:"networks"`
-	RestartPolicy string   `json:"restart_policy"`
+	ComposeProject string   `json:"compose_project,omitempty"`
+	RestartAllowed bool     `json:"restart_allowed"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Image          string   `json:"image"`
+	ImageID        string   `json:"image_id"`
+	State          string   `json:"state"`
+	Fingerprint    string   `json:"fingerprint"`
+	Allowed        bool     `json:"allowed"`
+	Reason         string   `json:"reason"`
+	UpdateAllowed  bool     `json:"update_allowed"`
+	UpdateReason   string   `json:"update_reason"`
+	MountCount     int      `json:"mount_count"`
+	Networks       []string `json:"networks"`
+	RestartPolicy  string   `json:"restart_policy"`
 }
 type containerOperation struct {
 	PersistenceError bool      `json:"persistence_error,omitempty"`
@@ -222,40 +224,52 @@ func (s *containerManagement) review(ctx context.Context, id string) (containerR
 	if e != nil {
 		return containerReview{}, c, e
 	}
-	r := containerReview{ID: c.ID, Name: strings.TrimPrefix(c.Name, "/"), Image: value[string](c.Config, "Image"), ImageID: c.Image, State: c.State.Status, Fingerprint: inspectFingerprint(c), Allowed: true, UpdateAllowed: true, MountCount: len(c.Mounts), Networks: []string{}, RestartPolicy: value[struct{ Name string }](c.HostConfig, "RestartPolicy").Name}
+	r := containerReview{ID: c.ID, Name: strings.TrimPrefix(c.Name, "/"), Image: value[string](c.Config, "Image"), ImageID: c.Image, State: c.State.Status, Fingerprint: inspectFingerprint(c), Allowed: true, RestartAllowed: true, UpdateAllowed: true, MountCount: len(c.Mounts), Networks: []string{}, RestartPolicy: value[struct{ Name string }](c.HostConfig, "RestartPolicy").Name}
 	for name := range c.NetworkSettings.Networks {
 		r.Networks = append(r.Networks, name)
 	}
 	sort.Strings(r.Networks)
 	labels := value[map[string]string](c.Config, "Labels")
+	r.ComposeProject = labels["com.docker.compose.project"]
+	composeOwned := false
 	for k, v := range labels {
-		if strings.HasPrefix(k, "com.docker.compose.") || strings.HasPrefix(k, "com.docker.swarm.") || k == "io.reef.local" || k == "io.reef.instance" && v == "true" {
+		if strings.HasPrefix(k, "com.docker.compose.") {
+			composeOwned = true
 			r.Allowed = false
-			r.Reason = "Compose, Swarm and Reef administration containers must be managed by their owner/project"
+		}
+		if strings.HasPrefix(k, "com.docker.swarm.") || k == "io.reef.local" || k == "io.reef.instance" && v == "true" {
+			r.Allowed = false
+			r.RestartAllowed = false
+			r.Reason = "Swarm and Reef administration containers must be managed by their owner"
 		}
 	}
 	hostname, _ := os.Hostname()
 	if len(hostname) >= 12 && strings.HasPrefix(c.ID, hostname) {
 		r.Allowed = false
+		r.RestartAllowed = false
 		r.Reason = "Reef cannot manage its own container"
 	}
 	for _, m := range c.Mounts {
 		if m.Destination == "/var/run/docker.sock" || m.Destination == "/run/docker.sock" || strings.HasSuffix(m.Source, "/docker.sock") {
 			r.Allowed = false
+			r.RestartAllowed = false
 			r.Reason = "Docker administration containers are protected"
 		}
 	}
 	if c.State.Paused || c.State.Restarting || (c.State.Status != "running" && c.State.Status != "exited" && c.State.Status != "created") {
 		r.Allowed = false
+		r.RestartAllowed = false
 		r.Reason = "Wait for a stable running, exited or created container"
 	}
 	if value[bool](c.HostConfig, "AutoRemove") {
 		r.Allowed = false
+		r.RestartAllowed = false
 		r.Reason = "Auto-remove containers cannot be safely stopped or recreated"
 	}
 	for _, k := range []string{"NetworkMode", "PidMode", "IpcMode"} {
 		if strings.HasPrefix(value[string](c.HostConfig, k), "container:") {
 			r.Allowed = false
+			r.RestartAllowed = false
 			r.Reason = "Containers sharing another container's namespace require owner-managed operations"
 		}
 	}
@@ -281,6 +295,7 @@ func (s *containerManagement) review(ctx context.Context, id string) (containerR
 			ref := strings.TrimPrefix(value[string](v.HostConfig, k), "container:")
 			if ref != value[string](v.HostConfig, k) && (ref == r.Name || ref == id || len(ref) >= 12 && strings.HasPrefix(id, ref)) {
 				r.Allowed = false
+				r.RestartAllowed = false
 				r.Reason = "Another container shares this container's namespace"
 			}
 		}
@@ -288,9 +303,22 @@ func (s *containerManagement) review(ctx context.Context, id string) (containerR
 			ref = strings.Split(ref, ":")[0]
 			if ref == r.Name || ref == id || len(ref) >= 12 && strings.HasPrefix(id, ref) {
 				r.Allowed = false
+				r.RestartAllowed = false
 				r.Reason = "Another container inherits volumes from this container"
 			}
 		}
+	}
+	r.RestartAllowed = r.RestartAllowed && c.State.Running
+	if composeOwned {
+		if r.ComposeProject == "" {
+			r.RestartAllowed = false
+		}
+		r.UpdateAllowed = false
+		r.UpdateReason = "Use the Compose project to update its containers"
+		if r.Reason == "" {
+			r.Reason = "Only individual restart is available here for Compose containers. Use the project for other actions."
+		}
+		return r, c, nil
 	}
 	if _, e = containerCreatePlan(c, c.Image, "preflight"); e != nil {
 		r.UpdateAllowed = false
@@ -555,7 +583,7 @@ func (m *Manager) beginContainer(action, id, fingerprint string) (containerOpera
 	}
 	for _, p := range m.Projects {
 		p.mu.Lock()
-		busy := p.busy
+		busy := p.busy || p.ImageUpdates.Checking
 		p.mu.Unlock()
 		if busy {
 			return fail("Wait for Compose operations to finish")
@@ -618,7 +646,7 @@ func (c *containerManagement) run(ctx context.Context, m *Manager, op containerO
 	if e != nil {
 		return e
 	}
-	if !r.Allowed || r.Fingerprint != fingerprint {
+	if (!(op.Action == "restart" && r.RestartAllowed) && !r.Allowed) || r.Fingerprint != fingerprint {
 		return errors.New("Container identity, state, configuration or eligibility changed; refresh and review")
 	}
 	c.mu.Lock()
@@ -641,6 +669,15 @@ func (c *containerManagement) run(ctx context.Context, m *Manager, op containerO
 			}
 		}
 		return c.mutate(ctx, "removing", "DELETE", base+"?v=false&force=false", nil, nil)
+	}
+	if op.Action == "restart" && r.ComposeProject != "" {
+		fresh, err := c.inspect(ctx, old.ID)
+		if err != nil {
+			return err
+		}
+		if inspectFingerprint(fresh) != fingerprint || !fresh.State.Running || fresh.State.Paused || fresh.State.Restarting {
+			return errors.New("Container changed before restart; refresh and review")
+		}
 	}
 	if op.Action == "restart" && !old.State.Running {
 		return errors.New("Restart requires a running container")

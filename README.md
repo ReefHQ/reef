@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.27.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.28.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -64,8 +64,8 @@ Reef itself, so let active operations finish first.
 
 | In Reef | What you can do |
 | --- | --- |
-| **Containers** | Inspect containers, read logs, open consoles and start, stop, update or delete standalone containers. |
-| **Projects** | Connect existing Compose projects, edit and validate their main file, save backups, start, stop and apply updates. |
+| **Containers** | Inspect containers, read logs, open consoles, restart an individual Compose container and manage standalone containers. |
+| **Projects** | Connect existing Compose projects, edit and validate their main file, save backups, start, restart, stop and apply updates. |
 | **Images** | Inspect usage, pull images, manage tags and review unused-image cleanup. |
 | **Volumes** | Inspect references, create volumes, back up their data, restore into a new volume and review cleanup. |
 | **Networks** | Inspect addressing and usage, create bridge networks and connect or disconnect running containers. |
@@ -123,6 +123,12 @@ images, Reef can suggest a newer patch tag in the same version series and varian
 your decision. The **Image updates** panel distinguishes a **new image for the
 current tag** from a **new version**. **Update project** applies current-tag image
 updates after confirmation; it updates the whole project and can interrupt services.
+Need a quick restart? Open a managed project and choose **More actions → Restart
+project**. Reef asks before interrupting its existing containers. Use **Apply
+update** when you want new images or Compose changes. To restart just one running
+Compose container, use its **Restart** button in Containers, review its identity
+and confirm in the container panel.
+
 **Browse tags** searches Docker Hub, LinuxServer (`lscr.io`) and compatible
 Registry V2 repositories,
 including references with an implicit `latest`, and prepares a chosen tag as an

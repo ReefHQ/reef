@@ -350,3 +350,21 @@ require explicit settings in that agent's optional `-config` file, independently
 of central Reef. See [registry access](CONFIGURATION.md#registry-tag-browsing).
 The selected image keeps its original registry and repository. Draft preparation,
 platform verification and separate reviewed deployment remain unchanged.
+
+## Restart managed projects (v0.28.0)
+
+Upgrade central first, then affected agents to 0.28.0+. `project-restart-v1`
+adds **More actions → Restart project** through the existing action relay.
+Old agents keep their Start/Stop/Apply actions; Restart is disabled with upgrade
+guidance. No enrollment, incoming port, configuration or state migration is needed.
+The owning agent validates its saved files/revision and performs Compose restart
+with its exact project name, file order, directory and interpolation files.
+No pull, recreation or draft save occurs. Operation locking, interruption recovery,
+History and webhooks use the existing pipeline.
+
+Individual running Compose-container restart additionally negotiates
+`compose-container-restart-v1` (0.28.0+), alongside `containers-v1`. It uses the
+existing container-management review, exact fingerprint/full ID, host resource
+lock and interrupted-outcome acknowledgement. It does not run Compose or restart
+sibling services; all non-restart Compose actions remain project-owned. Old agents
+keep standalone Restart and show upgrade guidance for individual Compose Restart.
