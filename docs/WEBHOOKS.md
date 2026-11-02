@@ -50,9 +50,23 @@ A failed result points the operator back to Reef for its detailed logs.
 ## Discord
 
 Create an incoming webhook for the desired channel in Discord and paste its URL.
-Reef accepts official Discord incoming webhook HTTPS URLs, posts a short text
-message as Reef, disables mentions and link previews, and requests confirmation
-with `wait=true`. No bot account or bot token is required.
+Reef accepts official Discord incoming webhook HTTPS URLs, posts a compact embed card as Reef and requests confirmation with `wait=true`.
+Cards use friendly action titles, separate Status/Host/Target fields, native Discord
+timestamps and a full operation reference in the footer when available. Colors are
+teal for in progress, green for completed/recovered, red for failures/incidents,
+amber for partial or unknown outcomes and gray for closed sessions. Text labels
+always identify the result as well. Batch cards show item totals and terminal
+success/failure/skipped counts; a started card does not show premature zero results.
+Alerts distinguish Incident opened from Recovered. Failed/unknown results point
+back to Reef without including private Docker errors or logs.
+
+Mentions remain disabled. Host and target are bounded literal code text; embedded
+backticks render as a similar typographic mark and @ is separated by a zero-width
+space, so metadata cannot introduce Markdown or mentions. No external image,
+thumbnail, action URL or top-level message content is added. The old SUPPRESS_EMBEDS
+flag is removed so these intentional cards are visible. Generic JSON carries this same card in its additive `presentation` block.
+Only central Reef needs this presentation upgrade; agents, saved settings, event
+selection, queue/retries and notification frequency stay unchanged. No bot account or bot token is required.
 
 See [Discord webhook execution](https://docs.discord.com/developers/resources/webhook#execute-webhook)
 and [rate-limit handling](https://docs.discord.com/developers/topics/rate-limits).
@@ -81,9 +95,51 @@ headers and HMAC signatures are not part of this version. Redirects are not foll
     "status": "completed",
     "operation_id": "abcdef0123456789abcdef0123456789abcdef0123456789",
     "target": "my-project"
+  },
+  "presentation": {
+    "author": {
+      "name": "Reef · Projects"
+    },
+    "title": "Project update",
+    "description": "The action completed successfully.",
+    "color": 3120760,
+    "fields": [
+      {
+        "name": "Status",
+        "value": "Completed",
+        "inline": true
+      },
+      {
+        "name": "Host",
+        "value": "`Local`",
+        "inline": true
+      },
+      {
+        "name": "Target",
+        "value": "`my-project`",
+        "inline": false
+      }
+    ],
+    "footer": {
+      "text": "Operation · abcdef0123456789abcdef0123456789abcdef0123456789"
+    },
+    "timestamp": "2026-10-28T10:00:00Z"
   }
 }
 ```
+
+From0.29.0, `presentation` is produced by the same formatter as Discord's embed.
+Its title, description, author/footer text, integer RGB color, timestamp and fields
+let a receiver recreate the card. Field values use a small Discord Markdown subset
+(inline code for literal host/target metadata); names, title, description and footer
+are plain text. `inline` is a layout hint, not a requirement for a receiver.
+The receiver must implement the rendering; the JSON envelope is not itself a
+Discord webhook payload. Original unmodified metadata remains under `event`.
+
+This is an additive extension of `reef.action.v1`: existing `schema` and `event`
+fields retain their values and meaning. Receivers that ignore unfamiliar fields
+continue to work; strict custom validators must allow `presentation` before upgrading.
+No event selection, privacy boundary, authentication or delivery behavior changes.
 
 Statuses are started, completed, failed, partial, unknown and closed. Operation ID,
 target and count fields can be absent. Event IDs identify individual notifications;
