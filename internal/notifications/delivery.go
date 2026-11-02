@@ -36,15 +36,17 @@ func payload(c Config, e Event) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	presentation := presentEvent(e)
 	var body any = struct {
-		Schema string `json:"schema"`
-		Event  Event  `json:"event"`
-	}{"reef.action.v1", e}
+		Schema       string            `json:"schema"`
+		Event        Event             `json:"event"`
+		Presentation eventPresentation `json:"presentation"`
+	}{"reef.action.v1", e, presentation}
 	if c.Format == "discord" {
 		q := u.Query()
 		q.Set("wait", "true")
 		u.RawQuery = q.Encode()
-		body = map[string]any{"username": "Reef", "content": e.Message(), "allowed_mentions": map[string]any{"parse": []string{}}, "flags": 4}
+		body = map[string]any{"username": "Reef", "embeds": []eventPresentation{presentation}, "allowed_mentions": map[string]any{"parse": []string{}}}
 	}
 	b, err := json.Marshal(body)
 	return b, u.String(), err

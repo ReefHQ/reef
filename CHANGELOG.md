@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.28.0 — Unreleased
+## 0.29.0 — Unreleased
+
+- Present Discord webhook events as status-colored cards with friendly action titles, host/target fields, batch results, operation references and native timestamps. Distinguish alert incidents and recovery; add the same shared presentation block to generic JSON while preserving existing schema/event fields and delivery behavior.
+
+## 0.28.0 — 2026-11-02
 
 - Add Restart project to More actions, with host/project confirmation and downtime notice; run Compose restart on existing containers without pulling images, recreating containers or saving a draft.
 - Restart a single running Compose container by exact ID from Containers, with an isolated restart review, unchanged sibling containers and existing administration/dependency protections. Remote hosts negotiate compose-container-restart-v1.

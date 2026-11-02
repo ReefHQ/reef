@@ -29,12 +29,14 @@ func TestDiscordPayloadSuppressesMentionsAndUsesConfirmedDelivery(t *testing.T) 
 		t.Fatal(err)
 	}
 	var v struct {
-		Content string `json:"content"`
+		Content string              `json:"content"`
+		Embeds  []eventPresentation `json:"embeds"`
+		Flags   int                 `json:"flags"`
 		Allowed struct {
 			Parse []string `json:"parse"`
 		} `json:"allowed_mentions"`
 	}
-	if json.Unmarshal(b, &v) != nil || v.Allowed.Parse == nil || len(v.Allowed.Parse) != 0 || strings.Contains(v.Content, "@everyone") || len([]rune(v.Content)) > 2000 || !strings.Contains(target, "wait=true") {
+	if json.Unmarshal(b, &v) != nil || v.Allowed.Parse == nil || len(v.Allowed.Parse) != 0 || len(v.Embeds) != 1 || v.Content != "" || v.Flags&4 != 0 || strings.Contains(string(b), "@everyone") || v.Embeds[0].Title != "Project update" || !strings.Contains(target, "wait=true") {
 		t.Fatal(string(b), target)
 	}
 }
