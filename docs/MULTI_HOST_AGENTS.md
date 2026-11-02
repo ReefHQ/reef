@@ -230,3 +230,15 @@ restart; central checks this capability before forwarding. The backend independe
 reinspects identity, fingerprint and eligibility under the host operation lock.
 Only one Docker restart request targets the exact container ID. New optional review
 fields remain compatible with old agents/standalone management; no new route/port.
+
+## Update availability notices (v0.31.0)
+
+`update-notices-v1` requires negotiated control+action events and resets on reconnect
+or control disable. Image availability adds a typed bounded update event (stable
+observation reference, fresh transport event ID), never Docker output or paths.
+Central verifies capability, binds host identity and rejects remote reef_available.
+The central notification queue/target marker are persisted together; category-off
+observations are ACKed without external delivery. History correlates repeated
+observations by stable reference. Offline agent queues suppress duplicate pending
+observations, while batches are capped by both count32 and encoded48 KiB. Upgrade
+central before agents because old event validators do not recognize the new scope.

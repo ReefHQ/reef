@@ -23,7 +23,7 @@ Docker control; repair that private state and restart before reconfiguring.
 
 ## Notification categories
 
-In Webhooks, tick the categories you want to receive: **Containers, Projects,
+In Webhooks, tick the categories you want to receive: **Updates available, Containers, Projects,
 Images, Volumes, Networks, Builds, Agents, Consoles, Schedules, Alerts & monitoring,
 and Webhook settings**. Use **Select all** or **Select none** for a quick starting
 point, then confirm **Save settings**. The selected count updates as you choose.
@@ -56,6 +56,67 @@ For API clients, GET `/api/webhook` returns selected `categories` and labeled
 `categories=project&categories=image` fields. The flag with no category values
 means none; omitting it preserves the saved selection, including for older clients
 or webhook removal. Existing origin/CSRF and global-admin restrictions apply.
+
+## Updates available (v0.31.0)
+
+Select **Updates available** to receive image and Reef availability notices even
+when no browser is open. All-categories installations include this new category;
+if you previously selected a subset, tick it and save. The Images category still
+controls ordinary image actions/check outcomes, independently of availability.
+
+Managed project checks run at startup and automatically every six hours, plus
+existing manual/scheduled checks. A configured tag with verified changed image
+content produces a notice; a verified newer patch-tag candidate takes precedence
+when both are available for the same service. That notice tracks both verified
+targets, so a republished configured tag is still detected even when the newer
+patch candidate is unchanged. Installing current-tag content does not itself
+repeat the already-known candidate notice. Candidate search keeps its existing
+public Docker Hub version-series/variant policy. Other registries still support
+configured-tag comparison. Local builds, digest pins, undeployed services,
+unsupported platforms, failed/stale or ambiguous results do not generate notices.
+Cards name the host, project, service, configured image and newer candidate if any.
+No pull, file save, restart, deployment or image deletion is performed.
+
+Central Reef checks public stable GitHub tags at startup/every six hours, plus
+Check now. A fresh successful result newer than the running stable version creates
+a Reef notice with installed/available versions and a trusted GitHub changelog link.
+A tag can appear before the release image is ready. Development/prerelease builds,
+unknown/failed checks and stale cached availability are not announced.
+
+The last accepted target is stored privately per host/project/service/kind (or
+central Reef version stream), atomically with the queued notice. Repeated checks,
+replicas and restarts do not repeat a pending or confirmed unchanged announcement.
+A different image content fingerprint or patch/version target permits a new notice.
+Cancelled, expired or definitively failed delivery clears its pending marker, so a
+new successful observation can retry it later. Network ambiguity can still produce
+duplicates under the existing best-effort delivery policy; there is no exactly-once
+guarantee. Confirmed notices survive category/enable toggles; changing destination
+or format starts a new receiver's announcement tracking. Excluded/disabled notices
+are not marked as accepted, so a future fresh selected observation can notify them.
+Historical event replays remain deduplicated/cut off normally.
+
+Remote project notices require central Reef first, then affected agents **0.31.0+**
+with `update-notices-v1` and `action-events-v1`. Older agents continue their existing
+image checks and UI reports. No port, enrollment, registry credentials or webhook
+URL is transferred to agents. Only central Reef sends externally; remote Reef
+version announcements are rejected. Diagnostics shows the negotiated capability.
+
+JSON `reef.action.v1` adds optional typed `event.update` for these observations:
+`kind` is image_digest, image_tag or reef; metadata includes bounded project/service,
+image/candidate or current/latest versions, an opaque target fingerprint and an
+optional configured_tag_changed flag. The
+technical event status is completed (the observation completed), while the shared
+presentation says **Update available**. The stable operation reference correlates
+observations; it does not identify an installation action. History exposes the
+Updates available category, groups repeated observations and states that no update
+was applied. Presentation may include a trusted GitHub title URL for Reef notices.
+
+Private notification state now allows up to4 MiB and4096 tracked update streams;
+new streams over that bound drop availability notices with a status error while
+ordinary notifications/history continue. Agent outbox batches remain at most32
+and48 KiB encoded, below the existing64 KiB request limit. Queues/ACKs, category
+preferences and existing state version remain in place. No configuration edit or
+state migration is needed; older binaries do not understand new availability events.
 
 ## Events
 
@@ -100,7 +161,8 @@ back to Reef without including private Docker errors or logs.
 Mentions remain disabled. Host and target are bounded literal code text; embedded
 backticks render as a similar typographic mark and @ is separated by a zero-width
 space, so metadata cannot introduce Markdown or mentions. No external image,
-thumbnail, action URL or top-level message content is added. The old SUPPRESS_EMBEDS
+thumbnail or top-level message content is added. Reef availability cards can link
+the title to the fixed public GitHub changelog for their validated version. The old SUPPRESS_EMBEDS
 flag is removed so these intentional cards are visible. Generic JSON carries this same card in its additive `presentation` block.
 Only central Reef needs this presentation upgrade; agents, saved settings, event
 selection, queue/retries and notification frequency stay unchanged. No bot account or bot token is required.

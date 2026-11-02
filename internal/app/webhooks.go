@@ -96,6 +96,16 @@ func (s *Server) agentEvents(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Inactive event connection", 403)
 		return
 	}
+	for _, event := range input.Events {
+		if event.Scope == "update" && event.Action == "reef_available" {
+			http.Error(w, "Only central Reef publishes Reef update notices", 400)
+			return
+		}
+		if event.Scope == "update" && !s.agents.CanUpdateNotices(host) {
+			http.Error(w, "Update notice capability not negotiated", 403)
+			return
+		}
+	}
 	view, _, ok := s.agents.Inventory(host)
 	if !ok {
 		http.Error(w, "Agent not found", 403)

@@ -18,13 +18,15 @@ import (
 
 // These checks read registry manifests; they never pull an image or run Compose up.
 type ImageUpdate struct {
-	Candidate      string `json:"candidate,omitempty"`
-	VersionStatus  string `json:"version_status,omitempty"`
-	VersionMessage string `json:"version_message,omitempty"`
-	Service        string `json:"service"`
-	Image          string `json:"image"`
-	Status         string `json:"status"`
-	Message        string `json:"message,omitempty"`
+	ConfiguredFingerprint string `json:"-"`
+	CandidateFingerprint  string `json:"-"`
+	Candidate             string `json:"candidate,omitempty"`
+	VersionStatus         string `json:"version_status,omitempty"`
+	VersionMessage        string `json:"version_message,omitempty"`
+	Service               string `json:"service"`
+	Image                 string `json:"image"`
+	Status                string `json:"status"`
+	Message               string `json:"message,omitempty"`
 }
 type ImageUpdates struct {
 	Checking  bool          `json:"checking"`
@@ -285,6 +287,7 @@ func (s *ImageService) check(ctx context.Context, p Project) ([]ImageUpdate, err
 				}
 			}
 			if row.Status != "unknown" {
+				row.ConfiguredFingerprint, _ = remoteManifestFingerprint(manifests, platforms)
 				s.checkPatchVersion(ctx, p, &row, platforms)
 			}
 		}
@@ -426,6 +429,7 @@ func (m *Manager) checkImages(id string, automatic bool) error {
 		}
 		m.emit(notifications.New("image", "check", status, checkID, p.Project.ProjectName))
 		report.CheckedAt = time.Now()
+		m.publishImageUpdateNotices(p.Project, report)
 		p.mu.Lock()
 		p.ImageUpdates = report
 		p.mu.Unlock()

@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.30.0 — Unreleased
+## 0.31.0 — Unreleased
+
+- Notify when a managed project image or newer stable Reef version is available, using existing startup/background/manual checks without an open interface or automatic deployment.
+- Add Updates available to webhook categories and shared Discord/JSON cards, with project/service/image or installed/available Reef metadata. Remember the last accepted target per host/service/kind across restarts; retry failed/cancelled delivery only after a new successful observation.
+- Negotiate update-notices-v1 for remote project image notices (agent0.31.0+), retain existing checks on older agents, and keep remote event batches within the existing byte budget. History groups repeated observations and explicitly distinguishes availability from deployment.
+
+## 0.30.0 — 2026-11-02
 
 - Choose webhook notification categories for Discord and JSON, with Select all / Select none and persistent central preferences. Existing installations keep all categories enabled.
 - Filter Local/remote delivery while retaining complete History and remote acknowledgements; excluded events do not count as delivery failures. Explicit Send test remains available independently of category choices.

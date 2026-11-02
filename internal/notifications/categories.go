@@ -12,7 +12,7 @@ type Category struct {
 
 func CategoryOptions() []Category {
 	return []Category{
-		{"container", "Containers"}, {"project", "Projects"}, {"image", "Images"},
+		{"update", "Updates available"}, {"container", "Containers"}, {"project", "Projects"}, {"image", "Images"},
 		{"volume", "Volumes"}, {"network", "Networks"}, {"build", "Builds"},
 		{"agent", "Agents"}, {"console", "Consoles"}, {"schedule", "Schedules"},
 		{"monitor", "Alerts & monitoring"}, {"webhook", "Webhook settings"},

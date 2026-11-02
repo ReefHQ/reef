@@ -22,16 +22,17 @@ type pending struct {
 	Next     time.Time `json:"next"`
 }
 type disk struct {
-	Activated   time.Time `json:"activated"`
-	Version     int       `json:"version"`
-	Config      Config    `json:"config"`
-	Pending     []pending `json:"pending"`
-	Seen        []string  `json:"seen"`
-	Sent        uint64    `json:"sent"`
-	Dropped     uint64    `json:"dropped"`
-	LastSuccess time.Time `json:"last_success"`
-	LastError   string    `json:"last_error"`
-	After       time.Time `json:"after"`
+	UpdateNotices map[string]string `json:"update_notices,omitempty"`
+	Activated     time.Time         `json:"activated"`
+	Version       int               `json:"version"`
+	Config        Config            `json:"config"`
+	Pending       []pending         `json:"pending"`
+	Seen          []string          `json:"seen"`
+	Sent          uint64            `json:"sent"`
+	Dropped       uint64            `json:"dropped"`
+	LastSuccess   time.Time         `json:"last_success"`
+	LastError     string            `json:"last_error"`
+	After         time.Time         `json:"after"`
 }
 type View struct {
 	Categories       []string   `json:"categories"`
@@ -84,15 +85,20 @@ func Open(state string, relay bool) (*Service, error) {
 	if os.IsNotExist(err) {
 		return s, nil
 	}
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 2<<20 {
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > MaxStateBytes {
 		return nil, errors.New("Unsafe notification state")
 	}
 	b, err := os.ReadFile(s.file)
 	if err != nil {
 		return nil, err
 	}
-	if json.Unmarshal(b, &s.data) != nil || s.data.Version != 1 || len(s.data.Pending) > MaxPending || len(s.data.Seen) > 4096 {
+	if json.Unmarshal(b, &s.data) != nil || s.data.Version != 1 || len(s.data.Pending) > MaxPending || len(s.data.Seen) > 4096 || len(s.data.UpdateNotices) > MaxUpdateStreams {
 		return nil, errors.New("Invalid notification state")
+	}
+	for key, fp := range s.data.UpdateNotices {
+		if !updateHash.MatchString(key) || !updateHash.MatchString(fp) {
+			return nil, errors.New("Invalid update notification tracking state")
+		}
 	}
 	selected, categoryErr := normalizeCategories(s.data.Config.Categories)
 	if categoryErr != nil {
@@ -115,6 +121,10 @@ func (s *Service) saveLocked() error {
 	b, err := json.Marshal(s.data)
 	if err != nil {
 		return err
+	}
+	if len(b) > MaxStateBytes {
+		s.persistenceError = true
+		return errors.New("Notification state exceeds its size limit")
 	}
 	if info, e := os.Lstat(s.file); e == nil && !info.Mode().IsRegular() {
 		s.persistenceError = true
@@ -186,8 +196,12 @@ func (s *Service) Configure(c Config, clear bool) error {
 		return nil
 	}
 	old := s.data
+	forgetQueuedUpdates(&s.data, old.Pending)
 	s.data.Activated = time.Now()
 	s.data.Config = c
+	if c.URL != old.Config.URL || c.Format != old.Config.Format {
+		s.data.UpdateNotices = nil
+	}
 	s.data.Pending = nil
 	s.data.After = time.Time{}
 	s.data.LastError = ""
@@ -217,6 +231,10 @@ func (s *Service) Emit(e Event) {
 	if !s.relay && (!s.data.Config.Enabled || !s.data.Config.accepts(e)) {
 		return
 	}
+	if e.Scope == "update" {
+		s.emitUpdateLocked(e)
+		return
+	}
 	if len(s.data.Pending) >= MaxPending {
 		s.data.Dropped++
 		_ = s.saveLocked()
@@ -229,10 +247,16 @@ func (s *Service) Batch() []Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	events := []Event{}
+	bytes := 2
 	for _, item := range s.data.Pending {
 		if len(events) == 32 {
 			break
 		}
+		encoded, _ := json.Marshal(item.Event)
+		if bytes+len(encoded)+1 > MaxBatchBytes {
+			break
+		}
+		bytes += len(encoded) + 1
 		events = append(events, item.Event)
 	}
 	return events
@@ -273,7 +297,7 @@ func (s *Service) accept(host, name string, events []Event, central bool) error 
 		return errors.New("Event batch exceeds limit")
 	}
 	for _, e := range events {
-		if !e.Valid() || e.Scope == "webhook" || ((e.Scope == "monitor" || e.Scope == "schedule") && !central) {
+		if !e.Valid() || e.Scope == "webhook" || ((e.Scope == "monitor" || e.Scope == "schedule" || e.Scope == "update" && e.Action == "reef_available") && !central) {
 			return errors.New("Invalid action event")
 		}
 	}
@@ -294,10 +318,17 @@ func (s *Service) accept(host, name string, events []Event, central bool) error 
 			continue
 		}
 		if next.Config.Enabled && next.Config.accepts(e) && !e.Time.Before(next.Activated) && time.Since(e.Time) < 24*time.Hour {
-			if len(next.Pending) >= MaxPending {
-				return errors.New("Notification queue is full")
+			include, err := rememberUpdate(&next, e)
+			if err != nil {
+				next.LastError = err.Error()
+				next.Dropped++
 			}
-			next.Pending = append(next.Pending, pending{Event: e})
+			if include {
+				if len(next.Pending) >= MaxPending {
+					return errors.New("Notification queue is full")
+				}
+				next.Pending = append(next.Pending, pending{Event: e})
+			}
 		}
 		seen[e.Key()] = true
 		next.Seen = append(next.Seen, e.Key())

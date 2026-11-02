@@ -85,6 +85,9 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 		if capability == agents.ProjectRestartCapability {
 			central.agents.ProjectRestart(id, gen, true)
 		}
+		if capability == agents.UpdateNoticesCapability {
+			central.agents.UpdateNotices(id, gen, true)
+		}
 		if capability == agents.UpdatesCapability {
 			central.agents.Updates(id, gen, true)
 		}

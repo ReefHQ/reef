@@ -12,6 +12,7 @@ import (
 )
 
 const MonitoringCapability = "monitoring-v1"
+const UpdateNoticesCapability = "update-notices-v1"
 const EventsCapability = "action-events-v1"
 const UpdatesCapability = "agent-update-v1"
 const BuildsCapability = "builds-v1"

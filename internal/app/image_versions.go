@@ -201,6 +201,12 @@ func (s *ImageService) checkPatchVersion(ctx context.Context, p Project, row *Im
 			return
 		}
 	}
+	fp, err := remoteManifestFingerprint(manifests, platforms)
+	if err != nil {
+		row.VersionMessage = "No deployed image platform could be verified"
+		return
+	}
+	row.CandidateFingerprint = fp
 	row.VersionStatus = "available"
 	row.Candidate = candidate
 	row.VersionMessage = fmt.Sprintf("Patch tag available in %s%s.%s.x%s; review release notes before deployment", current.Prefix, current.Major, current.Minor, current.Suffix)

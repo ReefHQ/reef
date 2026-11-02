@@ -23,7 +23,8 @@
  }
  function details(row){
   const fields=find('history-detail-fields');fields.replaceChildren();
-  for(const [name,value] of [['Host',row.host],['Category',row.scope],['Action',row.action],['Target',row.target||(row.count?`${row.count} items`:'None')],['Last recorded status',label[row.status]||row.status],['First event time',date(row.started)],['Last event time (host clock)',date(row.time)],['Recorded centrally',date(row.recorded)],['Operation ID',row.operation_id||'Not provided'],['Result counts',row.count?`${row.succeeded||0} succeeded · ${row.failed||0} failed · ${row.skipped||0} skipped`:'Not provided'],['Note',row.note||'This is action metadata, not command output.']])fields.append(node('dt',name),node('dd',value));
+  for(const [name,value] of [['Host',row.host],['Category',row.scope],['Action',row.action],['Target',row.target||(row.count?`${row.count} items`:'None')],['Last recorded status',row.scope==='update'?'Update available':label[row.status]||row.status],['First event time',date(row.started)],['Last event time (host clock)',date(row.time)],['Recorded centrally',date(row.recorded)],['Operation ID',row.operation_id||'Not provided'],['Result counts',row.count?`${row.succeeded||0} succeeded · ${row.failed||0} failed · ${row.skipped||0} skipped`:'Not provided'],['Note',row.note||'This is action metadata, not command output.']])fields.append(node('dt',name),node('dd',value));
+  if(row.update)for(const [name,value] of [['Project',row.update.project],['Service',row.update.service],['Configured image',row.update.image],['Available image',row.update.candidate],['Installed Reef',row.update.current],['Available Reef',row.update.latest]])if(value)fields.append(node('dt',name),node('dd',value));
   find('history-details').showModal();
  }
  function render(){
@@ -31,7 +32,7 @@
    const tr=document.createElement('tr'),time=document.createElement('td'),action=document.createElement('td'),result=document.createElement('td'),open=document.createElement('td');
    time.append(node('span',date(row.recorded)),node('small',`Host time: ${date(row.time)}`,'muted'));
    action.append(node('strong',row.action),node('small',row.scope,'muted'));
-   result.append(node('span',label[row.status]||row.status,'tag '+(['failed','unknown','partial'].includes(row.status)?'failed':'neutral-tag')));if(row.note)result.append(node('small',row.note,'muted'));
+   result.append(node('span',row.scope==='update'?'Update available':label[row.status]||row.status,'tag '+(['failed','unknown','partial'].includes(row.status)?'failed':'neutral-tag')));if(row.note)result.append(node('small',row.note,'muted'));
    const button=node('button','Details','compact-button');button.type='button';button.dataset.focusKey='history-'+row.id;button.setAttribute('aria-label',`Action details for ${row.target||row.action}`);button.addEventListener('click',()=>details(row));open.append(button);
    tr.append(time,node('td',row.host),action,node('td',row.target||(row.count?`${row.count} items`:'—')),result,open);return tr;
   });replaceKeepingFocus(find('history-rows'),nodes);controls();
