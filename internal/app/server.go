@@ -164,6 +164,10 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		host := r.URL.Query().Get("host")
+		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/image-tags") && r.FormValue("extended") == "yes" && (s.agents == nil || !s.agents.CanImageTagRegistries(host)) {
+			http.Error(w, "Upgrade the agent to 0.27.0 or later for LSCR and implicit latest tags", 409)
+			return
+		}
 		if host != "" && host != "local" && strings.HasPrefix(r.URL.Path, "/api/image-tags") && (s.agents == nil || !s.agents.CanImageTags(host)) {
 			http.Error(w, "Upgrade the remote agent to 0.26.0 or later to browse and choose image tags", 409)
 			return

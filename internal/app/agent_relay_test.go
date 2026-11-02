@@ -38,7 +38,7 @@ func (w *relayTestWriter) WriteHeader(status int) {
 		return
 	}
 	w.status = status
-	_ = w.send(agents.Frame{Status: status, ContentType: w.header.Get("Content-Type")})
+	_ = w.send(agents.Frame{Status: status, ContentType: w.header.Get("Content-Type"), RegistryError: w.header.Get("X-Reef-Registry-Error")})
 }
 func (w *relayTestWriter) Write(data []byte) (int, error) {
 	if w.status == 0 {
@@ -81,6 +81,9 @@ func relayAgentFixture(t *testing.T, central *Server, backend *Server, name stri
 	for _, capability := range capabilities {
 		if capability == agents.UpdatesCapability {
 			central.agents.Updates(id, gen, true)
+		}
+		if capability == agents.ImageTagRegistriesCapability {
+			central.agents.ImageTagRegistries(id, gen, true)
 		}
 		if capability == agents.ImageTagsCapability {
 			central.agents.ImageTags(id, gen, true)

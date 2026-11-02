@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.26.0 — Unreleased
+## 0.27.0 — Unreleased
+
+- Treat missing image tags as implicit latest when browsing and preparing tag changes; preserve the full repository and leave the saved Compose file untouched.
+- Browse public lscr.io/linuxserver tags with scoped anonymous GHCR access, bounded cursor pagination/search and unchanged LSCR image references.
+- Browse compatible HTTPS Registry V2 repositories with bounded pagination/search, Basic/Bearer authentication using host-local Docker credentials, exact token-origin policy and explicit private-network opt-in. Distinguish authentication, rate limits, unavailable APIs and network errors.
+- Negotiate image-tag-registries-v1 for these additional cases, while preserving existing explicit Docker Hub browsing on older agents.
+
+## 0.26.0 — 2026-11-01
 
 - Browse and search public Docker Hub tags in pages of 50; choose a tag to prepare a reviewed unsaved Compose draft after verifying deployed platforms and that only the selected service image changes. Remote hosts negotiate image-tags-v1 (agent 0.26.0+).
 - Distinguish changed images behind current tags from newer patch tags in the Image updates panel; group technical notes under expandable Check details.

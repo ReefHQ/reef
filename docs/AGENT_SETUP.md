@@ -336,3 +336,17 @@ Compose draft. The agent validates the repository, saved revision, deployed
 platforms and image-only configuration change. Nothing is downloaded or deployed
 until the ordinary explicit project action. Old agents keep checks/Apply update
 and show upgrade guidance for the browser. No new port or enrollment is needed.
+
+## Registry and implicit image tags (v0.27.0)
+
+Upgrade central first, then affected agents to 0.27.0+ for
+`image-tag-registries-v1`. This adds HTTPS Registry V2, LSCR/LinuxServer tags and references without
+an explicit tag (interpreted as latest). Older agents retain their explicit
+Docker Hub browsing. The LSCR catalogue uses anonymous GHCR access in memory;
+no GitHub account, personal token, registry login or new network port is needed.
+Other registries may require a Docker username/token login available inside the
+agent runtime. Private network destinations and cross-origin token endpoints
+require explicit settings in that agent's optional `-config` file, independently
+of central Reef. See [registry access](CONFIGURATION.md#registry-tag-browsing).
+The selected image keeps its original registry and repository. Draft preparation,
+platform verification and separate reviewed deployment remain unchanged.

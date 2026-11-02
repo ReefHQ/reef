@@ -126,12 +126,16 @@ Registry and new-tag lookup explanations are available under **Check details**.
 An open explanation stays open during polling. Summary counts refer to services,
 so a service with both kinds of update is counted once.
 
-**Browse tags** opens a searchable list for the service's public Docker Hub
-repository, with 50 tags per page and Previous/Next navigation. This manual list
+**Browse tags** opens a searchable list for Docker Hub, `lscr.io/linuxserver`
+and HTTPS registries exposing the Registry V2 tag-list API (such as GHCR, Quay
+and compatible private registries), with 50 tags per page and Previous/Next navigation. This manual list
 can include floating tags, major/minor changes, prereleases and other variants;
 registry order is not a recommendation or SemVer ranking. The current reference
-is shown above the list. Private/custom registries, local builds and digest pins
-are outside this first tag browser.
+is shown above the list. Local builds and digest pins remain outside this browser. Private repositories
+require a usable Docker login on the owning host; an unavailable or restricted
+API is reported explicitly, rather than displayed as an empty list. A reference without a tag, such as `anthonyraymond/joal`,
+means `latest`; browsing does not append it to the saved Compose file. A selected
+replacement retains the full original repository and registry.
 
 Choose a different tag, then **Review tag change**. Administrators must confirm
 the exact reference and possible major/minor/variant change or downgrade. Reef
@@ -143,12 +147,27 @@ Ambiguous variables/anchors/overrides and services without a deployed platform
 require manual editing instead. Viewers can browse assigned hosts but cannot
 prepare changes.
 
-The browser reads one bounded anonymous Docker Hub page per explicit action.
-It does not forward registry credentials or follow API pagination/redirect URLs;
-errors and rate limits are explicit. Older agents retain their existing checks
-and Update project flow, but need **0.26.0+** with `image-tags-v1` for browsing
-and choosing tags. Opening, searching or preparing briefly reserves the project
-to prevent concurrent Compose changes. Late/closed/changed-host results are ignored.
+Public Docker Hub uses its paged search API; private/missing Hub catalogue entries
+can fall back to Registry V2. LSCR uses its fixed anonymous GHCR adapter. Other
+registries use HTTPS Registry V2 with Basic or Bearer authentication when needed.
+Credentials are resolved on the selected host, never sent through central Reef or
+the browser. Errors distinguish sign-in, rate limits, unsupported/missing APIs,
+network failures and operator access settings. See [registry access](CONFIGURATION.md#registry-tag-browsing).
+
+Registry pagination preserves returned order and uses the last consumed tag as a
+cursor; external pagination URLs and redirects are not followed. V2 search scans
+at most four batches of 1,000 tags per action under a 25-second deadline, returning
+up to 50 matches. Use Next to continue through an empty search segment. APIs without
+a total show the page and shown count. Responses are capped at 2 MiB (tokens at
+64 KiB), with a 10-second request deadline. Manual selection does not expand the
+automatic patch-tag discovery policy below.
+
+Older agents retain their checks and Update project flow. Explicit Docker Hub
+browsing needs **0.26.0+** / `image-tags-v1`; additional registries and implicit
+`latest` need **0.27.0+** / `image-tag-registries-v1`. Older agents show upgrade
+guidance for those references. Opening, searching or preparing briefly reserves
+the project against concurrent Compose changes. Late/closed/changed-host results
+are ignored.
 
 **New patch tags** are checked independently for **public Docker Hub** repositories.
 Reef supports full three-component numeric tags, with an optional `v` prefix and

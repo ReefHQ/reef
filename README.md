@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.26.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.27.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -123,8 +123,11 @@ images, Reef can suggest a newer patch tag in the same version series and varian
 your decision. The **Image updates** panel distinguishes a **new image for the
 current tag** from a **new version**. **Update project** applies current-tag image
 updates after confirmation; it updates the whole project and can interrupt services.
-**Browse tags** searches public Docker Hub tags and lets you prepare a chosen tag
-as an unsaved draft. Saving and deploying remain separate.
+**Browse tags** searches Docker Hub, LinuxServer (`lscr.io`) and compatible
+Registry V2 repositories,
+including references with an implicit `latest`, and prepares a chosen tag as an
+unsaved draft. Private repositories use the Docker login available on their host.
+Saving and deploying remain separate. [Registry access](docs/CONFIGURATION.md#registry-tag-browsing)
 
 [Project workflow and recovery](docs/USER_GUIDE.md#working-with-existing-projects) · [Paths and configuration](docs/CONFIGURATION.md)
 

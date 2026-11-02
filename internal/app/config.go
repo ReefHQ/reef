@@ -13,6 +13,8 @@ import (
 )
 
 type Config struct {
+	RegistryTagHosts        []string          `json:"registry_tag_hosts,omitempty"`
+	RegistryTagAuthRealms   map[string]string `json:"registry_tag_auth_realms,omitempty"`
 	VolumeBackupDirectory   string            `json:"volume_backup_directory,omitempty"`
 	VolumeBackupRetention   int               `json:"volume_backup_retention,omitempty"`
 	AgentsEnabled           bool              `json:"agents_enabled,omitempty"`
@@ -53,6 +55,9 @@ func loadConfigState(path, stateOverride string) (Config, error) {
 	return finishConfig(c)
 }
 func finishConfig(c Config) (Config, error) {
+	if e := validateRegistryTagConfig(c); e != nil {
+		return c, e
+	}
 	if c.VolumeBackupRetention < 0 || c.VolumeBackupRetention > 100 {
 		return c, errors.New("volume_backup_retention must be 1–100, or 0 for the default of 7")
 	}

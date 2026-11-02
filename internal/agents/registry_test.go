@@ -519,3 +519,33 @@ func TestImageTagCapabilityIsExplicitAndResetOnReconnect(t *testing.T) {
 		t.Fatal("Incorrect tag command allowlist")
 	}
 }
+
+func TestAdditionalTagRegistryCapabilityRequiresNegotiation(t *testing.T) {
+	r, e := Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	id, key := enrolled(t, r, "registry host")
+	g, e := r.Begin(id, key, "0.27.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.ImageTags(id, g, true)
+	if r.CanImageTagRegistries(id) {
+		t.Fatal("Registry capability inferred from version")
+	}
+	r.ImageTagRegistries(id, g, true)
+	if !r.CanImageTagRegistries(id) {
+		t.Fatal("Negotiated registry capability missing")
+	}
+	g, e = r.Begin(id, key, "0.27.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	r.ImageTags(id, g, true)
+	if r.CanImageTagRegistries(id) {
+		t.Fatal("Registry capability retained across reconnect")
+	}
+}

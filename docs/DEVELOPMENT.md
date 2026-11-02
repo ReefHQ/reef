@@ -156,3 +156,21 @@ registry credentials, redirects or response URLs are forwarded. Preparation has
 a 90-second overall limit, revalidates saved revision and deployed platforms,
 and reuses the literal-edit and normalized Compose comparison checks. See
 `image_tags_test.go`, `tests/image-tags.test.cjs` and project-selection regressions.
+
+Registry V2, LSCR and implicit latest browsing additionally negotiate `image-tag-registries-v1`
+(agent 0.27.0+). `image_tag_registry.go` parses Hub, LSCR and compatible explicit registry
+references, excluding digest pins. The public LSCR adapter uses fixed HTTPS origins (`ghcr.io/token`, `lscr.io/v2/.../tags/list`) with an
+anonymous repository pull token in memory, no proxy/redirect/cookie/Docker credential
+forwarding. Each page uses its last consumed tag as a cursor, without assuming
+lexical order. Tests cover real observed non-alphabetical registry order, malicious
+links, cursor progress, missing tags and empty final pages. Search is bounded to
+four batches/25 seconds; an empty segment with more data invites continuation.
+
+Registry tag adapters are in `internal/app/image_tag_registry.go` and
+`registry_tag_v2.go`; network/token-origin policy and Docker credential resolution
+are separate. Tests use injected HTTP transports and synthetic HOME/config/helper
+fixtures. Never test this code against real Docker credentials or log tokens.
+Private destinations are opt-in, DNS is checked and pinned per dial, HTTPS stays
+verified, redirects/proxy/cookies are disabled, and token realms must be same-origin,
+known fixed adapters or exact operator mappings. Tag selection still uses fresh
+Docker manifests and the existing normalized image-only draft checks.

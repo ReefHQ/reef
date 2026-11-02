@@ -203,3 +203,13 @@ image-only unsaved draft preparation through the existing command relay.
 Selection stays bound to the project, saved revision and owning host; the central
 service rejects this feature for older/disconnected agents before forwarding.
 Existing image update and tag-proposal flows remain compatible.
+
+`image-tag-registries-v1` (0.27.0+) adds HTTPS Registry V2, LSCR and implicit latest references to the
+manual browser. Cursor and extended-mode parameters remain bound to the selected
+host/project/revision. Missing capability rejects extended requests before relay;
+explicit Docker Hub browsing remains available with the original image-tags-v1.
+
+Registry credentials and network/token-origin policy are evaluated by the owning
+host, using its Docker HOME and optional agent config, independently of central
+Reef. Classified registry errors are returned as bounded optional relay metadata;
+no credential or token is carried through the relay.

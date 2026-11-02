@@ -107,6 +107,9 @@ func (s *Server) agentProtocol(w http.ResponseWriter, r *http.Request) {
 			if capability == agents.UpdatesCapability {
 				_ = s.agents.Updates(host, generation, true)
 			}
+			if capability == agents.ImageTagRegistriesCapability {
+				_ = s.agents.ImageTagRegistries(host, generation, true)
+			}
 			if capability == agents.ImageTagsCapability {
 				_ = s.agents.ImageTags(host, generation, true)
 			}

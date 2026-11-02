@@ -18,13 +18,21 @@ const gitlabOld = "gitlab/gitlab-ce:19.5.1-ce.0"
 const gitlabNext = "gitlab/gitlab-ce:19.5.3-ce.0"
 
 type imageProposalExecutor struct {
+	oldRef, newRef       string
 	override, sideEffect bool
 	calls                []string
 }
 
 func (x *imageProposalExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
 	x.calls = append(x.calls, strings.Join(args, " "))
-	ref := gitlabOld
+	ref := x.oldRef
+	if ref == "" {
+		ref = gitlabOld
+	}
+	next := x.newRef
+	if next == "" {
+		next = gitlabNext
+	}
 	candidate := false
 	for _, arg := range args {
 		if strings.Contains(arg, ".reef-image-candidate-") {
@@ -33,8 +41,8 @@ func (x *imageProposalExecutor) Run(ctx context.Context, p Project, args []strin
 			if e != nil {
 				return e
 			}
-			if strings.Contains(string(raw), gitlabNext) && !x.override {
-				ref = gitlabNext
+			if strings.Contains(string(raw), next) && !x.override {
+				ref = next
 			}
 		}
 	}
