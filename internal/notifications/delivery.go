@@ -87,6 +87,12 @@ func (s *Service) SendOne(ctx context.Context, client *http.Client) bool {
 		return false
 	}
 	item := s.data.Pending[0]
+	if !s.data.Config.accepts(item.Event) {
+		s.data.Pending = s.data.Pending[1:]
+		_ = s.saveLocked()
+		s.mu.Unlock()
+		return true
+	}
 	if time.Since(item.Event.Time) > 24*time.Hour {
 		s.data.Pending = s.data.Pending[1:]
 		s.data.Dropped++

@@ -11,9 +11,10 @@ import (
 )
 
 type Config struct {
-	Enabled bool   `json:"enabled"`
-	Format  string `json:"format"`
-	URL     string `json:"url"`
+	Categories []string `json:"categories"`
+	Enabled    bool     `json:"enabled"`
+	Format     string   `json:"format"`
+	URL        string   `json:"url"`
 }
 type pending struct {
 	Event    Event     `json:"event"`
@@ -33,16 +34,18 @@ type disk struct {
 	After       time.Time `json:"after"`
 }
 type View struct {
-	Enabled          bool      `json:"enabled"`
-	Format           string    `json:"format"`
-	Configured       bool      `json:"configured"`
-	Destination      string    `json:"destination"`
-	Pending          int       `json:"pending"`
-	Sent             uint64    `json:"sent"`
-	Dropped          uint64    `json:"dropped"`
-	LastSuccess      time.Time `json:"last_success"`
-	LastError        string    `json:"last_error"`
-	PersistenceError bool      `json:"persistence_error"`
+	Categories       []string   `json:"categories"`
+	CategoryOptions  []Category `json:"category_options"`
+	Enabled          bool       `json:"enabled"`
+	Format           string     `json:"format"`
+	Configured       bool       `json:"configured"`
+	Destination      string     `json:"destination"`
+	Pending          int        `json:"pending"`
+	Sent             uint64     `json:"sent"`
+	Dropped          uint64     `json:"dropped"`
+	LastSuccess      time.Time  `json:"last_success"`
+	LastError        string     `json:"last_error"`
+	PersistenceError bool       `json:"persistence_error"`
 }
 type Service struct {
 	mu               sync.Mutex
@@ -91,6 +94,11 @@ func Open(state string, relay bool) (*Service, error) {
 	if json.Unmarshal(b, &s.data) != nil || s.data.Version != 1 || len(s.data.Pending) > MaxPending || len(s.data.Seen) > 4096 {
 		return nil, errors.New("Invalid notification state")
 	}
+	selected, categoryErr := normalizeCategories(s.data.Config.Categories)
+	if categoryErr != nil {
+		return nil, categoryErr
+	}
+	s.data.Config.Categories = selected
 	if s.data.Config.Enabled || s.data.Config.URL != "" {
 		if _, err = validate(s.data.Config); err != nil {
 			return nil, err
@@ -147,7 +155,7 @@ func (s *Service) View() View {
 	if u != nil {
 		destination = u.Host
 	}
-	return View{Enabled: s.data.Config.Enabled, Format: s.data.Config.Format, Configured: s.data.Config.URL != "", Destination: destination, Pending: len(s.data.Pending), Sent: s.data.Sent, Dropped: s.data.Dropped, LastSuccess: s.data.LastSuccess, LastError: s.data.LastError, PersistenceError: s.persistenceError}
+	return View{Categories: effectiveCategories(s.data.Config.Categories), CategoryOptions: CategoryOptions(), Enabled: s.data.Config.Enabled, Format: s.data.Config.Format, Configured: s.data.Config.URL != "", Destination: destination, Pending: len(s.data.Pending), Sent: s.data.Sent, Dropped: s.data.Dropped, LastSuccess: s.data.LastSuccess, LastError: s.data.LastError, PersistenceError: s.persistenceError}
 }
 func (s *Service) Configure(c Config, clear bool) error {
 	if !s.Ready() {
@@ -158,6 +166,11 @@ func (s *Service) Configure(c Config, clear bool) error {
 	if s.relay {
 		return errors.New("Webhooks are configured on central Reef only")
 	}
+	categories, err := normalizeCategories(c.Categories)
+	if err != nil {
+		return err
+	}
+	c.Categories = categories
 	if c.URL == "" && !clear {
 		c.URL = s.data.Config.URL
 	}
@@ -169,7 +182,7 @@ func (s *Service) Configure(c Config, clear bool) error {
 	if c.Format != "discord" && c.Format != "json" {
 		return errors.New("Choose Discord or JSON format")
 	}
-	if c == s.data.Config {
+	if c.Enabled == s.data.Config.Enabled && c.Format == s.data.Config.Format && c.URL == s.data.Config.URL && sameCategories(c.Categories, s.data.Config.Categories) {
 		return nil
 	}
 	old := s.data
@@ -201,7 +214,7 @@ func (s *Service) Emit(e Event) {
 	e.Host = Text(e.Host, 200)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.relay && !s.data.Config.Enabled {
+	if !s.relay && (!s.data.Config.Enabled || !s.data.Config.accepts(e)) {
 		return
 	}
 	if len(s.data.Pending) >= MaxPending {
@@ -280,7 +293,7 @@ func (s *Service) accept(host, name string, events []Event, central bool) error 
 		if seen[e.Key()] {
 			continue
 		}
-		if next.Config.Enabled && !e.Time.Before(next.Activated) && time.Since(e.Time) < 24*time.Hour {
+		if next.Config.Enabled && next.Config.accepts(e) && !e.Time.Before(next.Activated) && time.Since(e.Time) < 24*time.Hour {
 			if len(next.Pending) >= MaxPending {
 				return errors.New("Notification queue is full")
 			}

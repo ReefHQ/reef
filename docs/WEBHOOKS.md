@@ -1,7 +1,8 @@
 # Action webhooks
 
 Open **Webhooks** in the navigation. Choose **Discord** or **JSON**, enter the
-incoming webhook URL and enable notifications, then confirm **Save settings**.
+incoming webhook URL, choose your notification categories and enable notifications,
+then confirm **Save settings**.
 Use **Send test** to enqueue a harmless test notification. The status line shows
 waiting, sent and dropped notifications, the last success and a sanitized delivery
 error. Polling refreshes that line without replacing unsaved form fields.
@@ -19,6 +20,42 @@ URLs can contain private tokens: preserve this state with private backups and do
 not publish it. No new environment variables, container mounts or ports are needed.
 Unavailable/corrupt notification state disables notifications without stopping
 Docker control; repair that private state and restart before reconfiguring.
+
+## Notification categories
+
+In Webhooks, tick the categories you want to receive: **Containers, Projects,
+Images, Volumes, Networks, Builds, Agents, Consoles, Schedules, Alerts & monitoring,
+and Webhook settings**. Use **Select all** or **Select none** for a quick starting
+point, then confirm **Save settings**. The selected count updates as you choose.
+Polling refreshes delivery status without replacing your category draft.
+
+Existing installations default to all categories. Selecting all also includes
+future categories added by Reef; a selected subset excludes newly added categories.
+Selecting none pauses automatic webhook notifications while keeping the saved
+destination and enable switch. **Send test** always checks an enabled saved
+destination, regardless of the category selection. Selecting Webhook settings
+controls automatic configuration notifications; it does not suppress a manual test.
+
+Preferences apply instance-wide to Local and remote hosts, for Discord and JSON.
+They filter delivery by event category, including both started and terminal results;
+History retains every action it normally records. Agents continue forwarding their
+metadata for History. Central Reef durably acknowledges/deduplicates excluded
+remote events, so they do not retry or later reappear when categories are enabled.
+Intentional exclusions do not increase the dropped/failure count or fill the queue.
+Changing preferences uses the existing confirmation and discards waiting deliveries;
+an in-flight delivery may already have reached the receiver. Changes apply to new
+events, without replaying historical events.
+
+Selections persist with the existing private notification settings and survive
+restarts. Legacy missing/null categories mean all; an explicit empty list means
+none. Invalid/duplicate/oversized selections are rejected. No new mount, port,
+enrollment or agent capability is needed; upgrade central Reef to0.30.0.
+
+For API clients, GET `/api/webhook` returns selected `categories` and labeled
+`category_options`. POST save uses `categories_present=yes` and repeated
+`categories=project&categories=image` fields. The flag with no category values
+means none; omitting it preserves the saved selection, including for older clients
+or webhook removal. Existing origin/CSRF and global-admin restrictions apply.
 
 ## Events
 

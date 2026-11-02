@@ -175,6 +175,7 @@
   <label class="webhook-toggle"><input id="webhook-enabled" type="checkbox"> Enable action notifications</label>
   <div class="form-field"><label for="webhook-format">Format</label><select id="webhook-format"><option value="discord">Discord</option><option value="json">JSON</option></select></div>
   <div class="form-field"><label for="webhook-url">Webhook URL</label><input id="webhook-url" type="password" maxlength="2048" placeholder="https://…" autocomplete="new-password" spellcheck="false" aria-describedby="webhook-destination"><p id="webhook-destination" class="muted small"></p></div>
+  <fieldset class="webhook-category-settings"><legend>Notification categories</legend><p class="muted small">Choose what reaches your webhook, across all hosts. History stays complete.</p><div class="webhook-category-tools"><button id="webhook-categories-all" type="button" class="quiet">Select all</button><button id="webhook-categories-none" type="button" class="quiet">Select none</button></div><div id="webhook-categories" class="webhook-categories" aria-describedby="webhook-category-summary"></div><p id="webhook-category-summary" class="muted small" role="status">Loading categories…</p></fieldset>
   <div class="dialog-actions"><button id="webhook-remove" type="button" class="danger" disabled>Remove webhook</button><button id="webhook-test" type="button" disabled>Send test</button><button id="webhook-save" type="submit" class="primary">Save settings</button></div>
  </form>
  <p id="webhook-status" class="muted small" role="status">Loading webhook settings…</p>

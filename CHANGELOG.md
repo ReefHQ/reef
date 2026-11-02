@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.29.0 — Unreleased
+## 0.30.0 — Unreleased
+
+- Choose webhook notification categories for Discord and JSON, with Select all / Select none and persistent central preferences. Existing installations keep all categories enabled.
+- Filter Local/remote delivery while retaining complete History and remote acknowledgements; excluded events do not count as delivery failures. Explicit Send test remains available independently of category choices.
+- Preserve category drafts during polling, reject invalid selections and keep saved preferences when an older API client omits the category fields.
+
+## 0.29.0 — 2026-11-02
 
 - Present Discord webhook events as status-colored cards with friendly action titles, host/target fields, batch results, operation references and native timestamps. Distinguish alert incidents and recovery; add the same shared presentation block to generic JSON while preserving existing schema/event fields and delivery behavior.
 

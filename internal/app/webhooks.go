@@ -55,7 +55,11 @@ func (s *Server) webhookSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Form.Get("action") {
 	case "save":
-		if err := s.webhooks.Configure(notifications.Config{Enabled: r.Form.Get("enabled") == "true", Format: r.Form.Get("format"), URL: r.Form.Get("url")}, r.Form.Get("clear") == "yes"); err != nil {
+		categories := s.webhooks.View().Categories
+		if r.Form.Get("categories_present") == "yes" {
+			categories = append([]string{}, r.PostForm["categories"]...)
+		}
+		if err := s.webhooks.Configure(notifications.Config{Categories: categories, Enabled: r.Form.Get("enabled") == "true", Format: r.Form.Get("format"), URL: r.Form.Get("url")}, r.Form.Get("clear") == "yes"); err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
