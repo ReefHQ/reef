@@ -230,7 +230,7 @@ func (m *Manager) beginOptions(id, action, rev, content string, opts BuildOption
 		return errors.New("unknown project")
 	}
 	switch action {
-	case "save", "apply", "start", "stop", "build":
+	case "save", "apply", "start", "stop", "restart", "build":
 	default:
 		return errors.New("action not allowed")
 	}
@@ -248,6 +248,9 @@ func (m *Manager) beginOptions(id, action, rev, content string, opts BuildOption
 	defer p.mu.Unlock()
 	if p.busy || p.ImageUpdates.Checking {
 		return errors.New("an operation is already running")
+	}
+	if action == "restart" && p.Op.NeedsStart {
+		return errors.New("Use Start / retry to recover this project before restarting existing containers")
 	}
 	current, e := revision(p.Project)
 	if e != nil {
@@ -506,6 +509,15 @@ func (m *Manager) work(p *Managed, action, rev, content string) {
 		}
 		if e = sameRevision(p.Project, rev); e != nil {
 			return e
+		}
+		if action == "restart" {
+			if e = m.update(p, func(o *Operation) { o.NeedsStart = true }); e != nil {
+				return e
+			}
+			if e = m.run(ctx, p, w, "", "restart"); e != nil {
+				return e
+			}
+			return m.update(p, func(o *Operation) { o.NeedsStart = false })
 		}
 		if action == "stop" {
 			if e = m.update(p, func(o *Operation) { o.NeedsStart = true }); e != nil {

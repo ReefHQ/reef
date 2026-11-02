@@ -213,3 +213,12 @@ Registry credentials and network/token-origin policy are evaluated by the owning
 host, using its Docker HOME and optional agent config, independently of central
 Reef. Classified registry errors are returned as bounded optional relay metadata;
 no credential or token is carried through the relay.
+
+## Project restart (v0.28.0)
+
+`project-restart-v1` is negotiated independently of `control-v1`, never inferred
+from a version string, and resets on reconnect/control disable. Central rejects
+remote `/api/action` restart requests before dispatch when it is missing; both
+central and backend require explicit confirmation, normal write/host permissions
+and CSRF/origin checks. No fallback to Local. New agents use the existing command
+route, operation persistence, project locks and metadata-only project restart events.

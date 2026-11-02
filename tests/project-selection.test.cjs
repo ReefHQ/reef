@@ -51,3 +51,19 @@ test('closing the tag browser while a draft request is pending discards its resp
  const p=imageUpdatePage();let alive=true,resolve;p.context.window.ReefImageTags={isCurrent:()=>alive,close(){alive=false}};p.context.tagRequest=()=>new Promise(r=>resolve=r);vm.runInContext('request=()=>tagRequest()',p.context);
  const pending=p.context.window.ReefPrepareImageVersion('web',{id:'p1',host:'remote-one',service:'web',image:'example/web:1.0',candidate:'example/web:2.0',revision:'rev1'});for(let i=0;i<10;i++)await Promise.resolve();alive=false;resolve({json:async()=>({content:'late draft',revision:'rev1'})});await pending;assert.equal(vm.runInContext('dirty',p.context),false);assert.notEqual(p.nodes.get('#editor').value,'late draft');
 });
+function restartPage(){const p=imageUpdatePage();vm.runInContext("window.reefCapabilities.push('project-restart-v1');projects[0].image_updates={};",p.context);return p;}
+test('Restart project confirms downtime and sends the exact saved revision, host and CSRF',async()=>{
+ const p=restartPage();await vm.runInContext("runAction('restart')",p.context);assert.equal(p.context.confirmations.length,1);assert.match(p.context.confirmations[0],/Restart Media on Remote one/);assert.match(p.context.confirmations[0],/including stopped containers.*Downtime/);assert.equal(p.context.calls.length,1);const call=p.context.calls[0];assert.equal(call.host,'remote-one');assert.equal(call.path,'/api/action');for(const [key,value] of Object.entries({action:'restart',id:'p1',revision:'rev1',csrf:'fixture-csrf',confirmed:'yes'}))assert.equal(call.options.body.get(key),value);assert.equal(p.nodes.get('#editor').value,'unsaved compose');
+});
+test('restart cancellation and changed host, revision, draft, permissions or capability never dispatch',async()=>{
+ for(const change of ["dirty=true","revision='new-revision'","selected='other'","editorEpoch++","projects[0].busy=true","projects[0].image_updates.checking=true","projects[0].operation.needs_start=true","window.reefCapabilities=['control-v1']","window.reefAccess={canWrite:false}"]){const p=restartPage();p.context.actionConfirm=async()=>{vm.runInContext(change,p.context);return true};await vm.runInContext("runAction('restart')",p.context);assert.equal(p.context.calls.length,0,change)}
+ const cancelled=restartPage();cancelled.context.actionConfirm=async()=>false;await vm.runInContext("runAction('restart')",cancelled.context);assert.equal(cancelled.context.calls.length,0);
+ for(const change of ["dirty=true","window.reefCapabilities=['control-v1']","projects[0].operation.needs_start=true"]){const p=restartPage();vm.runInContext(change,p.context);await vm.runInContext("runAction('restart')",p.context);assert.equal(p.context.calls.length,0);assert.equal(p.context.confirmations.length,0)}
+});
+test('Restart project menu explains old-agent and recovery blocks and shares project operation locks',()=>{
+ const p=restartPage(),button=p.nodes.get('[data-action="restart"]');button.dataset.action='restart';p.context.document.querySelectorAll=selector=>selector==='[data-action]'?[button]:[];
+ vm.runInContext('controls()',p.context);assert.equal(button.disabled,false);
+ vm.runInContext("window.reefCapabilities=['control-v1'];controls()",p.context);assert.equal(button.disabled,true);assert.match(button.title,/0.28.0/);
+ vm.runInContext("window.reefCapabilities.push('project-restart-v1');projects[0].operation.needs_start=true;controls()",p.context);assert.equal(button.disabled,true);assert.match(button.title,/Start \/ retry/);
+ vm.runInContext("projects[0].operation.needs_start=false;dirty=true;controls()",p.context);assert.equal(button.disabled,true);
+});

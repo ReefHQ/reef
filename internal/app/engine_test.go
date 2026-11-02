@@ -30,7 +30,7 @@ type fakeExecutor struct {
 func (f *fakeExecutor) Run(ctx context.Context, p Project, args []string, w io.Writer) error {
 	cmd := ""
 	for i, a := range args {
-		if a == "config" || a == "pull" || a == "down" || a == "up" {
+		if a == "config" || a == "pull" || a == "down" || a == "up" || a == "restart" {
 			cmd = strings.Join(args[i:], " ")
 			break
 		}
@@ -196,7 +196,7 @@ func TestLockObsoleteAndExternalChange(t *testing.T) {
 		t.Fatal(e)
 	}
 	<-f.entered
-	for _, action := range []string{"save", "start", "stop", "apply"} {
+	for _, action := range []string{"save", "start", "stop", "restart", "apply"} {
 		if e := m.begin(p.ID, action, rev, "services: {}\n"); e == nil {
 			t.Fatal("concurrent operation accepted")
 		}

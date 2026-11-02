@@ -18,7 +18,7 @@ var actions = map[string]string{
 	"container": " start stop restart update remove ",
 	"schedule":  " configure remove run ",
 	"monitor":   " disconnected unhealthy restart_loop ",
-	"project":   " save apply start stop register unmanage ",
+	"project":   " save apply start stop restart register unmanage ",
 	"image":     " pull tag untag remove cleanup check ",
 	"network":   " create remove cleanup connect disconnect ",
 	"volume":    " create remove cleanup backup restore backup_delete ",

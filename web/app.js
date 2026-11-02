@@ -6,6 +6,7 @@ let pendingEdits=new Map();
 let editorHost='local',editorEpoch=0,pollTimer=null,pollController=null;
 const hostEditors=new Map();
 function canManageHost(){return !window.reefHost||window.reefHost==='local'||window.reefCapabilities?.includes('control-v1');}
+function canRestartProject(){return canManageHost()&&(!window.reefHost||window.reefHost==='local'||window.reefCapabilities?.includes('project-restart-v1'));}
 function saveHostEditor(){hostEditors.set(editorHost,{projects,selected,revision,dirty,loading:false,loaded,inFlight:false,lastOp,openedLog,pendingEdits,content:$('#editor').value});}
 window.addEventListener('reef-host-changed',event=>{
  saveHostEditor();editorEpoch++;editorHost=event.detail.id;pollController?.abort();clearTimeout(pollTimer);
@@ -25,7 +26,8 @@ function replaceKeepingFocus(parent,nodes){const key=parent.contains(document.ac
 function controls(){
  const p=current(),busy=!canManageHost()||!p||p.busy||pendingEdits.has(selected)||loading||inFlight||!loaded;
  $('#editor').disabled=busy;$('#editor').readOnly=window.reefAccess?.canWrite===false;
- document.querySelectorAll('[data-action]').forEach(button=>button.disabled=window.reefAccess?.canWrite===false||busy||p?.image_updates?.checking||(dirty&&['start','stop'].includes(button.dataset.action)));
+ document.querySelectorAll('[data-action]').forEach(button=>button.disabled=window.reefAccess?.canWrite===false||busy||p?.image_updates?.checking||(dirty&&['start','stop','restart'].includes(button.dataset.action))||(button.dataset.action==='restart'&&(!canRestartProject()||!!p?.operation?.needs_start)));
+ const restart=document.querySelector('[data-action="restart"]');restart.title=!canRestartProject()?'Upgrade the agent to 0.28.0 or later to restart projects':p?.operation?.needs_start?'Use Start / retry to recover this project first':'Restart existing project containers; expect downtime';
  $('#reload').disabled=!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
  $('#unmanage-current').disabled=window.reefAccess?.canWrite===false||!p||!!p.busy||p.image_updates?.checking||pendingEdits.has(selected)||loading||inFlight;
  $('#edit-state').textContent=p?.busy||inFlight||pendingEdits.has(selected)?'Operation in progress':loading?'Loading file…':!loaded?'File unavailable':dirty?'Unsaved changes':'Saved';
@@ -66,7 +68,7 @@ function render(){
  $('#phase').textContent=status;$('#phase').className='tag'+(['Failed','Interrupted'].includes(status)?' failed':'');
  $('#operation-result').textContent=op.result||(op.running?'Running on the server. You can close this tab.':'No operations yet.');
  const steps=ReefUI.operationSteps(op);$('#steps').replaceChildren(...steps.map(step=>{const item=textNode('li',step.label,step.state);item.setAttribute('aria-label',`${step.label}: ${step.state}`);if(step.state==='active')item.setAttribute('aria-current','step');return item;}));
- $('#operation-time').textContent=op.id?`${op.action==='apply'?'Update':op.action==='save'?'Save':op.action==='start'?'Start':op.action==='build'?'Build':'Stop'} · ${new Date(op.started).toLocaleString('en-GB')}${op.running?' · continues on the server':''}`:'';
+ $('#operation-time').textContent=op.id?`${op.action==='apply'?'Update':op.action==='save'?'Save':op.action==='start'?'Start':op.action==='build'?'Build':op.action==='restart'?'Restart':'Stop'} · ${new Date(op.started).toLocaleString('en-GB')}${op.running?' · continues on the server':''}`:'';
  $('#needs-start').hidden=!op.needs_start;$('#operation-next').hidden=!['failed','interrupted'].includes(op.phase)||op.needs_start;$('#operation-next').textContent='Review the error and command log, then retry. Reload the file first if it changed outside Reef.';
  const log=op.log||'Operation logs will appear here.';if($('#logs').textContent!==log){const pre=$('#logs'),follow=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30;pre.textContent=log;if(follow)pre.scrollTop=pre.scrollHeight;}
  if(['failed','interrupted'].includes(op.phase)&&openedLog!==op.id){$('#operation-log').open=true;openedLog=op.id;}else if(op.id&&openedLog!==op.id){$('#operation-log').open=false;openedLog=op.id;}
@@ -88,14 +90,16 @@ document.addEventListener('click',event=>{if(!event.target.closest('.project-too
 $('#editor').addEventListener('input',()=>{dirty=true;controls();});
 $('#reload').addEventListener('click',async()=>{const epoch=editorEpoch;if(!dirty||await ask('Reload the file and discard your unsaved changes?')){if(epoch!==editorEpoch)return;message('');await loadDocument();}});
 async function runAction(action,{imageUpdate=false}={}){
- const epoch=editorEpoch,host=editorHost,p=current();if(window.reefAccess?.canWrite===false||!canManageHost()||!p||p.busy||p.image_updates?.checking||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
+ const epoch=editorEpoch,host=editorHost,p=current(),savedRevision=revision;if(window.reefAccess?.canWrite===false||!canManageHost()||!p||p.busy||p.image_updates?.checking||pendingEdits.has(p.id)||inFlight||loading||!loaded)return;
  if(imageUpdate&&!window.ReefCanApplyImageUpdate?.())return;
- if(['start','stop'].includes(action)&&dirty)return;
+ if(['start','stop','restart'].includes(action)&&dirty)return;
+ if(action==='restart'&&(!canRestartProject()||p.operation.needs_start))return;
+ if(action==='restart'&&!await ask(`Restart ${p.name} on ${window.reefHostName||'Local'}? Reef will restart existing project containers, including stopped containers. Downtime is expected. This does not pull images, recreate containers or apply Compose changes.`))return;
  if(['apply','stop'].includes(action)&&!await ask(action==='apply'?`Apply update to ${p.name} on ${window.reefHostName||'Local'}? Reef will validate and save, pull images, then stop and recreate this project. Downtime is expected. Replaced images will be removed only if untagged, unused and the updated containers are running (and healthy when a healthcheck exists).`:`Stop ${p.name} on ${window.reefHostName||'Local'}? Reef will run Compose down without deleting named volumes.`))return;
- if(epoch!==editorEpoch||current()?.id!==p.id||current()?.busy||current()?.image_updates?.checking||inFlight||loading||!loaded||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false||(imageUpdate&&!window.ReefCanApplyImageUpdate?.()))return;
+ if(epoch!==editorEpoch||current()?.id!==p.id||revision!==savedRevision||(['start','stop','restart'].includes(action)&&dirty)||(action==='restart'&&(!canRestartProject()||current()?.operation?.needs_start))||current()?.busy||current()?.image_updates?.checking||inFlight||loading||!loaded||pendingEdits.has(p.id)||window.reefAccess?.canWrite===false||(imageUpdate&&!window.ReefCanApplyImageUpdate?.()))return;
  inFlight=true;controls();message('');
  const submitted={content:$('#editor').value,revision,dirty,previousOpID:p.operation.id};
- try{await request('/api/action',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,id:p.id,action,revision,content:$('#editor').value})},host);if(epoch!==editorEpoch){const cached=hostEditors.get(host);if(cached){cached.loaded=false;cached.inFlight=false;if(['save','apply'].includes(action))cached.pendingEdits.set(p.id,submitted);}return;}if(['save','apply'].includes(action))pendingEdits.set(p.id,submitted);else loaded=false;p.busy=true;message('Operation started. It will continue if you close this tab.');document.querySelector('.project-tools').open=false;}
+ try{await request('/api/action',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,id:p.id,action,revision,confirmed:action==='restart'?'yes':'',content:$('#editor').value})},host);if(epoch!==editorEpoch){const cached=hostEditors.get(host);if(cached){cached.loaded=false;cached.inFlight=false;if(['save','apply'].includes(action))cached.pendingEdits.set(p.id,submitted);}return;}if(['save','apply'].includes(action))pendingEdits.set(p.id,submitted);else loaded=false;p.busy=true;message('Operation started. It will continue if you close this tab.');document.querySelector('.project-tools').open=false;}
  catch(error){if(epoch===editorEpoch)message(error.message,true);}finally{if(epoch===editorEpoch){inFlight=false;controls();}}
 }
 document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>runAction(button.dataset.action)));

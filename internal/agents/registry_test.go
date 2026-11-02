@@ -549,3 +549,37 @@ func TestAdditionalTagRegistryCapabilityRequiresNegotiation(t *testing.T) {
 		t.Fatal("Registry capability retained across reconnect")
 	}
 }
+
+func TestProjectRestartRequiresNegotiationAndResetsOnReconnect(t *testing.T) {
+	r, e := Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	id, key := enrolled(t, r, "restart host")
+	g, e := r.Begin(id, key, "0.28.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	if r.CanProjectRestart(id) {
+		t.Fatal("Project restart capability inferred from version")
+	}
+	r.ProjectRestart(id, g, true)
+	if !r.CanProjectRestart(id) {
+		t.Fatal("Negotiated restart capability missing")
+	}
+	r.Control(id, g, false)
+	r.Control(id, g, true)
+	if r.CanProjectRestart(id) {
+		t.Fatal("Restart capability retained after disabling control")
+	}
+	r.ProjectRestart(id, g, true)
+	g, e = r.Begin(id, key, "0.28.0", Protocol)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Control(id, g, true)
+	if r.CanProjectRestart(id) {
+		t.Fatal("Project restart capability retained across reconnect")
+	}
+}

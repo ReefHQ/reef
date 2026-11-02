@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.27.0 — Unreleased
+## 0.28.0 — Unreleased
+
+- Add Restart project to More actions, with host/project confirmation and downtime notice; run Compose restart on existing containers without pulling images, recreating containers or saving a draft.
+- Preserve revision checks, operation locks, recovery guidance, progress and History/webhook events for restarts. Require negotiated project-restart-v1 on remote agents (0.28.0+).
+
+## 0.27.0 — 2026-11-02
 
 - Treat missing image tags as implicit latest when browsing and preparing tag changes; preserve the full repository and leave the saved Compose file untouched.
 - Browse public lscr.io/linuxserver tags with scoped anonymous GHCR access, bounded cursor pagination/search and unchanged LSCR image references.

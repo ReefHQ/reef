@@ -24,7 +24,7 @@ Docker control; repair that private state and restart before reconfiguring.
 
 Reef sends action metadata and outcomes for:
 
-- Managed projects: save, apply, start, stop, registration and stop managing.
+- Managed projects: save, apply, start, restart, stop, registration and stop managing.
 - Images: pull, tag/untag, removal/cleanup and manual/automatic update checks.
 - Volumes: creation, removal and cleanup.
 - Builds: saved project builds and default-builder cache cleanup.
