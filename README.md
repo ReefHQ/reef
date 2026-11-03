@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.31.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**In development: 0.32.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -17,6 +17,22 @@ no database and no CDN.
 > [Accounts and upgrade details](docs/USERS.md#upgrade-an-existing-installation)
 
 ## 🚀 Get your feet wet
+
+**Install the published image, without cloning Reef.** Public distribution uses
+GitHub Container Registry: `ghcr.io/reefhq/reef` and `ghcr.io/reefhq/reef-agent`,
+for Linux **amd64 and arm64**. Choose an explicit release for installations;
+`latest` follows published stable versions. GitHub Actions builds and publishes
+these images when a version tag reaches the public mirror.
+
+> **First public release: 0.32.0, pending publication.** The commands in the
+> [image installation guide](docs/CONTAINER_IMAGES.md) become usable after the
+> tag is mirrored and both GHCR packages are public. Existing GitLab delivery
+> continues independently.
+
+The guide covers the two-file Compose setup, initial password, LAN access,
+upgrades and agents. No registry login is needed for public images.
+
+**Prefer running from the source checkout?**
 
 From the Reef checkout, with a running local Linux Docker engine, Docker CLI,
 Compose v2 and Buildx:
@@ -198,6 +214,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Local startup, LAN access and Docker contexts | [Local setup](docs/LOCAL_SETUP.md) |
 | Everyday actions, limits and recovery | [Usage guide](docs/USER_GUIDE.md) |
 | Config fields, mounts and manual installation | [Configuration](docs/CONFIGURATION.md) |
+| Public images and installation without cloning | [Container images](docs/CONTAINER_IMAGES.md) |
 | Server installation and versioned CI delivery | [Deployment](docs/DEPLOYMENT.md) |
 | User accounts, host permissions and access recovery | [Accounts](docs/USERS.md) |
 | Timed checks, backups and cleanup policies | [Schedules](docs/SCHEDULES.md) |

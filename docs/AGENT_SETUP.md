@@ -1,5 +1,12 @@
 # Docker host agents
 
+Public agent images are introduced in 0.32.0 on
+`ghcr.io/reefhq/reef-agent` (first publication pending). New preparations use
+GHCR; existing GitLab installations retain their registry. See
+[public images and registry migration](CONTAINER_IMAGES.md#agents-and-their-updates)
+before switching an existing updater. Historical version examples below use the
+GitLab registry where those earlier releases were published.
+
 Upgraded agents provide container inventory, stdout/stderr logs, consoles, project
 registration, Compose editing/actions and image checks/cleanup. The central Reef
 owns browser authentication and the UI. Every filesystem access and Docker action

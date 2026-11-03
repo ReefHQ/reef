@@ -13,6 +13,7 @@ import (
 )
 
 const Repository = "registry.gitlab.renaudbaivier.com/reef/reef/agent"
+const PublicRepository = "ghcr.io/reefhq/reef-agent"
 
 var stable = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 var revision = regexp.MustCompile(`^[0-9a-f]{40}$`)

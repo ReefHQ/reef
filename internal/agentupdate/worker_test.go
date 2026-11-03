@@ -16,6 +16,7 @@ type workerFixture struct {
 	o                                                               Operation
 	commands                                                        []string
 	env                                                             []byte
+	repository                                                      string
 	pullFail, wrongRevision, wrongVolume, changeConfig, noReconnect bool
 	recreated                                                       bool
 }
@@ -39,6 +40,7 @@ func newWorkerFixture(t *testing.T) *workerFixture {
 		t.Fatal(err)
 	}
 	f := &workerFixture{env: env, o: Operation{ID: strings.Repeat("a", 48), FromVersion: "0.10.0", Version: "0.11.0", Revision: strings.Repeat("b", 40), Started: time.Now(), Phase: "queued"}}
+	f.repository = Repository
 	f.w = &Worker{Store: store, Installation: installation}
 	f.w.Run = func(ctx context.Context, args []string) ([]byte, error) {
 		command := strings.Join(args, " ")
@@ -46,7 +48,7 @@ func newWorkerFixture(t *testing.T) *workerFixture {
 		marshal := func(v any) ([]byte, error) { return json.Marshal(v) }
 		switch {
 		case args[0] == "compose" && strings.Contains(command, " config "):
-			return marshal(map[string]any{"name": "existing-agent", "services": map[string]any{"reef-agent": map[string]any{"image": Repository + ":v0.10.0", "volumes": []map[string]string{{"type": "volume", "source": "agent-state", "target": "/var/lib/reef-agent"}}}}, "volumes": map[string]any{"agent-state": map[string]string{"name": "existing-agent_agent-state"}}})
+			return marshal(map[string]any{"name": "existing-agent", "services": map[string]any{"reef-agent": map[string]any{"image": f.repository + ":v0.10.0", "volumes": []map[string]string{{"type": "volume", "source": "agent-state", "target": "/var/lib/reef-agent"}}}}, "volumes": map[string]any{"agent-state": map[string]string{"name": "existing-agent_agent-state"}}})
 		case args[0] == "compose" && strings.Contains(command, " ps "):
 			return []byte(strings.Repeat("c", 64)), nil
 		case args[0] == "container":
@@ -88,6 +90,35 @@ func newWorkerFixture(t *testing.T) *workerFixture {
 		}
 	}
 	return f
+}
+func TestUpdatesKeepTheInstalledRegistry(t *testing.T) {
+	for _, repository := range []string{Repository, PublicRepository, "ghcr.io/untrusted/reef-agent", PublicRepository + ".evil", PublicRepository + ":latest"} {
+		t.Run(repository, func(t *testing.T) {
+			f := newWorkerFixture(t)
+			f.repository = repository
+			f.env = []byte(strings.ReplaceAll(string(f.env), Repository, repository))
+			if err := os.WriteFile(filepath.Join(f.w.Installation, ".env"), f.env, 0600); err != nil {
+				t.Fatal(err)
+			}
+			err := f.w.execute(context.Background(), &f.o)
+			if repository != Repository && repository != PublicRepository {
+				if err == nil || len(f.commands) != 0 {
+					t.Fatal("Untrusted registry reached Docker", err, f.commands)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(strings.Join(f.commands, "\n"), "pull "+repository+":v0.11.0\n") {
+				t.Fatal(f.commands)
+			}
+			env, err := os.ReadFile(filepath.Join(f.w.Installation, ".env"))
+			if err != nil || string(env) != strings.Replace(string(f.env), ":v0.10.0", ":v0.11.0", 1) {
+				t.Fatal("Repository or private settings changed", err)
+			}
+		})
+	}
 }
 func TestUpdatePreservesIdentityAndSettingsAndWaitsForExactReconnect(t *testing.T) {
 	f := newWorkerFixture(t)

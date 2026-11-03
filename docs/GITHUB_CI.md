@@ -18,7 +18,11 @@ there, and let the audited mirror publish them to GitHub.
 
 GitHub schedules can be delayed by its runners and require the workflow on the
 default branch. The default branch of the public Reef mirror is `master`.
-Application tests and versioned delivery continue through GitLab's existing jobs.
+Application tests and production delivery continue through GitLab's existing jobs.
+The separate **Publish public container images** workflow builds GHCR images on
+mirrored stable version tags with its automatic package token; see
+[container image publication](CONTAINER_IMAGES.md#publication-through-github-actions-maintainers).
+It requires no personal token in GitLab and does not deploy production.
 
 ## Read the results
 
@@ -69,7 +73,7 @@ and downloads its verified release from the upstream project.
 Validate workflow syntax locally with [actionlint](https://github.com/rhysd/actionlint):
 
 ```sh
-actionlint .github/workflows/plumber.yml
+actionlint .github/workflows/*.yml
 ```
 
 The mirror regression suite checks that this public workflow survives the same

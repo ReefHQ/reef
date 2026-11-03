@@ -208,7 +208,8 @@ func (w *Worker) execute(ctx context.Context, o *Operation) error {
 	if err != nil {
 		return err
 	}
-	if old != Repository+":v"+o.FromVersion {
+	repository := strings.TrimSuffix(old, ":v"+o.FromVersion)
+	if (repository != Repository && repository != PublicRepository) || old != repository+":v"+o.FromVersion {
 		return errors.New("Agent image differs from the running version; review the installation manually")
 	}
 	project, err := envValue(env, "COMPOSE_PROJECT_NAME")
@@ -263,7 +264,7 @@ func (w *Worker) execute(ctx context.Context, o *Operation) error {
 	if err = w.phase(o, "pulling", "Downloading and checking the matching agent image."); err != nil {
 		return err
 	}
-	target := Repository + ":v" + o.Version
+	target := repository + ":v" + o.Version
 	if _, err = w.Run(ctx, []string{"pull", target}); err != nil {
 		return errors.New("Agent image download failed; the existing agent was preserved. Check registry access on this host.")
 	}

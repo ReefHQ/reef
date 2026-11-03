@@ -1,0 +1,44 @@
+# Prepared by prepare-installation.sh in a dedicated reef directory.
+name: reef
+services:
+  reef:
+    image: ghcr.io/reefhq/reef:${REEF_VERSION:?Run prepare-installation.sh}
+    restart: unless-stopped
+    stop_grace_period: 46m
+    labels:
+      io.reef.instance: 'true'
+      traefik.enable: 'false'
+    ports:
+      - '${REEF_BIND_ADDRESS:-127.0.0.1}:${REEF_PORT:-8099}:8099'
+    environment:
+      QCU_PASSWORD_FILE: /run/secrets/reef_password
+      REEF_INSTALLATION_DIR: ${REEF_INSTALLATION_DIR:?Run prepare-installation.sh}
+    secrets: [reef_password]
+    volumes:
+      - type: bind
+        source: ${REEF_PROJECT_ROOT:?Run prepare-installation.sh}
+        target: ${REEF_PROJECT_ROOT}
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./state
+        target: /var/lib/reef
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./config.json
+        target: /etc/reef/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ['no-new-privileges:true']
+secrets:
+  reef_password:
+    file: ./secrets/password.txt

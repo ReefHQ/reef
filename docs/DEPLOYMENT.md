@@ -1,5 +1,10 @@
 # Versioned Reef delivery
 
+For installation from a public prebuilt image without cloning or a private
+registry login, see [Container images](CONTAINER_IMAGES.md). Public GHCR images are built
+and published separately by GitHub Actions on mirrored version tags; the GitLab
+production workflow below remains. No GHCR token is needed in GitLab.
+
 Prepared on `ci/tagged-deployment`. The selected target is the same server as
 the recent applications, in a folder named `reef`, accessed over the LAN without
 an external URL. Canonical paths are derived on that server from the installation folder;

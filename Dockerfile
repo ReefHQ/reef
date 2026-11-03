@@ -18,15 +18,22 @@ FROM ${DOCKER_IMAGE} AS agent
 ARG APP_REVISION=unknown
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.revision="${APP_REVISION}" \
-      org.opencontainers.image.version="${APP_VERSION}"
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.source="https://github.com/ReefHQ/reef" \
+      org.opencontainers.image.licenses="GPL-3.0-only"
+COPY LICENSE /usr/share/licenses/reef/LICENSE
 COPY --from=build /reef-agent /usr/local/bin/reef-agent
 ENTRYPOINT ["/usr/local/bin/reef-agent"]
 
 # This image includes the Docker client and Compose plugin; no daemon.
 FROM ${DOCKER_IMAGE} AS runtime
 ARG APP_REVISION=unknown
+ARG APP_VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/ReefHQ/reef" \
-      org.opencontainers.image.revision="${APP_REVISION}"
+      org.opencontainers.image.revision="${APP_REVISION}" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.licenses="GPL-3.0-only"
+COPY LICENSE /usr/share/licenses/reef/LICENSE
 COPY --from=build /reef /usr/local/bin/reef
 WORKDIR /app
 EXPOSE 8099
