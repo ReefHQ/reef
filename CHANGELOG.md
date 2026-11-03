@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.32.0 — Unreleased
+## 0.32.0 — 2026-11-03
 
 - Build and publish public Reef and agent images on GHCR through GitHub Actions for Linux amd64/arm64, using the automatic GitHub token and version/revision/latest tags; retain independent GitLab production delivery. Preserve original source revisions across the public mirror for agent-update compatibility, without changing older tags.
 - Add a Compose installation without cloning or registry credentials, private idempotent configuration preparation and explicit LAN access.

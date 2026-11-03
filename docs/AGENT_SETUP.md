@@ -1,7 +1,7 @@
 # Docker host agents
 
 Public agent images are introduced in 0.32.0 on
-`ghcr.io/reefhq/reef-agent` (first publication pending). New preparations use
+`ghcr.io/reefhq/reef-agent` (publicly available). New preparations use
 GHCR; existing GitLab installations retain their registry. See
 [public images and registry migration](CONTAINER_IMAGES.md#agents-and-their-updates)
 before switching an existing updater. Historical version examples below use the
