@@ -7,18 +7,31 @@ installation=$(pwd -P)
 [ "$(basename "$installation")" = reef-agent ] || { echo 'Run from the dedicated reef-agent folder.' >&2;exit 1; }
 parent=$(dirname "$installation")
 [ "$parent" != / ] || { echo 'The installation parent cannot be the filesystem root.' >&2;exit 1; }
-version=${1:-v0.31.0}
+version=${1:-v0.32.0}
 updates=${2:-}
 case "$updates" in ''|--enable-updates) ;; *) echo 'Usage: sh prepare-agent.sh VERSION [--enable-updates]' >&2;exit 1;; esac
 if [ "$updates" = --enable-updates ]; then
  [ -f compose.updates.yaml ] && [ ! -L compose.updates.yaml ] || { echo 'Copy compose.updates.yaml into this installation first.' >&2;exit 1; }
  if grep -q '^COMPOSE_FILE=' .env && ! grep -Fxq 'COMPOSE_FILE=compose.yaml:compose.updates.yaml' .env; then echo 'Review the existing COMPOSE_FILE before enabling agent updates.' >&2;exit 1;fi
 fi
-printf '%s\n' "$version" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || { echo 'Pass a published stable version, e.g. v0.31.0.' >&2;exit 1; }
+printf '%s\n' "$version" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || { echo 'Pass a published stable version, e.g. v0.32.0.' >&2;exit 1; }
 if [ "$updates" = --enable-updates ]; then
  printf '%s\n' "$version" | awk -F. '{sub(/^v/,"",$1);if($1==0 && $2<10)exit 1}' || { echo 'Agent updates require v0.10.0 or newer.' >&2;exit 1; }
 fi
+[ -f .env ] && [ ! -L .env ] || { echo 'Existing private .env with REEF_SERVER is required.' >&2;exit 1; }
+repository=${REEF_AGENT_REPOSITORY:-}
+if [ -z "$repository" ]; then
+ current=$(awk '/^REEF_AGENT_IMAGE=/{sub(/^REEF_AGENT_IMAGE=/, "");print;exit}' .env)
+ case "$current" in
+  registry.gitlab.renaudbaivier.com/reef/reef/agent:v*) repository=registry.gitlab.renaudbaivier.com/reef/reef/agent;;
+  ghcr.io/reefhq/reef-agent:v*|'') repository=ghcr.io/reefhq/reef-agent;;
+  *) echo 'Unsupported existing agent image; review its repository manually.' >&2;exit 1;;
+ esac
+fi
+case "$repository" in registry.gitlab.renaudbaivier.com/reef/reef/agent|ghcr.io/reefhq/reef-agent) ;; *) echo 'Unsupported agent repository.' >&2;exit 1;; esac
+umask 077
 docker_config=${DOCKER_CONFIG:-${HOME:?}/.docker}
+if [ ! -d "$docker_config" ] && [ "$repository" = ghcr.io/reefhq/reef-agent ]; then mkdir -p "$docker_config"; fi
 [ -d "$docker_config" ] || { echo 'Run docker login on this host before preparation.' >&2;exit 1; }
 docker_config=$(CDPATH= cd -- "$docker_config" && pwd -P)
 for path in "$installation" "$parent" "$docker_config"; do
@@ -39,20 +52,20 @@ backup=.env.before-remote-parity
 [ -e "$backup" ] || cp -p .env "$backup"
 temporary=$(mktemp .env.agent.XXXXXX)
 cp -p .env "$temporary"
-awk -v version="$version" -v installation="$installation" -v parent="$parent" -v docker_config="$docker_config" -v updates="$updates" '
+awk -v version="$version" -v repository="$repository" -v installation="$installation" -v parent="$parent" -v docker_config="$docker_config" -v updates="$updates" '
  /^REEF_AGENT_UPDATER_IMAGE=/ {seen_updater=1}
  /^COMPOSE_FILE=/ {seen_compose=1}
- /^REEF_AGENT_IMAGE=/ {print "REEF_AGENT_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:" version;seen_image=1;next}
+ /^REEF_AGENT_IMAGE=/ {print "REEF_AGENT_IMAGE=" repository ":" version;seen_image=1;next}
  /^REEF_AGENT_INSTALLATION_DIR=/ {seen_installation=1}
  /^REEF_AGENT_PROJECT_ROOT=/ {seen_parent=1}
  /^REEF_AGENT_DOCKER_CONFIG_DIR=/ {seen_docker=1}
  {print}
  END {
- if(!seen_image)print "REEF_AGENT_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:" version;
+ if(!seen_image)print "REEF_AGENT_IMAGE=" repository ":" version;
  if(!seen_installation)print "REEF_AGENT_INSTALLATION_DIR=" installation;
  if(!seen_parent)print "REEF_AGENT_PROJECT_ROOT=" parent;
  if(!seen_docker)print "REEF_AGENT_DOCKER_CONFIG_DIR=" docker_config;
- if(updates=="--enable-updates"&&!seen_updater)print "REEF_AGENT_UPDATER_IMAGE=registry.gitlab.renaudbaivier.com/reef/reef/agent:" version;
+ if(updates=="--enable-updates"&&!seen_updater)print "REEF_AGENT_UPDATER_IMAGE=" repository ":" version;
  if(updates=="--enable-updates"&&!seen_compose)print "COMPOSE_FILE=compose.yaml:compose.updates.yaml";
  }
 ' .env > "$temporary"

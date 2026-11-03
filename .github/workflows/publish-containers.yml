@@ -1,0 +1,32 @@
+name: Publish public container images
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: public-container-images
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'ReefHQ/reef' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the public release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build and publish both multi-platform images
+        env:
+          REEF_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh scripts/publish-containers.sh
