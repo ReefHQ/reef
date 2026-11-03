@@ -12,10 +12,12 @@ the full source revision and `latest`. Use a version tag for predictable upgrade
 use an image digest if you need an immutable installation reference. `latest`
 does not update a running container by itself.
 
-**First public release: 0.32.0, pending publication.** Wait for the GitHub tag's
-**Publish public container images** workflow and public package visibility
-before using these commands. A GitHub tag alone does not guarantee image readiness.
-Earlier versions were published only in the existing GitLab registry.
+**First public release: 0.32.0, published on November 3, 2026.** Both images
+are accessible anonymously, with Linux amd64/arm64 manifests and matching original
+source revisions verified. The installation commands below are ready to use.
+For future versions, wait for the GitHub publication workflow to succeed; a tag
+alone does not guarantee image readiness. Earlier versions were published only
+in the existing GitLab registry.
 
 ## Install without cloning
 

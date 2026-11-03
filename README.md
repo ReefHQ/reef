@@ -8,7 +8,7 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**In development: 0.32.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**Latest release: 0.32.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -24,10 +24,8 @@ for Linux **amd64 and arm64**. Choose an explicit release for installations;
 `latest` follows published stable versions. GitHub Actions builds and publishes
 these images when a version tag reaches the public mirror.
 
-> **First public release: 0.32.0, pending publication.** The commands in the
-> [image installation guide](docs/CONTAINER_IMAGES.md) become usable after the
-> tag is mirrored and both GHCR packages are public. Existing GitLab delivery
-> continues independently.
+**Ready to install:** Reef **0.32.0** and its agent are publicly available.
+Follow the [image installation guide](docs/CONTAINER_IMAGES.md) to get started.
 
 The guide covers the two-file Compose setup, initial password, LAN access,
 upgrades and agents. No registry login is needed for public images.
