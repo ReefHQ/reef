@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — maintenance
+
+- Prepare self-hosted Renovate schedules for dependency merge requests in GitLab, with a default full dry run, mandatory human merge review and coordinated base/tool/helper/action updates. Cover SHA-pinned GitHub Actions and the Plumber binary together; retain manual maintenance for embedded terminal assets.
+- Validate Renovate configuration and real offline dependency extraction in CI without bot credentials. No application dependency versions or release images are changed by this setup.
+
 ## 0.32.0 — 2026-11-03
 
 - Build and publish public Reef and agent images on GHCR through GitHub Actions for Linux amd64/arm64, using the automatic GitHub token and version/revision/latest tags; retain independent GitLab production delivery. Preserve original source revisions across the public mirror for agent-update compatibility, without changing older tags.

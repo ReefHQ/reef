@@ -8,6 +8,10 @@ and selected repository settings, then produces findings and an A–E score when
 collection is complete. GitLab remains Reef's source of truth: contribute changes
 there, and let the audited mirror publish them to GitHub.
 
+Renovate maintenance is prepared in the source GitLab CI for dependency MRs,
+including these action SHA pins and the matching Plumber binary version. See
+[dependency maintenance](DEPENDENCY_MAINTENANCE.md) for activation and review.
+
 ## When it runs
 
 - Pushes to `master` that change `.github/workflows/**`, `.github/actions/**` or

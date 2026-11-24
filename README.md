@@ -205,6 +205,11 @@ selected metadata, without terminal contents, application logs or credentials.
 - Compose updates can interrupt services. Reef does not automatically roll back
   or replay interrupted operations.
 
+**Keeping Reef itself current.** Dependency maintenance is prepared with Renovate
+for weekly GitLab merge requests, covering base/tool images and pinned GitHub
+actions. Maintainers review proposals before merging.
+[Setup and coverage](docs/DEPENDENCY_MAINTENANCE.md).
+
 ## 📚 Pick your next stop
 
 | Looking for… | Start here |
@@ -219,6 +224,7 @@ selected metadata, without terminal contents, application logs or credentials.
 | Volume archives, retention and restoration | [Volume backups](docs/VOLUME_BACKUPS.md) |
 | Remote hosts and agent upgrades | [Agent setup](docs/AGENT_SETUP.md) |
 | Architecture of remote operations | [Multi-host agents](docs/MULTI_HOST_AGENTS.md) |
+| Dependency updates and bot setup | [Dependency maintenance](docs/DEPENDENCY_MAINTENANCE.md) |
 | Development checks and versioning | [Development](docs/DEVELOPMENT.md) |
 | Public GitHub workflow audits and reports | [Plumber audit](docs/GITHUB_CI.md) |
 | Changes and upcoming work | [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) |
