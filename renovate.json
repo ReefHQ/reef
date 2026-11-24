@@ -1,0 +1,97 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": [
+    "dockerfile",
+    "github-actions",
+    "custom.regex"
+  ],
+  "dependencyDashboard": {
+    "enabled": true,
+    "title": "Dependency maintenance \u2014 Reef"
+  },
+  "timezone": "Europe/Paris",
+  "automerge": false,
+  "platformAutomerge": false,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "pinDigests": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^scripts\\/(?:ci|local|ensure-buildx|renovate)\\.sh$/",
+        "/^internal\\/app\\/(?:volume_backups|[a-z_]+_integration_test)\\.go$/",
+        "/^examples\\/compose\\.install\\.yaml$/"
+      ],
+      "matchStrings": [
+        "(?<depName>ghcr\\.io/renovatebot/renovate|docker|golang|node):(?<currentValue>[0-9][a-zA-Z0-9_.-]*)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/plumber\\.yml$/"
+      ],
+      "matchStrings": [
+        "[ \\t]version: (?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "depNameTemplate": "getplumber/plumber",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "pinDigests": true
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "GitHub Actions compatible updates"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "docker"
+      ],
+      "groupName": "Docker CLI and helpers"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "golang"
+      ],
+      "groupName": "Go build and tooling images"
+    },
+    {
+      "matchPackageNames": [
+        "getplumber/plumber"
+      ],
+      "groupName": "Plumber action and verified binary"
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
