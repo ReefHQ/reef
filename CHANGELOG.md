@@ -4,6 +4,7 @@
 
 - Prepare self-hosted Renovate schedules for dependency merge requests in GitLab, with a default full dry run, mandatory human merge review and coordinated base/tool/helper/action updates. Cover SHA-pinned GitHub Actions and the Plumber binary together; retain manual maintenance for embedded terminal assets.
 - Validate Renovate configuration and real offline dependency extraction in CI without bot credentials. No application dependency versions or release images are changed by this setup.
+- Copy Renovate validation inputs through the Docker API so containerized shell runners can use their host daemon without matching checkout paths; retain failure propagation and temporary-container cleanup.
 
 ## 0.32.0 — 2026-11-03
 

@@ -115,6 +115,10 @@ exact Renovate image version with no network or tokens. Tests check runner
 admission and credential handling with fake Docker, then run the real extractor
 offline against a synthetic repository. They verify image ARGs, inline helper/tool
 references, action SHAs and both Plumber version references, with zero HTTP calls.
+Configuration and fixtures are copied into temporary containers with `docker cp`;
+no checkout bind mount is required. This supports shell runners inside containers
+using the host Docker daemon even when their filesystem paths differ. Container
+exit codes are checked and temporary containers are removed on success or failure.
 The audited mirror is gated on that check too. These tests do not establish live
 GitLab bot permissions, registry availability or actual update compatibility;
 verify the first hosted schedule after merging.

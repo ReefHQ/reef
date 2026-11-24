@@ -6,9 +6,19 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
 image=ghcr.io/renovatebot/renovate:44.258.0
 if [ "${1:-}" = validate ]; then
- docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,mode=1777 \
-  --mount "type=bind,source=$root/renovate.json,target=/repo/renovate.json,readonly" \
-  "$image" renovate-config-validator --strict --no-global /repo/renovate.json
+ container="reef-renovate-validation-${CI_JOB_ID:-$$}"
+ trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+ trap 'exit 130' INT
+ trap 'exit 143' HUP TERM
+ # The shell runner and its Docker daemon may have different filesystems.
+ # Copy through the Docker API instead of bind-mounting the checkout path.
+ docker create --name "$container" --network none --cap-drop=ALL \
+  --security-opt no-new-privileges:true --workdir /repo \
+  "$image" renovate-config-validator --strict --no-global /repo/renovate.json >/dev/null
+ docker cp "$root/renovate.json" "$container:/repo/renovate.json"
+ docker start --attach "$container"
+ status=$(docker inspect --format '{{.State.ExitCode}}' "$container")
+ [ "$status" = 0 ] || exit 1
  exit
 fi
 [ "$#" -eq 0 ] || { echo 'Usage: sh scripts/renovate.sh [validate]' >&2; exit 1; }
