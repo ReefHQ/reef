@@ -10,6 +10,9 @@ no database and no CDN.
 
 **Latest release: 0.32.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
+**Next patch: 0.32.1** keeps the volume-backup window steady while progress updates,
+including on remote hosts. Pending publication.
+
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
 > need to sign in again after the upgrade. You can then change your password and

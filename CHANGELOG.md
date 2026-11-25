@@ -6,6 +6,11 @@
 - Validate Renovate configuration and real offline dependency extraction in CI without bot credentials. No application dependency versions or release images are changed by this setup.
 - Copy Renovate validation inputs through the Docker API so containerized shell runners can use their host daemon without matching checkout paths; retain failure propagation and temporary-container cleanup.
 
+## 0.32.1 — Unreleased
+
+- Keep the volume-backup dialog stable during polling: reserve the loading indicator's space, retain unchanged record controls and operation output, and preserve reading position and restoration drafts as progress changes.
+- Use a viewport-bounded dialog height so loading and completed operations do not recenter the window. This central UI fix also applies to remote hosts; agents need no upgrade for it.
+
 ## 0.32.0 — 2026-11-03
 
 - Build and publish public Reef and agent images on GHCR through GitHub Actions for Linux amd64/arm64, using the automatic GitHub token and version/revision/latest tags; retain independent GitLab production delivery. Preserve original source revisions across the public mirror for agent-update compatibility, without changing older tags.
