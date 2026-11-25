@@ -1,21 +1,43 @@
 'use strict';
 (()=>{
  const find=id=>document.getElementById(id),dialog=find('volume-backups');
- let epoch=0,host='local',busy=false,loading=false,volumes=[],offset=0,total=0,timer;
+ let epoch=0,host='local',busy=false,loading=false,volumes=[],offset=0,total=0,timer,recordNodes=new Map(),operationSignature='';
  const canWrite=()=>window.reefAccess?.canWrite!==false;
  const available=()=>host==='local'||window.reefCapabilities?.includes('volume-backups-v1');
  const node=(tag,text,cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
  function notice(text){find('backups-error').textContent=text;find('backups-error').hidden=!text;}
- function controls(){find('backups-create').disabled=!canWrite()||busy||loading||!available()||!volumes.length;find('backups-volume').disabled=busy||loading;find('backups-refresh').disabled=loading;find('backups-previous').disabled=loading||offset===0;find('backups-next').disabled=loading||offset+50>=total;find('backups-loading').hidden=!loading;}
+ function preserveScroll(update){const top=dialog.scrollTop;update();dialog.scrollTop=top;}
+ function controls(){preserveScroll(()=>{find('backups-create').disabled=!canWrite()||busy||loading||!available()||!volumes.length;find('backups-volume').disabled=busy||loading;find('backups-refresh').disabled=loading;find('backups-previous').disabled=loading||offset===0;find('backups-next').disabled=loading||offset+50>=total;find('backups-loading').hidden=!loading;find('backups-records').setAttribute('aria-busy',String(loading));});}
+ function renderRecords(rows){
+  const list=find('backups-records'),next=new Map();
+  rows.forEach((row,index)=>{
+   const signature=JSON.stringify(row);let entry=recordNodes.get(row.id);
+   if(!entry||entry.signature!==signature){
+    const card=node('article','','backup-record');card.append(node('h3',row.destination?`${row.volume} → ${row.destination}`:row.volume),node('p',`${new Date(row.created).toLocaleString('en-GB')} · ${row.status}${row.bytes?' · '+(row.bytes/1048576).toFixed(1)+' MiB':''}`,'muted small'),node('p',row.message));
+    if(row.containers?.length&&(row.status==='interrupted'||row.status==='failed'))card.append(node('p','Containers to check: '+row.containers.join(', '),'small'));
+    const actions=node('div','','dialog-actions');let restore;
+    if(row.status==='succeeded'&&!row.destination){restore=node('button','Restore to a new volume');restore.type='button';restore.addEventListener('click',()=>restoreDialog(row));actions.append(restore);}
+    const remove=node('button','Delete record'+(!row.destination?' and archive':''),'quiet');remove.type='button';remove.addEventListener('click',()=>act({action:'delete',backup:row.id},`Permanently delete this ${row.destination?'restoration record':'backup record and archive'} for ${row.volume} on ${window.reefHostName||host}?${row.status==='interrupted'?' Confirm you have checked and recovered the listed containers first.':''} Docker volumes are kept.`));actions.append(remove);card.append(actions);
+    entry={card,signature,restore,remove};
+   }
+   if(entry.restore)entry.restore.disabled=!canWrite()||busy;
+   entry.remove.disabled=!canWrite()||busy||row.status==='pending';
+   next.set(row.id,entry);
+   if(list.children[index]!==entry.card)list.insertBefore(entry.card,list.children[index]||null);
+  });
+  const retained=new Set([...next.values()].map(entry=>entry.card));
+  for(const card of [...list.children])if(!retained.has(card))list.removeChild(card);
+  recordNodes=next;find('backups-empty').hidden=!!rows.length;
+ }
  async function refresh(){
   if(!dialog.open||loading||document.hidden)return;const current=epoch;loading=true;controls();
   try{if(!available())throw new Error('Upgrade this host’s agent for volume backups.');const data=await(await request('/api/volume-backups?offset='+offset,undefined,host)).json();if(current!==epoch)return;
-   offset=data.offset;total=data.total;busy=!!data.operation?.running;find('backups-summary').textContent=`${total} records · ${total?offset+1:0}–${Math.min(offset+50,total)} shown · keeps ${data.retention} successful backups per volume`;
-   window.ReefOperationPanels.render(find('backups-operation'),data.operation,{kind:'volume-backups',host,summary:data.operation?.id?`${data.operation.action}: ${busy?'in progress…':'finished'}`:'',result:r=>`${r.id}: ${r.message}`});
-   const records=data.backups.map(row=>{const card=node('article','','backup-record');card.append(node('h3',row.destination?`${row.volume} → ${row.destination}`:row.volume),node('p',`${new Date(row.created).toLocaleString('en-GB')} · ${row.status}${row.bytes?' · '+(row.bytes/1048576).toFixed(1)+' MiB':''}`,'muted small'),node('p',row.message));
-    if(row.containers?.length&&(row.status==='interrupted'||row.status==='failed'))card.append(node('p','Containers to check: '+row.containers.join(', '),'small'));
-    const actions=node('div','','dialog-actions');if(row.status==='succeeded'&&!row.destination){const restore=node('button','Restore to a new volume');restore.type='button';restore.disabled=!canWrite()||busy;restore.addEventListener('click',()=>restoreDialog(row));actions.append(restore);}
-    const remove=node('button','Delete record'+(!row.destination?' and archive':''),'quiet');remove.type='button';remove.disabled=!canWrite()||busy||row.status==='pending';remove.addEventListener('click',()=>act({action:'delete',backup:row.id},`Permanently delete this ${row.destination?'restoration record':'backup record and archive'} for ${row.volume} on ${window.reefHostName||host}?${row.status==='interrupted'?' Confirm you have checked and recovered the listed containers first.':''} Docker volumes are kept.`));actions.append(remove);card.append(actions);return card;});find('backups-records').replaceChildren(...records);find('backups-empty').hidden=!!records.length;notice('');
+   preserveScroll(()=>{
+    offset=data.offset;total=data.total;busy=!!data.operation?.running;find('backups-summary').textContent=`${total} records · ${total?offset+1:0}–${Math.min(offset+50,total)} shown · keeps ${data.retention} successful backups per volume`;
+    const signature=JSON.stringify(data.operation||{});
+    if(signature!==operationSignature){window.ReefOperationPanels.render(find('backups-operation'),data.operation,{kind:'volume-backups',host,summary:data.operation?.id?`${data.operation.action}: ${busy?'in progress…':'finished'}`:'',result:r=>`${r.id}: ${r.message}`});operationSignature=signature;}
+    renderRecords(data.backups);notice('');
+   });
   }catch(e){if(current===epoch)notice(e.message);}finally{if(current===epoch){loading=false;controls();clearTimeout(timer);if(dialog.open)timer=setTimeout(refresh,busy?1500:10000);}}
  }
  async function act(fields,confirmation){
@@ -24,7 +46,7 @@
   catch(e){if(current===epoch)notice(`${e.message} Refresh status before retrying; the request may have been accepted.`);}
   finally{if(current===epoch){busy=false;controls();clearTimeout(timer);timer=setTimeout(refresh,500);}}
  }
- async function open(row){epoch++;host=window.reefHost||'local';offset=0;total=0;loading=false;busy=false;volumes=[];find('backups-records').replaceChildren();find('backups-operation').hidden=true;find('backups-volume').replaceChildren();find('backups-restore-form').hidden=true;notice('');dialog.showModal();controls();const current=epoch;
+ async function open(row){epoch++;host=window.reefHost||'local';offset=0;total=0;loading=false;busy=false;volumes=[];recordNodes=new Map();operationSignature='';find('backups-records').replaceChildren();find('backups-operation').hidden=true;find('backups-volume').replaceChildren();find('backups-restore-form').hidden=true;notice('');dialog.showModal();controls();const current=epoch;
   try{if(available()){const data=await(await request('/api/volumes',undefined,host)).json();if(current!==epoch)return;volumes=data.volumes.filter(v=>v.driver==='local'&&v.scope==='local');for(const v of volumes){const option=node('option',v.name);option.value=v.name;find('backups-volume').append(option);}if(row&&volumes.some(v=>v.name===row.name))find('backups-volume').value=row.name;}}
   catch(e){if(current===epoch)notice(e.message);}if(current===epoch)await refresh();
  }

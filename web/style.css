@@ -232,7 +232,8 @@ dialog{width:450px;max-width:calc(100vw - 28px);max-height:90dvh;overflow:auto;p
 
 #account-password-options{margin:18px 0 10px}#account-revoke{margin-bottom:4px}#user-form{scroll-margin-top:70px}
 
-.backup-dialog{width:min(860px,calc(100vw - 2rem));max-height:85vh;overflow:auto}.backup-record{padding:1rem 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.backup-record h3{margin:0}.backup-dialog #backups-restore-form{padding:1rem 0;border-block:1px solid var(--border)}
+.backup-dialog{width:min(860px,calc(100vw - 2rem));height:min(720px,85dvh);max-height:85dvh;overflow:auto}.backup-record{padding:1rem 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.backup-record h3{margin:0}.backup-dialog #backups-restore-form{padding:1rem 0;border-block:1px solid var(--border)}
+#backups-loading[hidden]{display:flex;visibility:hidden}
 
 .schedule-form,.schedule-card{padding:1.25rem;margin-block:1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow-wrap:anywhere}.schedule-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:1rem;margin-block:1rem}.schedule-fields input,.schedule-fields select{width:100%}.schedule-check{display:flex;align-items:flex-start;gap:.6rem;margin-block:1rem}.schedule-check input{flex:0 0 auto;margin-top:.25rem}.schedule-card h2{font-size:1.1rem;margin:0}.schedule-form [hidden]{display:none}
 
