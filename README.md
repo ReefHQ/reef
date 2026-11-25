@@ -8,10 +8,10 @@ running, read logs, open a shell and ship an update — without losing your plac
 Built with Go’s standard library. One application process, embedded assets,
 no database and no CDN.
 
-**Latest release: 0.32.0** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
+**Latest release: 0.32.1** · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) · [GPLv3](LICENSE)
 
-**Next patch: 0.32.1** keeps the volume-backup window steady while progress updates,
-including on remote hosts. Pending publication.
+**In 0.32.1:** Reef keeps the volume-backup window steady while progress updates,
+including on remote hosts.
 
 > **Upgrading from a version before 0.17.0?** Sign in with username **`admin`**
 > and **your existing Reef password**. Reef now uses individual accounts, so you’ll
@@ -27,7 +27,7 @@ for Linux **amd64 and arm64**. Choose an explicit release for installations;
 `latest` follows published stable versions. GitHub Actions builds and publishes
 these images when a version tag reaches the public mirror.
 
-**Ready to install:** Reef **0.32.0** and its agent are publicly available.
+**Ready to install:** Reef **0.32.1** and its agent are publicly available.
 Follow the [image installation guide](docs/CONTAINER_IMAGES.md) to get started.
 
 The guide covers the two-file Compose setup, initial password, LAN access,
@@ -212,6 +212,11 @@ selected metadata, without terminal contents, application logs or credentials.
 proposes updates to base/tool images and pinned GitHub actions. Maintainers review
 its merge requests before merging.
 [Setup and coverage](docs/DEPENDENCY_MAINTENANCE.md).
+
+**Heading for 1.0?** We are defining a stable compatibility promise and a
+repeatable release checklist. [Read the proposed criteria](docs/V1_READINESS.md)
+and [qualification record](docs/V1_QUALIFICATION.md). Existing stable-use evidence
+counts; remaining checks and the release decision need maintainer sign-off.
 
 ## 📚 Pick your next stop
 

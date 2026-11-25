@@ -44,3 +44,12 @@ between features.
 ## Interface consistency
 
 [#39](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/39) — **UX/UI consistency — implemented, awaiting review and publication (0.25.1).** Shared action sizing, responsive action groups, accessible scrollable dialog headings, and explicit loading/empty/error states in Builds and Schedules.
+
+## Define the 1.0 decision
+
+[#40](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/40) — **Criteria prepared for review; qualification has not started.**
+Define the supported core and 1.x compatibility promise, observable release gates,
+Local/remote scenario coverage and acceptance of applicable stable-use evidence,
+with targeted additional observation when needed. [Readiness criteria](V1_READINESS.md) and the separate
+[qualification record](V1_QUALIFICATION.md) distinguish existing baseline evidence
+from work still to run. No 1.0 version bump or release is part of this issue.

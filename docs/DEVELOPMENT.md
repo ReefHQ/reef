@@ -75,6 +75,12 @@ mean it has been published. Published releases are immutable.
 - Document migration requirements for configuration, persisted state or HTTP/API
   changes in the changelog. Related unreleased work may share a version.
 
+Before declaring 1.0, review the [readiness criteria](V1_READINESS.md) and fill the
+[qualification record](V1_QUALIFICATION.md) with evidence for a frozen 0.x candidate.
+Reuse applicable existing tests and stable-use evidence; add targeted checks and
+observation for gaps. A fresh seven-day wait is not mandatory. Merging the
+criteria does not qualify a candidate or authorize a 1.0 release.
+
 Quality jobs run on merge requests and tags. Ordinary branch pushes and the
 post-merge master push do not repeat them. When enabled, CI creates the stable
 release tag from VERSION, then checks/builds/publishes it. See

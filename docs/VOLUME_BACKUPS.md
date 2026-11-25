@@ -6,7 +6,7 @@ Available from **v0.18.0**, on Local and agents advertising **volume-backups-v1*
 Upgrade central first, then the agents that need this feature. Existing agent
 identities, CA and configuration stay in place; no re-enrollment is needed.
 
-In **0.32.1 (pending publication)**, automatic progress refreshes keep the backup
+In **0.32.1**, automatic progress refreshes keep the backup
 window, reading position and restoration draft steady. This is a central UI fix;
 existing capable agents do not need an upgrade for it.
 
