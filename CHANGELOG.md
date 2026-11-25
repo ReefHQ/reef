@@ -2,11 +2,13 @@
 
 ## Unreleased — maintenance
 
+- Document proposed 1.0 compatibility/readiness criteria and a separate candidate qualification record, including public-image delivery and Local/remote workflows. Criteria review does not qualify a candidate or authorize a 1.0 release.
+
 - Prepare self-hosted Renovate schedules for dependency merge requests in GitLab, with a default full dry run, mandatory human merge review and coordinated base/tool/helper/action updates. Cover SHA-pinned GitHub Actions and the Plumber binary together; retain manual maintenance for embedded terminal assets.
 - Validate Renovate configuration and real offline dependency extraction in CI without bot credentials. No application dependency versions or release images are changed by this setup.
 - Copy Renovate validation inputs through the Docker API so containerized shell runners can use their host daemon without matching checkout paths; retain failure propagation and temporary-container cleanup.
 
-## 0.32.1 — Unreleased
+## 0.32.1 — 2026-11-26
 
 - Keep the volume-backup dialog stable during polling: reserve the loading indicator's space, retain unchanged record controls and operation output, and preserve reading position and restoration drafts as progress changes.
 - Use a viewport-bounded dialog height so loading and completed operations do not recenter the window. This central UI fix also applies to remote hosts; agents need no upgrade for it.
