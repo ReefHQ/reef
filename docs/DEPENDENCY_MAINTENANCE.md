@@ -4,10 +4,11 @@ Renovate proposes dependency updates **in GitLab**, where Reef's source and revi
 process live. GitHub remains the audited public mirror. No Dependabot setup or
 direct merge into the GitHub mirror is needed.
 
-This setup is prepared, not yet activated. After merging the configuration, the
-maintainer configures the bot credentials and pipeline schedule below, inspects a
-dry run and explicitly enables real proposals. No application dependency or image
-version is upgraded by this configuration change; Reef stays on 0.32.0.
+The Reef setup is active: its first full dry run and real proposal run passed on
+November 24, 2026. Renovate created its dependency dashboard and merge requests
+in GitLab. The setup steps below explain how to configure or recreate the runner;
+new installations should start with a dry run before enabling real proposals.
+Dependency updates still require review and an explicit release when shipping images.
 
 ## What the bot watches
 

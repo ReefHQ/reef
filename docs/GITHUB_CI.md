@@ -8,7 +8,7 @@ and selected repository settings, then produces findings and an A–E score when
 collection is complete. GitLab remains Reef's source of truth: contribute changes
 there, and let the audited mirror publish them to GitHub.
 
-Renovate maintenance is prepared in the source GitLab CI for dependency MRs,
+Renovate maintenance runs in the source GitLab CI to propose dependency MRs,
 including these action SHA pins and the matching Plumber binary version. See
 [dependency maintenance](DEPENDENCY_MAINTENANCE.md) for activation and review.
 
@@ -59,11 +59,11 @@ beyond the job token's scope remain unknown rather than prompting for a PAT.
 
 Checkout is pinned to commit `3d3c42e5aac5ba805825da76410c181273ba90b1`
 (v7.0.1). The official Plumber action is pinned to
-`e9ad2dc6d6faa2dfd84395aac18e461284062640` (v0.7.16), with an explicit matching
+`ec8cb3a7edd6a324b33e85109b627b2df6023d94` (v0.7.23), with an explicit matching
 binary version and checksum/build-provenance verification enabled. Its nested
 artifact-upload actions are also pinned in that upstream revision. The separate
 Code Scanning upload uses `github/codeql-action` commit
-`6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee` (v4.39.0). Review the new
+`1bd86f2fdb4b86187fa4059f16f31a3202acc9ea` (v4.39.4). Review the new
 action source, release and provenance when updating these references.
 
 Plumber's built-in controls apply without a local override. Hosted score publishing
@@ -87,7 +87,7 @@ GitHub run, including Code Scanning/artifact uploads, must be checked after that
 publication; local static checks cannot prove GitHub token permissions or hosted
 API availability. No agent upgrade is needed for this CI-only change.
 
-References: [official Plumber action](https://github.com/getplumber/plumber/blob/e9ad2dc6d6faa2dfd84395aac18e461284062640/action.yml),
+References: [official Plumber action](https://github.com/getplumber/plumber/blob/ec8cb3a7edd6a324b33e85109b627b2df6023d94/action.yml),
 [GitHub SARIF uploads](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/integrate-with-existing-tools/upload-sarif-file).
 
 The public mirror's default branch is protected by a GitHub ruleset against
