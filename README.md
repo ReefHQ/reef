@@ -205,9 +205,9 @@ selected metadata, without terminal contents, application logs or credentials.
 - Compose updates can interrupt services. Reef does not automatically roll back
   or replay interrupted operations.
 
-**Keeping Reef itself current.** Dependency maintenance is prepared with Renovate
-for weekly GitLab merge requests, covering base/tool images and pinned GitHub
-actions. Maintainers review proposals before merging.
+**Keeping Reef itself current.** Renovate runs on a weekly GitLab schedule and
+proposes updates to base/tool images and pinned GitHub actions. Maintainers review
+its merge requests before merging.
 [Setup and coverage](docs/DEPENDENCY_MAINTENANCE.md).
 
 ## 📚 Pick your next stop
