@@ -47,9 +47,18 @@ between features.
 
 ## Define the 1.0 decision
 
-[#40](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/40) — **Criteria prepared for review; qualification has not started.**
+[#40](https://gitlab.renaudbaivier.com/reef/reef/-/work_items/40) — **Done — reviewed criteria merged and mirrored; release qualification continues in [#52](https://gitlab.renaudbaivier.com/reef/reef/-/issues/52).**
 Define the supported core and 1.x compatibility promise, observable release gates,
 Local/remote scenario coverage and acceptance of applicable stable-use evidence,
 with targeted additional observation when needed. [Readiness criteria](V1_READINESS.md) and the separate
 [qualification record](V1_QUALIFICATION.md) distinguish existing baseline evidence
 from work still to run. No 1.0 version bump or release is part of this issue.
+
+## Qualify the 1.0 release
+
+[#52](https://gitlab.renaudbaivier.com/reef/reef/-/issues/52) — **Doing.**
+Build/history round trips now pass on published 0.32.1 for Local and a TLS-relayed
+agent, including controlled failures and log/history persistence after restart.
+The [qualification record](V1_QUALIFICATION.md) keeps exact scope, prior recovery
+results and remaining platform, recovery and visual checks separate. No 1.0
+release is authorized by these individual passes.

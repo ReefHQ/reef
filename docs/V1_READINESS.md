@@ -1,8 +1,10 @@
 # When is Reef ready for 1.0?
 
-**Proposal for maintainer review, not a release announcement.** Reef remains on
+**Reviewed release criteria, not a release announcement.** Reef remains on
 0.32.1. This document defines the decision; it does not certify that the checks
-have passed or authorize a deployment.
+have passed or authorize a deployment. The definition was accepted through
+[MR !65](https://gitlab.renaudbaivier.com/reef/reef/-/merge_requests/65);
+[#52](https://gitlab.renaudbaivier.com/reef/reef/-/issues/52) tracks qualification.
 
 Reef can become **1.0.0 when the existing core is reliable, recoverable and has a
 clear compatibility promise**. We do not need to finish every future feature.
@@ -46,7 +48,7 @@ a defect in an advertised supported path must be fixed or explicitly scoped.
 ## What 1.x compatibility means
 
 [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html) requires a defined public
-contract. For Reef, the proposed contract is the documented operator interface:
+contract. For Reef, the reviewed contract is the documented operator interface:
 configuration fields and environment variables, launcher/installation commands,
 Compose installation model, persisted user/project/agent state, agent protocol
 and capability meanings, and documented generic webhook fields.
