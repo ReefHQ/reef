@@ -213,8 +213,9 @@ proposes updates to base/tool images and pinned GitHub actions. Maintainers revi
 its merge requests before merging.
 [Setup and coverage](docs/DEPENDENCY_MAINTENANCE.md).
 
-**Heading for 1.0?** We are defining a stable compatibility promise and a
-repeatable release checklist. [Read the proposed criteria](docs/V1_READINESS.md)
+**Heading for 1.0?** The compatibility promise and release checklist are defined.
+We are checking the remaining workflows in [#52](https://gitlab.renaudbaivier.com/reef/reef/-/issues/52).
+[Read the criteria](docs/V1_READINESS.md)
 and [qualification record](docs/V1_QUALIFICATION.md). Existing stable-use evidence
 counts; remaining checks and the release decision need maintainer sign-off.
 

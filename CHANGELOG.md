@@ -2,6 +2,8 @@
 
 ## Unreleased — maintenance
 
+- Record actual 0.32.1 Local and TLS-agent build qualification: verified scratch artifacts, controlled build failures and unchanged logs/history after restart. Track remaining 1.0 qualification separately from the completed criteria definition; no new application version or release.
+
 - Document proposed 1.0 compatibility/readiness criteria and a separate candidate qualification record, including public-image delivery and Local/remote workflows. Criteria review does not qualify a candidate or authorize a 1.0 release.
 
 - Prepare self-hosted Renovate schedules for dependency merge requests in GitLab, with a default full dry run, mandatory human merge review and coordinated base/tool/helper/action updates. Cover SHA-pinned GitHub Actions and the Plumber binary together; retain manual maintenance for embedded terminal assets.

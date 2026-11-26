@@ -2,7 +2,9 @@
 
 **Current decision: not yet qualified.** This is a partial evidence record;
 individual results below do not qualify every platform or the complete release.
-See [the release criteria proposal](V1_READINESS.md).
+See [the reviewed release criteria](V1_READINESS.md). Remaining work is tracked
+in [#52](https://gitlab.renaudbaivier.com/reef/reef/-/issues/52); #40 completed the
+criteria definition, not the release qualification.
 
 Current published baseline: Reef 0.32.1, reviewed November 26, 2026. Recovery
 executions below used 0.32.0; their exact scope and versions remain explicit.
@@ -12,8 +14,8 @@ This is not a frozen or qualified 1.0 candidate.
 
 | Item | Record |
 | --- | --- |
-| Maintainer / decision date | Pending |
-| Criteria decision | Agent review supports the scope and eight gates on November 25; mandatory fresh seven-day wait removed. Final maintainer acceptance pending. |
+| Maintainer / decision date | Criteria accepted by maintainer merge of !65 on November 26; final release decision pending. |
+| Criteria decision | Reviewed scope/eight gates accepted via !65. Reuse applicable evidence; no mandatory fresh seven-day wait. |
 | Operational feedback | Maintainer reports weeks of stable use on November 25; exact versions, dates, environments and exercised workflows not yet recorded. |
 | Frozen 0.x version / source commit | Not selected |
 | Central and agent image digests | Not recorded |
@@ -28,10 +30,11 @@ This is not a frozen or qualified 1.0 candidate.
 | --- | --- | --- |
 | Installed version | Maintainer reports the latest central and agents. This feedback preceded publication of 0.32.1. | Exact installed health/version/revisions and image digests have not been independently collected. |
 | Routine upgrades | Maintainer confirms central and at least one agent were upgraded while retaining accounts, projects and connections. | Record tested version pairs; this is real upgrade evidence, not an offline-restoration test. |
-| Operational stability | Weeks of stable use reported across a QNAP and two Intel Ubuntu servers. | QNAP architecture, exact OS/Docker versions and exercised workflows still need mapping. No ARM runtime coverage established. |
+| Operational stability | Weeks of stable use reported across a QNAP and two Intel Ubuntu servers. | QNAP architecture, exact OS/Docker versions and exercised workflows still need mapping. No production ARM runtime is established by this feedback; isolated ARM64 evidence is recorded below. |
 | Restoration | Disposable remote volume backup/restore passed on Ego on November 25: exact file content/SHA-256, UID/GID 1234:1235 and mode 0640 preserved. | Isolated central account/registry and actual agent identity restoration passed on November 26, detailed below. Full configured-project/registration/schedule/archive recovery, active-consumer recovery and broader filesystem cases remain outside these manual checks. |
 | Builds report | Safari inspection of the NAS Local host confirms Builds 6, uptime-kuma selected, 0 buildable services, no recorded builds, and a populated cache table with 242 records / 16.5 GiB cumulative after Refresh cache. Maintainer also reports no recorded builds for miam shopping. | Local cache loading is verified. Read-only Safari check of remote Vision / deluge, including Refresh cache, returns 0 records / 0 B without a visible error; Builds count is 3 and deluge has 0 buildable services and no recorded builds. This verifies remote UI refresh/empty response, not independent Docker cache completeness or a real build/history round trip. Counter wording remains ambiguous. |
 | Remote Ego cache | Initial Refresh cache failed with a generic Buildx error. Maintainer checks: agent 0.32.0 / revision 780a080ddc107a5c242b65d000ff35f75dc62b7b; Buildx works with normal and isolated environment (920 JSON rows / 318519 bytes, normal run 1s). Subsequent Safari refresh succeeds: 920 records / 22.6 GiB cumulative, consistent with Docker 24.23 GB decimal. | Successful real remote cache read confirmed. Initial failure is intermittent/unexplained; no code fix, restart or cleanup performed. A cold-start/deadline explanation remains a hypothesis. No real build/history round trip checked. |
+| Real builds and history | Published 0.32.1 central/agent ARM64: successful scratch builds and controlled failures through Local and TLS-relayed APIs; artifact contents and persisted logs/history verified after central/agent restarts. | Uses one local engine with separate fixture projects/state volumes. Does not certify two physical servers, RUN steps, registry base pulls or browser log rendering. |
 | Existing automated coverage | Release pipeline 14488 jobs 20198 (Go) and 20199 (frontend), plus delivery/mirror/build/deploy, rechecked successful on November 25. | These are release-baseline results, not newly executed tests or proof of actual restoration/platform behavior. |
 
 Relevant existing regressions include the permission matrix and delayed-result
@@ -115,6 +118,51 @@ All owned containers, anonymous volumes and the internal network were removed
 by the fixture cleanup. Production installations were untouched. These scoped
 passes do not mark the entire upgrade/recovery or platform gates complete.
 
+## Real builds and history — passed November 26
+
+Used the actual published **0.32.1** central and agent, original revision
+`856eaa4b1a217dc89b2a931d638f8ee03b689106`, Linux ARM64 under local Docker.
+Engine **29.9.3** (linux/arm64), Compose **v5.6.1**, Buildx **v0.38.1**
+(`0dbe87f36ed472fe36b6796c3f70b4210a731fc5`) were recorded.
+Both ran with read-only roots, writable private anonymous state/fixture volumes
+and `/tmp`. Their engine access was the local Docker socket. The TLS agent and
+central communicated over an internal-only fixture network with a generated
+trusted certificate; no listening ports were published or credentials mounted.
+All accounts and enrollment credentials were generated only for this test.
+
+Two uniquely named Compose projects each had one buildable service. Each used
+`FROM scratch`, a fixture label and `COPY marker /marker`; `.dockerignore` allowed
+only the Dockerfile and marker. No RUN step, base-image pull or application
+startup was requested. Each build created only a uniquely named fixture tag.
+
+For Local, then for the real agent through central's relay:
+
+1. GET `/api/builds/project` identified the saved revision and buildable service.
+2. POST `/api/builds/action` with confirmation/CSRF, exact revision/service,
+   no-cache enabled and pull disabled returned 202. The operation completed.
+3. The actual Docker image existed with the fixture ownership label; reading
+   `/marker` from a never-started disposable container verified the exact contents.
+4. Replaced only the fixture Dockerfile with a deliberately missing COPY source.
+   A second accepted build failed visibly; the earlier successful history survived.
+5. Read both `/api/builds/history` and `/api/builds/log`. After central restart
+   for Local and agent restart for the remote path, exactly the same two build
+   identities remained and both log SHA-256 values matched their pre-restart values.
+6. Central's login remained valid, the agent retained its identity, host histories
+   remained separate, and no extra build or application deployment appeared.
+
+**Pass for these Local and relay scenarios.** Central and agent shared one local
+engine, so this does not certify two independent physical hosts. It does not
+cover registry authentication/base pulls, RUN steps, browser log layout, cache
+pruning or interruption during an in-flight build. No production project was used.
+Fixture containers, anonymous volumes, tagged images and the internal network
+were removed. No broad cache prune was performed; small build-cache entries may
+remain in the local default builder.
+
+Image config IDs: central
+`sha256:97cac7a650158defb028cab3f8097abe1d916dd5c71cee9d2bf4421af83a9ca0`, agent
+`sha256:944476f8611ab4ab9d00c1c74ae48c4339db75f681e83e2107a6c3b0ce442f23`.
+These are observed test images, not a selected 1.0 candidate's frozen digests.
+
 ## Environment and scenario evidence
 
 For each test environment, record OS/architecture, Docker/Compose/Buildx/browser
@@ -133,8 +181,8 @@ record only the outcome and non-sensitive resource identities here.
 | Upgrade and recovery | Scoped 0.32.0 private-state restoration passed | Fresh disposable central, cold-copy accounts/agent registry restore, offline admin recovery and actual agent identity reconnect passed November 26; real upgrades reported by maintainer. Full project/registration/schedule/archive recovery and exact upgrade pairs still need assessment. |
 | Isolation and permissions | Candidate qualification pending | Repeat existing regression checks and isolated cross-host scenarios. |
 | Data safety | Remote basic volume restoration passed; broader coverage pending | Manual Ego fixture verified content, ownership and permissions; applicable existing tests and remaining recovery cases still need assessment. |
-| Platforms | ARM64 startup/auth/recovery evidence added; workflow matrix incomplete | Published central/agent 0.32.0 Linux ARM64 images ran under local Docker during recovery checks. QNAP and Intel Ubuntu operation reported separately. No ARM64 Docker operations tested in these isolated checks. |
-| UI and diagnosis | #51 desktop fix verified and published; broader review pending | Backup dialog no longer moves in the Safari desktop fixture; focus/scroll/draft retained. Narrow-viewport check blocked by unavailable native window access. Other visual cases and actual build/history round trip remain unqualified. Remote cache observations are recorded above. |
+| Platforms | ARM64 startup/auth/recovery evidence added; workflow matrix incomplete | Published central/agent 0.32.0 Linux ARM64 images ran under local Docker during recovery checks. QNAP and Intel Ubuntu operation reported separately. Additional published 0.32.1 ARM64 Local/agent scratch builds passed below; this is not every Docker workflow. |
+| UI and diagnosis | #51 desktop fix verified and published; broader review pending | Backup dialog no longer moves in the Safari desktop fixture; focus/scroll/draft retained. Narrow-viewport check blocked by unavailable native window access. Other visual cases remain pending; actual API build/history round trips passed below. Remote cache observations are recorded above. |
 | Quality and delivery | 0.32.1 publication verified | GitLab quality/build/deploy/mirror and GitHub image publication succeeded. Anonymous central/agent amd64/arm64 metadata match the release. This does not establish candidate-wide runtime or recovery. |
 | Observation and blockers | Stable-use feedback recorded; applicability pending | Map existing use to the selected version and workflows; agree additional observation only for gaps. Assess open blockers. |
 
@@ -204,9 +252,9 @@ and actual error/result. Retain the diagnosis before deciding the gate status.
 
 ## Release decision
 
-- Criteria review: agent supports the scope and eight gates on November 25, with
-  reuse of applicable evidence and no mandatory fresh seven-day wait. Final
-  maintainer acceptance remains pending.
+- Criteria review: maintainer accepted the reviewed definition through !65 on
+  November 26. Applicable evidence can be reused; no mandatory fresh seven-day
+  wait. #40 is Done/closed; #52 tracks remaining qualification.
 - Every gate passed with linked evidence: pending.
 - Open blocking defects: not assessed for a candidate.
 - Accepted limitations and upgrade/recovery notes: pending.
@@ -217,4 +265,4 @@ and actual error/result. Retain the diagnosis before deciding the gate status.
 - Deployed health version/revision and post-release smoke: not applicable.
 
 This record must be updated from observed results. Merging the documentation or
-closing #40 does not change any of these values to Pass.
+closing #40 does not mark the release gates Pass.
